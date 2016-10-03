@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    Modulo receptor transmisor de audio
+    Modulo receptor emisor de audio
     usamos upd para estas dos tareas con dos hilos simultaneos
 """
 
@@ -26,7 +26,7 @@ def receiver(port_receiv):
 
 def transmiter(ip_transm, port_transm):
     """
-        transmisor de datos, usado como un segundo hilo
+        emisor de datos, usado como un segundo hilo
         recibe como parametros la ip del compañero al que enviar datos
         y el puerto por el que lo hace
     """
