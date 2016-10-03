@@ -14,22 +14,22 @@ def receiver(port_receiv):
         recibe el puerto por el que se desea escuchar
     """
     sock_receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #cambiar a udp
-    server_address = ('0.0.0.0', port_receiv) # usar localhost para pruebas en el mismo portatil(?)
+    server_address = ('0.0.0.0', int(port_receiv)) # usar localhost para pruebas en el mismo portatil(?)
     sock_receiver.bind(server_address)
 
     #bucle para recibir audio
     while True:
-        data, addr = sock.recvfrom(1024) # tamanhio de buffer no definitivo
+        data, addr = sock_receiver.recvfrom(1024) # tamanhio de buffer no definitivo
         # recibir datos, descomprimirlos y etc. luego reproducir
         # reproducir -> print ("received message:", data)
     print(1)
 
 def transmiter(ip_transm, port_transm):
-        """
-            transmisor de datos, usado como un segundo hilo
-            recibe como parametros la ip del compañero al que enviar datos
-            y el puerto por el que lo hace
-        """
+    """
+        transmisor de datos, usado como un segundo hilo
+        recibe como parametros la ip del compañero al que enviar datos
+        y el puerto por el que lo hace
+    """
     sock_transmiter = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #cambiar a udp
 
     #bucle de transmision de datos
@@ -53,6 +53,6 @@ if __name__ == '__main__':
     port_transm = input("Introduce el puerto del host: ")
 
     # hilo para enviar udp de lo que se graba
-    t = threading.Thread(target=transmiter, args=(ip_transm, port_transm))
+    t = threading.Thread(target=transmiter, args=(host_transm, port_transm))
     t.daemon = True
     t.start()
