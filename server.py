@@ -1,35 +1,37 @@
 import socket
 import pyaudio
 
-#record
+#Stream Data
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
-RECORD_SECONDS = 40
+RECORD_SECONDS = 5
+frames = []
 
-HOST = '127.0.0.1'    # The remote host
-PORT = 5005              # The same port as used by the server
+#Host and Port
+HOST = '127.0.0.1'
+PORT = 5005
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((HOST, PORT))
-
+#Initializing pyaudio and buffer.
 p = pyaudio.PyAudio()
-
 stream = p.open(format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
                 frames_per_buffer=CHUNK)
 
+#Creating Socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+
 print("*recording")
 
-frames = []
-
 for i in range(0, int(RATE/CHUNK*RECORD_SECONDS)):
- data  = stream.read(CHUNK)
- frames.append(data)
- s.sendall(data)
+    data = stream.read(CHUNK)
+    frames.append(data)
+    s.sendall(data)
+    print (i)
 
 print("*done recording")
 
