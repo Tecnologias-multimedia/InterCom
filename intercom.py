@@ -9,22 +9,27 @@ import socket
 import pyaudio
 #import sys
 
-CHUNK = 1024
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-frames = []
+CHUNK = 1024                        # cada paquete
+FORMAT = pyaudio.paInt16            # cada plano
+CHANNELS = 1                        # numero de canales, en principio 1
+RATE = 44100                        # frecuencia, calidad cd
+# frames = []                         #
 
 def receiver(port_receiv):
     
-
     """
         receptor de datos, usado como un hilo
         recibe el puerto por el que se desea escuchar
     """
-    sock_receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #cambiar a udp
-    server_address = ('0.0.0.0', int(port_receiv)) # usar localhost para pruebas en el mismo portatil(?)
+    sock_receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # cambiar a udp
+    server_address = ('0.0.0.0', int(port_receiv)) # IP:puerto de destino
     sock_receiver.bind(server_address)
+
+    '''
+        la conexion se realiza a la ip del dispositivo y puerto,
+        se supone que deberia ser a dos dispositivos fijos con lo
+        que no seria necesario pedir esta información.
+    '''
 
     print(1)
     #bucle para recibir audio
@@ -62,12 +67,15 @@ def transmiter(ip_transm, port_transm):
 
     while True:
         data = stream.read(1024)
-        #MESSAGE = "El arcipreste de Hita fuma petardos de marihuana."
+        # MESSAGE = "El arcipreste de Hita fuma petardos de marihuana."
         # grabar sonido comprimirlo y etc y enviarlo.
-        #sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
+        # sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
+
+        
+
         sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
 if __name__ == '__main__':
-    #establecemos puerto de escucha
+    # establecemos puerto de escucha
     port_receiv = input("Introduce el puerto para recibir: ")
 
     # iniciamos el hilo reporoductor que lee lo que entra de udp
@@ -76,12 +84,12 @@ if __name__ == '__main__':
     r.start()
 
     # solicitamos los datos del "peer"
-    host_transm = input("Introduce la ip del host: ")
-    port_transm = input("Introduce el puerto del host: ")
+    host_transm = input("Introduce la ip de destino: ")
+    port_transm = input("Introduce el puerto de destino: ")
 
     # hilo para enviar udp de lo que se graba
     t = threading.Thread(target=transmiter, args=(host_transm, port_transm))
     t.daemon = True
     t.start()
 
-esperandoEntradaDatos = input("Introduce algo mas: ")
+# esperandoEntradaDatos = input("Introduce algo mas: ")
