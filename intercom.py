@@ -20,7 +20,7 @@ def receiver(port_receiv):
     stream = p.open(format=FORMAT,
                     channels=CHANNELS,
                     rate=RATE,
-                    output=False,
+                    output=True,
                     frames_per_buffer=CHUNK)
 
     """
@@ -44,7 +44,7 @@ def transmiter(ip_transm, port_transm):
     stream = p.open(format=FORMAT,
                     channels=CHANNELS,
                     rate=RATE,
-                    output=True,
+                    input=True,
                     frames_per_buffer=CHUNK)
     """
         emisor de datos, usado como un segundo hilo
