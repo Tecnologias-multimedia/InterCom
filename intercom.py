@@ -23,7 +23,6 @@ def receiver(port_receiv):
     server_address = ('0.0.0.0', int(port_receiv))
     sock_receiver.bind(server_address)
 
-    print(1)
     # bucle para recibir audio
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT,
@@ -45,7 +44,6 @@ def transmiter(ip_transm, port_transm):
     """
     sock_transmiter = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    print(2)
     # bucle de transmision de datos
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT,
@@ -55,14 +53,14 @@ def transmiter(ip_transm, port_transm):
                     frames_per_buffer=CHUNK)
     while True:
         data = stream.read(1024)
-        sock_transmiter.sendto(data, (ip_transm, port_transm))
+        sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
 
 if __name__ == '__main__':
     # establecemos puerto de escucha
     port_receiv = input("Introduce el puerto para recibir: ")
 
     # iniciamos el hilo reporoductor que lee lo que entra de udp
-    r = threading.Thread(target=receiver, args=(port_receiv))
+    r = threading.Thread(target=receiver, args=(port_receiv,))
     r.daemon = True
     r.start()
 
