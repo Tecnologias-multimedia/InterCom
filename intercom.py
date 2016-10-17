@@ -17,7 +17,7 @@ RATE = 44100
 def receiver(port_receiv):
     """Receptor de datos.
 
-    Usado como un hilo recibe el puerto por el que se desea escuchar.
+    Usado como un hilo recibe el puerto por el que se desea escuchar .
     """
     sock_receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = ('0.0.0.0', int(port_receiv))
