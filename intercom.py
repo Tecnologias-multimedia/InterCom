@@ -7,6 +7,7 @@ from pyaudio import paInt16
 from pyaudio import PyAudio
 import socket
 import threading
+import toWavelet
 # import sys
 
 CHUNK = 1024
