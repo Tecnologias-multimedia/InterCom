@@ -59,6 +59,14 @@ def transmiter(ip_transm, port_transm):
         sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
 
 if __name__ == '__main__':
+    main()
+
+def main():
+    """main
+
+    Esta es la parte que realmente se ejecuta para ponerse a escucha
+    y para empezar a enviar paquetes.
+    """
     # establecemos puerto de escucha
     port_receiv = input("Introduce el puerto para recibir: ")
 
@@ -75,5 +83,4 @@ if __name__ == '__main__':
     t = threading.Thread(target=transmiter, args=(host_transm, port_transm,))
     t.daemon = True
     t.start()
-
     esperandoEntradaDatos = input("Introduce algo mas: ")

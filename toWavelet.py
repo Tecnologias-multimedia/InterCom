@@ -39,7 +39,11 @@ def main():
                     input=True,
                     frames_per_buffer=CHUNK)
     data = stream.read(1024)
-    arraySecuencial(data)
+    frames = arraySecuencial(data)
+    coeffs = wt.wavedec(frames, 'db1', level=5)
+    cA5, cD5, cD4, cD3, cD2, cD1 = coeffs
+    print(len(cD1))
+    print(len(frames))
 
 if __name__ == '__main__':
     main()
