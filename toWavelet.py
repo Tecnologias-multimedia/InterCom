@@ -24,7 +24,7 @@ VALORES = 32
 
 def arraySecuencial(data):
     frames = []
-    for i in range(0, 1024):
+    for i in range(0, len(data)):
         frames.append(data[i])
     return frames
 
@@ -32,27 +32,30 @@ def transform(frames):
     """realiza la TRANSFORMADA, normaliza y separa los datos en las colecciones
 
     despues pega las colecciones en una sola"""
-    coeffs = wt.wavedec(frames, 'db1', level=5)
+    coeffs = wt.wavedec(frames, 'db1', level=2)
     transformada = []
     for i in coeffs:
         for e in i:
             transformada.append(int(round(e)))
-    planos = []
+
+    planos = {}
     for plano in range(0, 32):
         comp = 32-plano
+        n = 0
+        bloque = 0
         planos[plano] = []
+
         for v in transformada:
-            temp = (v & (2**comp)) >> comp
-            for i in range(0, 32):
-                if i == 0:
-                    planos[plano][]
-
-
-
-    print(transformada[0], type(transformada[0]))
-    print(bin(transformada[0]))
-    print(transformada[0] & (2**31))
-    print(bin(transformada[0] & (2**31)))
+            temp = ((v & (2**comp)) >> comp)
+            bloque += (temp << (32 - n))
+            n = n+1
+            if n == 31:
+                planos[plano].append(bloque)
+                n = 0
+                bloque = 0
+    
+    print(transformada)
+    print(planos)
 
     #aqui sacamos los planos de bits y devolvemos un
     #array de arrays de planos de bits
@@ -70,6 +73,7 @@ def main():
                     input=True,
                     frames_per_buffer=CHUNK)
     data = stream.read(1024)
+    #data = [5, 12, 3, 6]
     frames = arraySecuencial(data)
     transform(frames)
 
