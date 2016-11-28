@@ -13,6 +13,7 @@ FALTA DECIDIR EL TIPO DE TRANSFORMADA A USAR.
 #cambiar los import de numpy y pywt a lo necesario
 import numpy as np
 import pywt as wt
+from ctypes import c_int32
 from pyaudio import paInt16
 from pyaudio import PyAudio
 
@@ -26,6 +27,7 @@ def arraySecuencial(data):
     frames = []
     for i in range(0, len(data)):
         frames.append(data[i])
+    #print(len(frames))
     return frames
 
 def transform(frames):
@@ -56,44 +58,43 @@ def transform(frames):
             temp = ((entero & (2**comp)) >> comp)
             #print(bin(temp))
             bloque += (temp << (32 - n)) # cada bloque tendra 32 bits
-            #print(bin(bloque))
             n = n+1
-            if n == 31:
+            if n == 32:
                 #print(plano)
                 planos[plano].append(bloque)
-                
+                #print("este es el bloque en binario ",bin(bloque))
                 n = 0
                 bloque = 0
+    return planos
     
-
-    print(len(planos))
-    for plane in planos:
-        print("este es el plano nº ",plane)
-        pepe = []
-        posicion = 32-plane
-        m = 0
-        numero = 0
-        for bloke in planos[plane]:
-            pass
-            #print(bin(bloke))
-
-            #binario = ((bloke & (2**posicion)) >> posicion)
-            #print(binario)
-            #numero += (binario << (32 - m))
-            #m = m+1
-            #if m == 31:
-             #   pepe.append(numero)
-              #  m = 0
-               # numero = 0
-            #print(numero)
-
-
+def detransform(diciPlanos):
+    destransformacion = []
+    n = 31
+    cuentaBloque = 0
+    #comp = 32-n
+    for plano in diciPlanos:
+        
+        if plano == 0:
+            for bloque in diciPlanos[plano]:
+                print("el bloque nº ",cuentaBloque,"del plano",plano)
+                print(bloque)
+                #plano[cuentaBloque]
+                for bit in reversed(range(0,32)):
+                    temp = ((bloque & (2**bit)) >> bit)
+                    temp = c_int32(temp << n)
+                    destransformacion.append(temp.value)
+                cuentaBloque = cuentaBloque + 1   
+            print(destransformacion)
+        
+        for x in destransformacion:
+            
 
         #print("aqui termina un plano")
 
             #tempo = (y & (2**x) >> x)
             #print(tempo)
 
+        cuentaBloque = 0
 
 
 
@@ -115,11 +116,15 @@ def main():
                     rate=RATE,
                     input=True,
                     frames_per_buffer=CHUNK)
-    data = stream.read(1024)
+    data = stream.read(512)
+    #print(len(data))
     #data = [5, 12, 3, 6]
     #data = [0, 0, 0, 0]
     frames = arraySecuencial(data)
-    transform(frames)
+    
+    diciPlanos = transform(frames)
+
+    detransform(diciPlanos)
 
 if __name__ == '__main__':
     main()
