@@ -32,7 +32,7 @@ def arraySecuencial(data):
 
 def transform(frames):
     """
-    realiza la TRANSFORMADA, normaliza y separa los datos en 
+    realiza la TRANSFORMADA, normaliza y separa los datos en
     las colecciones despues pega las colecciones en una sola
     """
     coeffs = wt.wavedec(frames, 'db1', level=2)
@@ -41,65 +41,66 @@ def transform(frames):
     for i in coeffs:
         for e in i:
             transformada.append(int(round(e)))
+    print(transformada)
 
-    #print(transformada)
-    #print(len(transformada))
     planos = {}
     for plano in range(0, 32):
-        comp = 32-plano
-        
+        comp = 31-plano
+
         n = 0
         bloque = 0
         planos[plano] = []
-        #print(planos)
-        #print("caca", plano)
+
         for entero in transformada:
-            #print(bin(entero & (2**comp)))
-            temp = ((entero & (2**comp)) >> comp)
-            #print(bin(temp))
-            bloque += (temp << (32 - n)) # cada bloque tendra 32 bits
+            if plano == 0:
+                temp = ((entero & (2**comp)) >> comp)
+            else:
+                temp = ((abs(entero) & (2**comp)) >> comp)
+            bloque += (temp << (31 - n)) # cada bloque tendra 32 bits
             n = n+1
             if n == 32:
-                #print(plano)
                 planos[plano].append(bloque)
-                #print("este es el bloque en binario ",bin(bloque))
                 n = 0
                 bloque = 0
     return planos
-    
+
 def detransform(diciPlanos):
     destransformacion = []
-    n = 31
-    cuentaBloque = 0
-    #comp = 32-n
     for plano in diciPlanos:
-        
+        n = 31-plano
         if plano == 0:
             for bloque in diciPlanos[plano]:
-                print("el bloque nº ",cuentaBloque,"del plano",plano)
-                print(bloque)
-                #plano[cuentaBloque]
                 for bit in reversed(range(0,32)):
                     temp = ((bloque & (2**bit)) >> bit)
-                    temp = c_int32(temp << n)
+                    if temp == 1:
+                        #un truco para almacenar el signo ya que es imposible almacenar -0
+                        temp = c_int32(-1)
+                    else:
+                        temp = c_int32(temp << n)
+
                     destransformacion.append(temp.value)
-                cuentaBloque = cuentaBloque + 1   
-            print(destransformacion)
-        
-        for x in destransformacion:
-            
-
-        #print("aqui termina un plano")
-
-            #tempo = (y & (2**x) >> x)
-            #print(tempo)
-
-        cuentaBloque = 0
-
+        else:
+            cuentaBloque = 0
+            for bloque in diciPlanos[plano]:
+                for bit in reversed(range(0,32)):
+                    temp = ((bloque & (2**bit)) >> bit)
+                    temp = temp << n
+                    if destransformacion[cuentaBloque] >= 0:
+                        destransformacion[cuentaBloque] += temp
+                    else:
+                        destransformacion[cuentaBloque] -= temp
+                    cuentaBloque += 1
 
 
-    #print(len(transformada))
-    #print(planos)
+    #resto 1 por que hemos almacenado -1 para los negativos
+    destransformacion = list(map(sumaUnoNegativos, destransformacion))
+    return destransformacion
+
+def sumaUnoNegativos(x):
+    if x < 0:
+        return x+1
+    return x
+
 
     #aqui sacamos los planos de bits y devolvemos un
     #array de arrays de planos de bits
@@ -107,7 +108,7 @@ def detransform(diciPlanos):
 def main():
     """modulo de pruebas
 
-    Aqui van los datos para realizar las pruebas sobre el 
+    Aqui van los datos para realizar las pruebas sobre el
     modulo aislado Tambien sirve como ejemplo de uso
     """
     p = PyAudio()
@@ -121,16 +122,12 @@ def main():
     #data = [5, 12, 3, 6]
     #data = [0, 0, 0, 0]
     frames = arraySecuencial(data)
-    
-    diciPlanos = transform(frames)
 
-    detransform(diciPlanos)
+    diciPlanos = transform(frames)
+    #print(diciPlanos)
+
+    dest = detransform(diciPlanos)
+    print("detransformada", dest)
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
