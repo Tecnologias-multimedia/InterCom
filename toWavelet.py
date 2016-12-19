@@ -22,7 +22,7 @@ FORMAT = paInt16
 CHANNELS = 1
 RATE = 44100
 VALORES = 32
-ITERACIONESDWT = 5
+ITERACIONESDWT = 9
 
 def arraySecuencial(data):
     frames = []
@@ -96,13 +96,17 @@ def detransform(diciPlanos):
 
     coeffs = []
     stack = 0
+    w = wt.Wavelet('db1')
+    values = wt.dwt_max_level(len(destransformacion), w) - ITERACIONESDWT
     for x in range(0,ITERACIONESDWT+1):
-        trick = 32 * 2 ** x
+        trick = ((2 ** (values)) * (2 ** x))
         #print(trick)
         coeffs.append(destransformacion[stack:trick])
         stack = trick
+    #print(len(destransformacion))
+    #print(len(coeffs))
     destransformacion = wt.waverec(coeffs, 'db1')
-    #print(coeffs)
+    print(list(map(len, coeffs)))
     #print(destransformacion)
     destransformacion = destransformacion.tolist()
     destransformacion = list(map(round, destransformacion))
@@ -135,12 +139,12 @@ def main():
     #data = [5, 12, 3, 6]
     #data = [0, 0, 0, 0]
     frames = arraySecuencial(data)
-    print("datos grabados: ", frames)
+    #print("datos grabados: ", frames)
     diciPlanos = transform(frames)
     #print(diciPlanos)
-    print(" ")
+    #print(" ")
     dest = detransform(diciPlanos)
-    print("detransformada: ", dest)
+    #print("detransformada: ", dest)
 
 if __name__ == '__main__':
     main()
