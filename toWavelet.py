@@ -22,12 +22,13 @@ FORMAT = paInt16
 CHANNELS = 1
 RATE = 44100
 VALORES = 32
+ITERACIONESDWT = 5
 
 def arraySecuencial(data):
     frames = []
     for i in range(0, len(data)):
         frames.append(data[i])
-    #print(len(frames))
+    #print(frames)
     return frames
 
 def transform(frames):
@@ -35,13 +36,13 @@ def transform(frames):
     realiza la TRANSFORMADA, normaliza y separa los datos en
     las colecciones despues pega las colecciones en una sola
     """
-    coeffs = wt.wavedec(frames, 'db1', level=2)
+    coeffs = wt.wavedec(frames, 'db1', level=ITERACIONESDWT)
     #print(coeffs)
     transformada = []
     for i in coeffs:
         for e in i:
             transformada.append(int(round(e)))
-    print(transformada)
+    #print(transformada)
 
     planos = {}
     for plano in range(0, 32):
@@ -90,17 +91,29 @@ def detransform(diciPlanos):
                     else:
                         destransformacion[cuentaBloque] -= temp
                     cuentaBloque += 1
-
-
     #resto 1 por que hemos almacenado -1 para los negativos
     destransformacion = list(map(sumaUnoNegativos, destransformacion))
+
+    coeffs = []
+    stack = 0
+    for x in range(0,ITERACIONESDWT+1):
+        trick = 32 * 2 ** x
+        #print(trick)
+        coeffs.append(destransformacion[stack:trick])
+        stack = trick
+    destransformacion = wt.waverec(coeffs, 'db1')
+    #print(coeffs)
+    #print(destransformacion)
+    destransformacion = destransformacion.tolist()
+    destransformacion = list(map(round, destransformacion))
+
+
     return destransformacion
 
 def sumaUnoNegativos(x):
     if x < 0:
         return x+1
     return x
-
 
     #aqui sacamos los planos de bits y devolvemos un
     #array de arrays de planos de bits
@@ -122,12 +135,12 @@ def main():
     #data = [5, 12, 3, 6]
     #data = [0, 0, 0, 0]
     frames = arraySecuencial(data)
-
+    print("datos grabados: ", frames)
     diciPlanos = transform(frames)
     #print(diciPlanos)
-
+    print(" ")
     dest = detransform(diciPlanos)
-    print("detransformada", dest)
+    print("detransformada: ", dest)
 
 if __name__ == '__main__':
     main()

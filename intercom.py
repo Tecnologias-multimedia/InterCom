@@ -8,6 +8,7 @@ from pyaudio import PyAudio
 import socket
 import threading
 import toWavelet
+from struct import *
 # import sys
 
 CHUNK = 1024
@@ -56,10 +57,9 @@ def transmiter(ip_transm, port_transm):
     while True:
         # grabar sonido comprimirlo y etc y enviarlo.
         data = stream.read(1024)
+        # importante -> print(unpack('<1024h', data))
         sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
 
-if __name__ == '__main__':
-    main()
 
 def main():
     """main
@@ -84,3 +84,6 @@ def main():
     t.daemon = True
     t.start()
     esperandoEntradaDatos = input("Introduce algo mas: ")
+
+if __name__ == '__main__':
+    main()
