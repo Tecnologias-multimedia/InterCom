@@ -3,15 +3,15 @@
 
 Modulo que recibe el sonido raw grabado en intercom
 y lo convierte primero en un array de enteros,
-despues le aplica la transformada (esta ha de ser normalizada a enteros) y por ultimo
-separa los datos ya transformados por planos de bits/bytes - corregir
+despues le aplica la transformada (esta ha de ser normalizada a enteros) y por
+último separa los datos ya transformados por planos de bits/bytes - corregir
 Estos planos son enviados en los paquetes upd para su proxima reconstruccion
 
 FALTA DECIDIR EL TIPO DE TRANSFORMADA A USAR.
 """
 
-#cambiar los import de numpy y pywt a lo necesario
-import numpy as np
+# Cambiar los import de numpy y pywt a lo necesario
+# import numpy as np
 import pywt as wt
 from ctypes import c_int32
 from pyaudio import paInt16
@@ -24,12 +24,14 @@ RATE = 44100
 VALORES = 32
 ITERACIONESDWT = 9
 
+
 def arraySecuencial(data):
     frames = []
     for i in range(0, len(data)):
         frames.append(data[i])
-    #print(frames)
+    # print(frames)
     return frames
+
 
 def transform(frames):
     """
@@ -37,12 +39,10 @@ def transform(frames):
     las colecciones despues pega las colecciones en una sola
     """
     coeffs = wt.wavedec(frames, 'db1', level=ITERACIONESDWT)
-    #print(coeffs)
     transformada = []
     for i in coeffs:
         for e in i:
             transformada.append(int(round(e)))
-    #print(transformada)
 
     planos = {}
     for plano in range(0, 32):
@@ -57,7 +57,7 @@ def transform(frames):
                 temp = ((entero & (2**comp)) >> comp)
             else:
                 temp = ((abs(entero) & (2**comp)) >> comp)
-            bloque += (temp << (31 - n)) # cada bloque tendra 32 bits
+            bloque += (temp << (31 - n))  # Cada bloque tendra 32 bits
             n = n+1
             if n == 32:
                 planos[plano].append(bloque)
@@ -65,16 +65,18 @@ def transform(frames):
                 bloque = 0
     return planos
 
+
 def detransform(diciPlanos):
     destransformacion = []
     for plano in diciPlanos:
         n = 31-plano
         if plano == 0:
             for bloque in diciPlanos[plano]:
-                for bit in reversed(range(0,32)):
+                for bit in reversed(range(0, 32)):
                     temp = ((bloque & (2**bit)) >> bit)
                     if temp == 1:
-                        #un truco para almacenar el signo ya que es imposible almacenar -0
+                        # Un truco para almacenar el signo ya que es
+                        # imposible almacenar -0
                         temp = c_int32(-1)
                     else:
                         temp = c_int32(temp << n)
@@ -83,7 +85,7 @@ def detransform(diciPlanos):
         else:
             cuentaBloque = 0
             for bloque in diciPlanos[plano]:
-                for bit in reversed(range(0,32)):
+                for bit in reversed(range(0, 32)):
                     temp = ((bloque & (2**bit)) >> bit)
                     temp = temp << n
                     if destransformacion[cuentaBloque] >= 0:
@@ -91,36 +93,33 @@ def detransform(diciPlanos):
                     else:
                         destransformacion[cuentaBloque] -= temp
                     cuentaBloque += 1
-    #resto 1 por que hemos almacenado -1 para los negativos
+    # Resto 1 por que hemos almacenado -1 para los negativos
     destransformacion = list(map(sumaUnoNegativos, destransformacion))
 
     coeffs = []
     stack = 0
     w = wt.Wavelet('db1')
     values = wt.dwt_max_level(len(destransformacion), w) - ITERACIONESDWT
-    for x in range(0,ITERACIONESDWT+1):
+    for x in range(0, ITERACIONESDWT+1):
         trick = ((2 ** (values)) * (2 ** x))
-        #print(trick)
         coeffs.append(destransformacion[stack:trick])
         stack = trick
-    #print(len(destransformacion))
-    #print(len(coeffs))
     destransformacion = wt.waverec(coeffs, 'db1')
     print(list(map(len, coeffs)))
-    #print(destransformacion)
     destransformacion = destransformacion.tolist()
     destransformacion = list(map(round, destransformacion))
 
-
     return destransformacion
+
 
 def sumaUnoNegativos(x):
     if x < 0:
         return x+1
     return x
 
-    #aqui sacamos los planos de bits y devolvemos un
-    #array de arrays de planos de bits
+    # Aqui sacamos los planos de bits y devolvemos un
+    # Array de arrays de planos de bits
+
 
 def main():
     """modulo de pruebas
@@ -135,16 +134,11 @@ def main():
                     input=True,
                     frames_per_buffer=CHUNK)
     data = stream.read(512)
-    #print(len(data))
-    #data = [5, 12, 3, 6]
-    #data = [0, 0, 0, 0]
     frames = arraySecuencial(data)
-    #print("datos grabados: ", frames)
     diciPlanos = transform(frames)
-    #print(diciPlanos)
-    #print(" ")
-    dest = detransform(diciPlanos)
-    #print("detransformada: ", dest)
+    # dest = detransform(diciPlanos)
+    detransform(diciPlanos)
+
 
 if __name__ == '__main__':
     main()

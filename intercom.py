@@ -7,8 +7,8 @@ from pyaudio import paInt16
 from pyaudio import PyAudio
 import socket
 import threading
-import toWavelet
-from struct import *
+# import toWavelet
+# from struct import *
 # import sys
 
 CHUNK = 1024
@@ -83,7 +83,8 @@ def main():
     t = threading.Thread(target=transmiter, args=(host_transm, port_transm,))
     t.daemon = True
     t.start()
-    esperandoEntradaDatos = input("Introduce algo mas: ")
+    input("Introduce algo mas: ")
+
 
 if __name__ == '__main__':
     main()
