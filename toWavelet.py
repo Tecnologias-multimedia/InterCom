@@ -12,6 +12,7 @@ FALTA DECIDIR EL TIPO DE TRANSFORMADA A USAR.
 
 # Cambiar los import de numpy y pywt a lo necesario
 # import numpy as np
+# Prueba
 import pywt as wt
 from ctypes import c_int32
 from pyaudio import paInt16
