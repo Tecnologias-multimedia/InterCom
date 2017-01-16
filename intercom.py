@@ -7,6 +7,8 @@ from pyaudio import paInt16
 from pyaudio import PyAudio
 import socket
 import threading
+# import toWavelet
+# from struct import *
 # import sys
 
 CHUNK = 1024
@@ -55,9 +57,16 @@ def transmiter(ip_transm, port_transm):
     while True:
         # grabar sonido comprimirlo y etc y enviarlo.
         data = stream.read(1024)
+        # importante -> print(unpack('<1024h', data))
         sock_transmiter.sendto(data, (ip_transm, int(port_transm)))
 
-if __name__ == '__main__':
+
+def main():
+    """main
+
+    Esta es la parte que realmente se ejecuta para ponerse a escucha
+    y para empezar a enviar paquetes.
+    """
     # establecemos puerto de escucha
     port_receiv = input("Introduce el puerto para recibir: ")
 
@@ -74,5 +83,8 @@ if __name__ == '__main__':
     t = threading.Thread(target=transmiter, args=(host_transm, port_transm,))
     t.daemon = True
     t.start()
+    input("Introduce algo mas: ")
 
-    esperandoEntradaDatos = input("Introduce algo mas: ")
+
+if __name__ == '__main__':
+    main()
