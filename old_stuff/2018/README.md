@@ -1,2 +1,2 @@
 # intercom
-Real time pont-to-point intercomunicator
+Real time pont-to-point intercomunicator 
