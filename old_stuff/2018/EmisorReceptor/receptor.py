@@ -1,8 +1,11 @@
+#llamamos a las librerias necesarias para trabajar con puertos
+#audio e hilos
 import pyaudio
 import socket
 from threading import Thread
 
-
+#variables que tendra el audio recibido para ser el optimo tiene que ser igual
+#que el que nos envia el servidor
 FORMAT = pyaudio.paInt16
 CHUNK = 1024
 CHANNELS = 2
@@ -30,7 +33,7 @@ def reproducir(stream, CHUNK):
                     stream.write(frames.pop(0), CHUNK)
 
 
-#Hulo que reproduce lo que recibe udp
+#Hilo que reproduce lo que recibe udp
 if __name__ == "__main__":
 
     print("Receptor de Audio \n")
@@ -43,7 +46,7 @@ if __name__ == "__main__":
                     output = True,
                     frames_per_buffer = CHUNK,
                     )
-    
+    #creamos los hilos necesarios y lo que ahcen para trabajar
     Ts = Thread(target = udpStream, args=(CHUNK,))
     Tp = Thread(target = reproducir, args=(stream, CHUNK,))
     Ts.setDaemon(True)

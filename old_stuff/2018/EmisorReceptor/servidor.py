@@ -7,6 +7,7 @@ import socket
 #Libreria threading para usar hilos
 from threading import Thread
 
+#variables que tendra el audio que enviamos
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
@@ -29,9 +30,7 @@ def record(stream, CHUNK):
     while True:
         frames.append(stream.read(CHUNK))
 
-
-
-#Hilo que envia udp de lo que se graba
+#Hilos que envian udp de lo que se graba e unen el envio con la recepcion
 if __name__ == "__main__":
 
     p = pyaudio.PyAudio()
@@ -51,4 +50,3 @@ if __name__ == "__main__":
     Ts.start()
     Tr.join()
     Ts.join()
-    

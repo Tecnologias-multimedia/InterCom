@@ -1,51 +1,45 @@
+#Libreerias necesarias para recibir audio por udp
 import socket
-
 import pyaudio
 
-CHUNK = 8192
+#variables del audio para ser lo mejor posible a de ser las mismas que el servidor
+CHUNK = 1024
 FORMAT = pyaudio.paInt16
-CHANNELS = 1
+CHANNELS = 2
 RATE = 44100
-RECORD_SECONDS = 5
 
-HOST = 'localhost'    # The remote host
-PORT = 50007             # The same port as used by the server
-
+#conectamos al que nos envia los datos
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((HOST, PORT))
+s.connect(("localhost", 50007))
 
+#Crear variable de pyaudio
 p = pyaudio.PyAudio()
-
+#creamos otra variable para trabajar con pyaudio
 stream = p.open(format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
                 frames_per_buffer=CHUNK)
-
+#iniciamos el audio
 stream.start_stream()
-
 
 def main():
     print("*_>recording")
-
+#ir leyendo el audio miemtras se recibe
     while True:
         try:
             data = stream.read(CHUNK)
         except Exception as e:
-           
             data = '\x00' * CHUNK
-
-        
         s.sendall(data)
 
     print("*_>done recording")
-
+#cerramos el audio terminamos con la libreria pyaudio y cerramos el trabajo con el puerto
     stream.stop_stream()
     stream.close()
     p.terminate()
     s.close()
 
-    print("*_>closed")
 
 if __name__ == '__main__':
     main()
