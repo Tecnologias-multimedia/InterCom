@@ -1,45 +1,53 @@
-#Libreerias necesarias para recibir audio por udp
+#Llamamos a la librerias de socket para utilizar udp
+# y pyaudio para enviar audio
 import socket
 import pyaudio
 
-#variables del audio para ser lo mejor posible a de ser las mismas que el servidor
+#Formato que llevara el audio, canales,...
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 2
 RATE = 44100
 
-#conectamos al que nos envia los datos
+#Recibimos audio usando udp  
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("150.214.223.20", 50007))
 
-#Crear variable de pyaudio
+#Socket escucha por el puerto indicado
+s.bind(("172.20.32.1", 50007))
+s.listen(1)
+#Si se crea la conexion hace esta parte
+conn, addr = s.accept()
+print 'Connected by', addr
+
+#Creamos una variable para pyaudio y despues
+#Cremos otra necesaria para el envio de audio
 p = pyaudio.PyAudio()
-#creamos otra variable para trabajar con pyaudio
-stream = p.open(format=FORMAT,
+stream = p.open(format=p.get_format_from_width(2),
                 channels=CHANNELS,
                 rate=RATE,
-                input=True,
+                output=True,
                 frames_per_buffer=CHUNK)
-#iniciamos el audio
+
+frames = []
+#Iniciamos el envio de audio
 stream.start_stream()
 
 def main():
-    print("*_>recording")
-#ir leyendo el audio miemtras se recibe
-    while True:
-        try:
-            data = stream.read(CHUNK)
-        except Exception as e:
-            data = '\x00' * CHUNK
-        s.sendall(data)
+#igualamos los datos a lo que recibimos de la conexion
+    data = conn.recv(CHUNK)
+#Si lo datos no son nulos escribimos esos datos es decir el audio
 
-    print("*_>done recording")
-#cerramos el audio terminamos con la libreria pyaudio y cerramos el trabajo con el puerto
+    while data != '':
+        stream.write(data)
+        data = conn.recv(CHUNK)
+        frames.append(data)
+
+#Si no hay datos paramos el audio, cerramos la conexion y terminamos de usar
+#pyaudio
     stream.stop_stream()
     stream.close()
     p.terminate()
-    s.close()
-
+    conn.close()
 
 if __name__ == '__main__':
     main()
