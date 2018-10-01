@@ -10,7 +10,7 @@ RATE = 44100
 
 #conectamos al que nos envia los datos
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("150.214.223.20", 50007))
+s.connect(("localhost", 50007))
 
 #Crear variable de pyaudio
 p = pyaudio.PyAudio()

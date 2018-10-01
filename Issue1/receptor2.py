@@ -13,7 +13,7 @@ RATE = 44100
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 #Socket escucha por el puerto indicado
-s.bind(("172.20.32.1", 50007))
+s.bind(("localhost", 50007))
 s.listen(1)
 #Si se crea la conexion hace esta parte
 conn, addr = s.accept()
