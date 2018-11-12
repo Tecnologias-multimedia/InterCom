@@ -69,7 +69,8 @@ def main():
                   max(cD2.astype(np.int16)),max(cD1.astype(np.int16))),
                   ', Min:', min(min(
                   cA5.astype(np.int16)),min(cD5.astype(np.int16)),
-                  min(cD4.astype(np.int16)),min(cD3.astype(np.int16)),min(cD2.astype(np.int16)),min(cD1.astype(np.int16))),
+                  min(cD4.astype(np.int16)),min(cD3.astype(np.int16)),
+                  min(cD2.astype(np.int16)),min(cD1.astype(np.int16))),
                   ', Entropy:', st.entropy(hist_sum)[0])
             # Calculate the inverse transform and store as int16
             # with the numpy library
