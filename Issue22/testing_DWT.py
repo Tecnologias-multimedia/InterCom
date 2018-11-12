@@ -17,7 +17,7 @@ RATE = 44100
 p = pyaudio.PyAudio()
 
 # Variable that we use to capture and broadcast audio
-stream = p.open(format=p.get_format_from_width(2),
+stream = p.open(format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
                 input=True,
