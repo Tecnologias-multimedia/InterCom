@@ -25,7 +25,7 @@ stream = p.open(format=FORMAT,
 
 
 # Function that a component passes in 32-bit planes assigned to a list
-def planos(planos):
+def array_to_planos(planos):
       b = planos.astype(np.int32)
       c = [(b & (0b1<<31)) >> 31,(b & (0b1<<30)) >> 30, (b & (0b1<<29)) >> 29, (b & (0b1<<28)) >> 28
             , (b & (0b1<<27)) >> 27, (b & (0b1<<26)) >> 26, (b & (0b1<<25)) >> 25, (b & (0b1<<24)) >> 24
