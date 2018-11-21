@@ -25,7 +25,7 @@ stream = p.open(format=FORMAT,
 
 
 # Function that a component passes in 32-bit planes assigned to a list
-def planos(planos):
+def array_to_planos(planos):
       b = planos.astype(np.int32)
       c = [(b & (0b1<<31)) >> 31,(b & (0b1<<30)) >> 30, (b & (0b1<<29)) >> 29, (b & (0b1<<28)) >> 28
             , (b & (0b1<<27)) >> 27, (b & (0b1<<26)) >> 26, (b & (0b1<<25)) >> 25, (b & (0b1<<24)) >> 24
@@ -61,12 +61,12 @@ def main():
             coeffs = pywt.wavedec(array_In, 'db1', level=5)
             cA5, cD5, cD4, cD3, cD2, cD1 = coeffs
             # Pass each component to 32-bit planes
-            cA5_planos = planos(cA5)
-            cD5_planos = planos(cD5)
-            cD4_planos = planos(cD4)
-            cD3_planos = planos(cD3)
-            cD2_planos = planos(cD2)
-            cD1_planos = planos(cD1)
+            cA5_planos = array_to_planos(cA5)
+            cD5_planos = array_to_planos(cD5)
+            cD4_planos = array_to_planes(cD4)
+            cD3_planos = array_to_planos(cD3)
+            cD2_planos = array_to_planos(cD2)
+            cD1_planos = array_to_planos(cD1)
 
             if __debug__:
                   print("cA5 uno -->",cA5.dtype)
