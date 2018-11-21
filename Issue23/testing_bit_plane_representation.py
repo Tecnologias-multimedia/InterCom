@@ -63,7 +63,7 @@ def main():
             # Pass each component to 32-bit planes
             cA5_planos = array_to_planos(cA5)
             cD5_planos = array_to_planos(cD5)
-            cD4_planos = array_to_planes(cD4)
+            cD4_planos = array_to_planos(cD4)
             cD3_planos = array_to_planos(cD3)
             cD2_planos = array_to_planos(cD2)
             cD1_planos = array_to_planos(cD1)
