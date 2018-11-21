@@ -85,7 +85,7 @@ def main():
         # Calculate the transform and store it in arrays in floats
         coeffs = pywt.wavedec(array_In, 'db1', level=args.levels)
         # Pass each component to 32-bit planes
-        coeffs_planos = planos(coeffs)
+        coeffs_planos = array_to_planos(coeffs)
         # Pass each list of list in 32 planes to original coeffs
         coeffs1 = planos_to_array(coeffs_planos)
         # Calculate the inverse transform and store as int16
