@@ -1,19 +1,12 @@
-import pyaudio            # https://pypi.org/project/PyAudio
-import numpy as np        # https://www.numpy.org
-import pywt               # https://pywavelets.readthedocs.io
-# SciPy to calculate entropy
-import scipy.stats as st
-# Argparse to receive arguments for command line
-import argparse
-# Math to calculate log in base 2
-import math
-# Multiprocessing to use process
-from multiprocessing import Process
-# Socket to send data using udp
-import socket
-
-# Declaration of variables
-FORMAT = pyaudio.paInt16
+import pyaudio                      # http://people.csail.mit.edu/hubert/pyaudio/
+import numpy as np                  # https://www.numpy.org
+import pywt                         # https://pywavelets.readthedocs.io
+#import scipy.stats as st            # https://www.scipy.org/
+import argparse                     # https://docs.python.org/3/library/argparse.html
+import math                         # https://docs.python.org/3/library/math.html
+import multiprocessing              # https://docs.python.org/3/library/multiprocessing.html
+import socket                       # https://docs.python.org/3/library/socket.html
+import time                         # https://docs.python.org/3/library/time.html
 
 # Function that take all component and passes in 32-bit planes assigned to a list
 def array_to_planos(components):
@@ -97,19 +90,18 @@ def decode(plane):
         , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
     return np.concatenate(list(zip(*a)))
 
-#Enviamos audio usando udp
-#Socket envia audio por puerto e ip indicado
-#Graba sonido y envia
-def enviar(direccionIp, port, channels, rate, chunk_size, levels):
-    udpEnviar = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def sender(direccionIp, port, channels, depth, rate, chunk_size, levels, sent):
     p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT,
+    stream = p.open(format=p.get_format_from_width(depth),
                     channels=channels,
                     rate=rate,
                     input=True,
                     frames_per_buffer=chunk_size)
 
+    udpEnviar = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     while True:
+        sent.value += 1
         # Read from the sound card Chunk to CHUNK
         data = stream.read(chunk_size, exception_on_overflow=False)
         # Pass from type bytes to int16 using the numpy library
@@ -127,16 +119,13 @@ def enviar(direccionIp, port, channels, rate, chunk_size, levels):
             udpEnviar.sendto(enviar.tobytes(), (direccionIp, port))
             
 
-#Recibimos audio usando udp
-#Socket escucha por el puerto indicado
-#Recibe datos y reproduce
-def recibir(port, channels, rate, chunk_size, levels):
+def receiver(port, channels, depth, rate, chunk_size, levels, received):
     udpRecibir = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     direccion = ('0.0.0.0', port)
     udpRecibir.bind(direccion)
 
     p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT,
+    stream = p.open(format=p.get_format_from_width(depth),
                     channels=channels,
                     rate=rate,
                     output=True,
@@ -144,6 +133,7 @@ def recibir(port, channels, rate, chunk_size, levels):
     # Create buffer 
     buffer_planes = [0]*32
     while True:
+        received.value += 1
         # receive 32 packages
         for i in range(0,32):
             plane, addr = udpRecibir.recvfrom(1025)
@@ -161,18 +151,17 @@ def recibir(port, channels, rate, chunk_size, levels):
         # to bytes
         stream.write(a_Out.tobytes())
 
-#Iniciamos dos hilos: un hilo para reproducir la entrada de socket 
-#y otro hilo para enviar grabacion 
-#Solicitamos direccion IP del host
 def main():
     # Receive parameters for command line, if not, they have default parameters 
     parser = argparse.ArgumentParser(description = 'Arguments')
-    parser.add_argument('-c', '--chunk_size', help='chunk size', type=int, default=1024)
-    parser.add_argument('-r', '--rate', help='sampling rate', type=int, default=44100)
-    parser.add_argument('-nc', '--nchannels', help='number of channels', type=int, default=1)
-    parser.add_argument('-l', '--levels', help='numbers of levels dwt', type=int, default=5)
-    parser.add_argument('-p', '--port', help='port', type=int, default=4443)
-    parser.add_argument('-ip', '--ip', help='ip', type=str, default='0.0.0.0')
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-c', '--chunk_size', help='Chunk size in bytes.', type=int, default=1024)
+    parser.add_argument('-r', '--rate', help='Sampling rate in samples/second.', type=int, default=44100)
+    parser.add_argument('-n', '--nchannels', help='Number of channels.', type=int, default=1)
+    parser.add_argument('-l', '--levels', help='Numbers of levels dwt.', type=int, default=5)
+    parser.add_argument('-p', '--port', help='Listening port in the receiver and the destination port in the sender.', type=int, default=4443)
+    parser.add_argument('-a', '--address', help='IP address of the receiver.', type=str, default='0.0.0.0')
+    parser.add_argument('-d', '--depth', help='Depth in bytes of the samples of audio.', type=int, default=2)
 
     args = parser.parse_args()
     # Check if the level of dwt stay in range
@@ -182,28 +171,34 @@ def main():
 
     # Print input parameters 
     if __debug__:
-        print('Input parameters:')
-        print('\tChunk size:',args.chunk_size)
-        print('\tSampling rate:',args.rate)
-        print('\tNumbers of channels:',args.nchannels)
-        print('\tNumbers of levels of dwt:',args.levels)
-        print('\tPort to send:',args.port)
-        print('\tAddress to send:',args.ip)
+        print('Chunk size:',args.chunk_size)
+        print('Sampling rate:',args.rate)
+        print('Numbers of channels:',args.nchannels)
+        print('Numbers of levels of dwt:',args.levels)
+        print('Port to send:',args.port)
+        print('Address to send:',args.address)
+        print('Sampling depth:', args.depth)
 
+    # Number of chunks of data sent by the sender process
+    sent_counter = multiprocessing.Value('i', 0)
 
+    # Number of chunks of data received by the receiver process
+    received_counter = multiprocessing.Value('i', 0)
+        
+    receiver_process = multiprocessing.Process(target=receiver, args=(args.port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter))
+    receiver_process.daemon = True
 
-    Tr = Process(target=recibir, args=(args.port, args.nchannels, args.rate, args.chunk_size, args.levels,))
-    Tr.daemon = True
-    Tr.start()
+    sender_process = multiprocessing.Process(target=sender, args=(args.address, args.port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter))
+    sender_process.daemon = True
 
-    print("\nGrabando...")
+    receiver_process.start()
+    sender_process.start()
 
-    Te = Process(target=enviar, args=(args.ip, args.port, args.nchannels, args.rate, args.chunk_size, args.levels,))
-    Te.daemon = True
-    Te.start()
-    Te.join()
+    #sender_process.join()
+    while True:
+        time.sleep(1)
+        print(f'Sent {sent_counter.value} chunks, received {received_counter.value} chunks')
     input()
-
 
 if __name__ == '__main__':
     main()
