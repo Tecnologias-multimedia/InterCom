@@ -1,9 +1,6 @@
-# PyAudio to capture and broadcast audio
-import pyaudio
-# NumPy to change variable types
-import numpy as np
-# Pywt to calculate Discrete Wavelet Transform (DWT)
-import pywt
+import pyaudio            # https://pypi.org/project/PyAudio
+import numpy as np        # https://www.numpy.org
+import pywt               # https://pywavelets.readthedocs.io
 # SciPy to calculate entropy
 import scipy.stats as st
 # Argparse to receive arguments for command line
