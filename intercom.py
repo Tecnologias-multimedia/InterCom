@@ -14,17 +14,41 @@ import socket                       # https://docs.python.org/3/library/socket.h
 import time                         # https://docs.python.org/3/library/time.html
 
 # Function that take all component and passes in 32-bit planes assigned to a list
-def array_to_planos(components):
-    a_components = np.concatenate(components, axis=0)   # Example: 6 components (6 individual array) in a single array
-    b = a_components.astype(np.int32)
-    list_32planes = [(b & (0b1<<31)) >> 31,(b & (0b1<<30)) >> 30, (b & (0b1<<29)) >> 29, (b & (0b1<<28)) >> 28
-            , (b & (0b1<<27)) >> 27, (b & (0b1<<26)) >> 26, (b & (0b1<<25)) >> 25, (b & (0b1<<24)) >> 24
-            , (b & (0b1<<23)) >> 23, (b & (0b1<<22)) >> 22, (b & (0b1<<21)) >> 21, (b & (0b1<<20)) >> 20
-            , (b & (0b1<<19)) >> 19, (b & (0b1<<18)) >> 18, (b & (0b1<<17)) >> 17, (b & (0b1<<16)) >> 16
-            , (b & (0b1<<15)) >> 15, (b & (0b1<<14)) >> 14, (b & (0b1<<13)) >> 13, (b & (0b1<<12)) >> 12
-            , (b & (0b1<<11)) >> 11, (b & (0b1<<10)) >> 10, (b & (0b1<<9)) >> 9, (b & (0b1<<8)) >> 8
-            , (b & (0b1<<7)) >> 7, (b & (0b1<<6)) >> 6, (b & (0b1<<5)) >> 5, (b & (0b1<<4)) >> 4
-            , (b & (0b1<<3)) >> 3, (b & (0b1<<2)) >> 2, (b & (0b1<<1)) >> 1, (b & (0b1<<0)) >> 0]
+def array_to_planos(subbands):
+    a_subbands = np.concatenate(subbands, axis=0)   # Join all subbands in a single array.
+    b = a_subbands.astype(np.int32)                 # Converts all coefficiets into int32.
+    list_32planes = [(b & (0b1<<31)) >> 31,         # Split the coeffs into bitplanes of one 1.
+                     (b & (0b1<<30)) >> 30,
+                     (b & (0b1<<29)) >> 29,
+                     (b & (0b1<<28)) >> 28,
+                     (b & (0b1<<27)) >> 27,
+                     (b & (0b1<<26)) >> 26,
+                     (b & (0b1<<25)) >> 25,
+                     (b & (0b1<<24)) >> 24,
+                     (b & (0b1<<23)) >> 23,
+                     (b & (0b1<<22)) >> 22,
+                     (b & (0b1<<21)) >> 21,
+                     (b & (0b1<<20)) >> 20,
+                     (b & (0b1<<19)) >> 19,
+                     (b & (0b1<<18)) >> 18,
+                     (b & (0b1<<17)) >> 17,
+                     (b & (0b1<<16)) >> 16,
+                     (b & (0b1<<15)) >> 15,
+                     (b & (0b1<<14)) >> 14,
+                     (b & (0b1<<13)) >> 13,
+                     (b & (0b1<<12)) >> 12,
+                     (b & (0b1<<11)) >> 11,
+                     (b & (0b1<<10)) >> 10,
+                     (b & (0b1<<9)) >> 9,
+                     (b & (0b1<<8)) >> 8,
+                     (b & (0b1<<7)) >> 7,
+                     (b & (0b1<<6)) >> 6,
+                     (b & (0b1<<5)) >> 5,
+                     (b & (0b1<<4)) >> 4,
+                     (b & (0b1<<3)) >> 3,
+                     (b & (0b1<<2)) >> 2,
+                     (b & (0b1<<1)) >> 1,
+                     (b & (0b1<<0)) >> 0]
     return list_32planes
 
 def encode(plane):
@@ -106,13 +130,12 @@ def sender(direccionIp, port, channels, depth, rate, chunk_size, levels, sent):
     udpEnviar = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     while True:
-        sent.value += 1
-        # Read from the sound card Chunk to CHUNK
-        data = stream.read(chunk_size, exception_on_overflow=False)
-        # Pass from type bytes to int16 using the numpy library
-        array_In = np.frombuffer(data, dtype=np.int16)
-        # Calculate the transform and store it in arrays in floats
-        coeffs = pywt.wavedec(array_In, 'db1', level=levels)
+        sent.value += 1                                               # Number of sent chunks.
+        data = stream.read(chunk_size, exception_on_overflow=False)   # Read a chunk from the sound card.
+        array_In = np.frombuffer(data, dtype=np.int16)                # Converts the chunk to a Numpy array.
+        coeffs = pywt.wavedec(array_In, 'db1', level=levels)          # Multilevel forward wavelet transform.
+                                                                      # coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1] : list,
+                                                                      # where n=levels.
         # Pass each component to 32-bit planes
         coeffs_planos = array_to_planos(coeffs) # Me devuelve una lista de 32, con 1024 muestras numericas entre 0 y 1
         # Send 32-bit planes
