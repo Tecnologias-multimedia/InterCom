@@ -23,7 +23,7 @@ Task 2. Player
 2.1. Play the chunk.
 2.2. Get the next chunk from the buffer.
 
-Task 3. SamplerAndSender:
+Task 3. SamplerAndSender
 
 1. Forever:
 1.1. Sample a chunk.
