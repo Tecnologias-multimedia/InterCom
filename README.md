@@ -8,6 +8,7 @@ The software is written in Python 3, and therefore, you should be able to run it
 
 ## Intercom without data-flow control.
 
+```
 Task 1. Receiver
 
 1. Forever:
@@ -28,7 +29,7 @@ Task 3. SamplerAndSender:
 1.1. Sample a chunk.
 1.2. Generate the sequence of compressed packets, one for each quality layer.
 1.3. Send the sequence of packets.
-
+```
 
 ## Resources
 
