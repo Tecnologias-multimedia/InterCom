@@ -162,6 +162,13 @@ def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent, max_
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)   # Read a chunk from the sound card.
         samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
+        if __debug__:
+            counter = 0
+            for i in samples:
+                print(i)
+                counter += 1
+                if counter > 10:
+                    break
         max_sent.value = np.max(np.abs(samples))
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
@@ -240,7 +247,7 @@ def main():
     #sender_process.join()
     while True:
         time.sleep(1)
-        print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks")
+        print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks, max_sent={max_sent.value}, max_received={max_received.value}")
         max_sent.value = 0
         max_received.value = 0
     input()
