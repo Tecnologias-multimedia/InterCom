@@ -55,37 +55,37 @@ def create_bitplanes(subbands):
 # INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
 # OUTPUT: Returns a list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
 def create_subbands(bitplanes, dwt_levels):
-    a = (bitplanes[31]<<31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
-         bitplanes[30]<<30 |
-         bitplanes[29]<<29 |
-         bitplanes[28]<<28 |
-         bitplanes[27]<<27 |
-         bitplanes[26]<<26 |
-         bitplanes[25]<<25 | 
-         bitplanes[24]<<24 |
-         bitplanes[23]<<23 |
-         bitplanes[22]<<22 |
-         bitplanes[21]<<21 |
-         bitplanes[20]<<20 |
-         bitplanes[19]<<19 |
-         bitplanes[18]<<18 | 
-         bitplanes[17]<<17 |
-         bitplanes[16]<<16 |
-         bitplanes[15]<<15 |
-         bitplanes[14]<<14 |
-         bitplanes[13]<<13 |
-         bitplanes[12]<<12 |
-         bitplanes[11]<<11 |
-         bitplanes[10]<<10 |
-         bitplanes[ 9]<< 9 |
-         bitplanes[ 8]<< 8 |
-         bitplanes[ 7]<< 7 |
-         bitplanes[ 6]<< 6 |
-         bitplanes[ 5]<< 5 |
-         bitplanes[ 4]<< 4 |
-         bitplanes[ 3]<< 3 |
-         bitplanes[ 2]<< 2 |
-         bitplanes[ 1]<< 1 |
+    a = (bitplanes[31] << 31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
+         bitplanes[30] << 30 |
+         bitplanes[29] << 29 |
+         bitplanes[28] << 28 |
+         bitplanes[27] << 27 |
+         bitplanes[26] << 26 |
+         bitplanes[25] << 25 | 
+         bitplanes[24] << 24 |
+         bitplanes[23] << 23 |
+         bitplanes[22] << 22 |
+         bitplanes[21] << 21 |
+         bitplanes[20] << 20 |
+         bitplanes[19] << 19 |
+         bitplanes[18] << 18 | 
+         bitplanes[17] << 17 |
+         bitplanes[16] << 16 |
+         bitplanes[15] << 15 |
+         bitplanes[14] << 14 |
+         bitplanes[13] << 13 |
+         bitplanes[12] << 12 |
+         bitplanes[11] << 11 |
+         bitplanes[10] << 10 |
+         bitplanes[ 9] <<  9 |
+         bitplanes[ 8] <<  8 |
+         bitplanes[ 7] <<  7 |
+         bitplanes[ 6] <<  6 |
+         bitplanes[ 5] <<  5 |
+         bitplanes[ 4] <<  4 |
+         bitplanes[ 3] <<  3 |
+         bitplanes[ 2] <<  2 |
+         bitplanes[ 1] <<  1 |
          bitplanes[ 0]).astype(np.int32).astype(float)
     # Now, create the subbands splitting this array.
     subbands = []
@@ -148,40 +148,39 @@ def decode(plane):
         , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
     return np.concatenate(list(zip(*a)))
 
-def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent, max_sent):
-    p = pyaudio.PyAudio()                                             # Create the audio handler.
-    stream = p.open(format=p.get_format_from_width(depth),            # Configure the sound card.
-                    channels=channels,
-                    rate=rate,
-                    input=True,
-                    frames_per_buffer=chunk_size)
-
+def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max_sent):
+    audio = pyaudio.PyAudio()                                      # Create the audio handler.
+    stream = audio.open(format=audio.get_format_from_width(depth), # Configure the sound card.
+                        channels=nchannels,
+                        rate=rate,
+                        input=True,
+                        frames_per_buffer=chunk_size)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
 
     while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
-        data = stream.read(chunk_size, exception_on_overflow=False)   # Read a chunk from the sound card.
+        data = stream.read(chunk_size, exception_on_overflow=False)    # Read a chunk from the sound card.
         samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
-        if __debug__:
-            counter = 0
-            for i in samples:
-                print(i)
-                counter += 1
-                if counter > 10:
-                    break
+        #if __debug__:
+        #    counter = 0
+        #    for i in samples:
+        #        print('i ' + str(i))
+        #        counter += 1
+        #        if counter > 10:
+        #            break
         max_sent.value = np.max(np.abs(samples))
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
         for i in range(32):                                           # For all bitplanes.
             sock.sendto(bitplanes[i].tobytes(), (IPaddr, port))       # Send the bitplane.
 
-def receive(port, channels, depth, rate, chunk_size, dwt_levels, received, max_received):
-    p = pyaudio.PyAudio()
-    stream = p.open(format=p.get_format_from_width(depth),
-                    channels=channels,
-                    rate=rate,
-                    output=True,
-                    frames_per_buffer=chunk_size)
+def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_received):
+    audio = pyaudio.PyAudio()                                      # Create the audio handler.
+    stream = audio.open(format=audio.get_format_from_width(depth), # Configure the sound card.
+                        channels=nchannels,
+                        rate=rate,
+                        output=True,
+                        frames_per_buffer=chunk_size)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listening_at = ("0.0.0.0", port)
@@ -196,6 +195,14 @@ def receive(port, channels, depth, rate, chunk_size, dwt_levels, received, max_r
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
+        samples = np.random.rand(1024).astype(np.int16)
+        if __debug__:
+            counter = 0
+            for i in samples:
+                print('o ' + str(i))
+                counter += 1
+                if counter > 10:
+                    break            
         max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
 
@@ -234,17 +241,16 @@ def main():
     received_counter = multiprocessing.Value("i", 0) # Number of chunks of data received by the receiver process.
     max_sent = multiprocessing.Value("i", 0)         # Max sample sent (in absolute value).
     max_received = multiprocessing.Value("i", 0)     # Max sample received (in absolute value).
-        
-    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter, max_received))
+
+    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.depth, args.nchannels, args.rate, args.chunk_size, args.levels, received_counter, max_received))
     receiver_process.daemon = True
 
-    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter, max_sent))
+    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.depth, args.nchannels, args.rate, args.chunk_size, args.levels, sent_counter, max_sent))
     sender_process.daemon = True
 
     receiver_process.start()
     sender_process.start()
 
-    #sender_process.join()
     while True:
         time.sleep(1)
         print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks, max_sent={max_sent.value}, max_received={max_received.value}")
