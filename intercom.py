@@ -148,7 +148,7 @@ def decode(plane):
         , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
     return np.concatenate(list(zip(*a)))
 
-def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent):
+def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent, max_sent):
     p = pyaudio.PyAudio()                                             # Create the audio handler.
     stream = p.open(format=p.get_format_from_width(depth),            # Configure the sound card.
                     channels=channels,
@@ -161,13 +161,14 @@ def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent):
     while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)   # Read a chunk from the sound card.
-        array_In = np.frombuffer(data, dtype=np.int16)                # Converts the chunk to a Numpy array.
-        coeffs = pywt.wavedec(array_In, "db1", level=dwt_levels)      # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
+        samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
+        max_sent.value = np.max(np.abs(samples))
+        coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
         for i in range(32):                                           # For all bitplanes.
             sock.sendto(bitplanes[i].tobytes(), (IPaddr, port))       # Send the bitplane.
 
-def receive(port, channels, depth, rate, chunk_size, dwt_levels, received):
+def receive(port, channels, depth, rate, chunk_size, dwt_levels, received, max_received):
     p = pyaudio.PyAudio()
     stream = p.open(format=p.get_format_from_width(depth),
                     channels=channels,
@@ -182,12 +183,13 @@ def receive(port, channels, depth, rate, chunk_size, dwt_levels, received):
     # Create buffer
     bitplanes = [None]*32
     while True:
-        received.value += 1
         for i in range(31,-1,-1):
             bitplane, addr = sock.recvfrom(4096)
             bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
+        received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
+        max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
 
 def main():
@@ -220,16 +222,16 @@ def main():
         print(f"Interlocutor's port: {args.interlocutor_port}")
         print(f"Interlocutor's address: {args.interlocutor_address}")
 
-    # Number of chunks of data sent by the sender process
-    sent_counter = multiprocessing.Value("i", 0)
-
-    # Number of chunks of data received by the receiver process
-    received_counter = multiprocessing.Value("i", 0)
+    # Shared variables.
+    sent_counter = multiprocessing.Value("i", 0)     # Number of chunks of data sent by the sender process.
+    received_counter = multiprocessing.Value("i", 0) # Number of chunks of data received by the receiver process.
+    max_sent = multiprocessing.Value("i", 0)         # Max sample sent (in absolute value).
+    max_received = multiprocessing.Value("i", 0)     # Max sample received (in absolute value).
         
-    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter))
+    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter, max_received))
     receiver_process.daemon = True
 
-    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter))
+    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter, max_sent))
     sender_process.daemon = True
 
     receiver_process.start()
@@ -239,6 +241,8 @@ def main():
     while True:
         time.sleep(1)
         print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks")
+        max_sent.value = 0
+        max_received.value = 0
     input()
 
 if __name__ == "__main__":
