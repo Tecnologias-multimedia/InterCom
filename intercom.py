@@ -18,75 +18,75 @@ import time                         # https://docs.python.org/3/library/time.htm
 def create_bitplanes(subbands):
     a = np.concatenate(subbands, axis=0)                   # Join all subbands in a single array. a: numpy.ndarray, a[0]: numpy.float64.
     b = a.astype(np.int32)                                 # Converts all coefficiets into int32. b: numpy.ndarray, b[0]: numpy.int32.
-    bitplanes = [((b & (0b1<<31)) >> 31).astype(np.int8),  # Split the coeffs into bitplanes.
-                 ((b & (0b1<<30)) >> 30).astype(np.int8),
-                 ((b & (0b1<<29)) >> 29).astype(np.int8),
-                 ((b & (0b1<<28)) >> 28).astype(np.int8),
-                 ((b & (0b1<<27)) >> 27).astype(np.int8),
-                 ((b & (0b1<<26)) >> 26).astype(np.int8),
-                 ((b & (0b1<<25)) >> 25).astype(np.int8),
-                 ((b & (0b1<<24)) >> 24).astype(np.int8),
-                 ((b & (0b1<<23)) >> 23).astype(np.int8),
-                 ((b & (0b1<<22)) >> 22).astype(np.int8),
-                 ((b & (0b1<<21)) >> 21).astype(np.int8),
-                 ((b & (0b1<<20)) >> 20).astype(np.int8),
-                 ((b & (0b1<<19)) >> 19).astype(np.int8),
-                 ((b & (0b1<<18)) >> 18).astype(np.int8),
-                 ((b & (0b1<<17)) >> 17).astype(np.int8),
-                 ((b & (0b1<<16)) >> 16).astype(np.int8),
-                 ((b & (0b1<<15)) >> 15).astype(np.int8),
-                 ((b & (0b1<<14)) >> 14).astype(np.int8),
-                 ((b & (0b1<<13)) >> 13).astype(np.int8),
-                 ((b & (0b1<<12)) >> 12).astype(np.int8),
-                 ((b & (0b1<<11)) >> 11).astype(np.int8),
-                 ((b & (0b1<<10)) >> 10).astype(np.int8),
-                 ((b & (0b1<< 9)) >>  9).astype(np.int8),
-                 ((b & (0b1<< 8)) >>  8).astype(np.int8),
-                 ((b & (0b1<< 7)) >>  7).astype(np.int8),
-                 ((b & (0b1<< 6)) >>  6).astype(np.int8),
-                 ((b & (0b1<< 5)) >>  5).astype(np.int8),
-                 ((b & (0b1<< 4)) >>  4).astype(np.int8),
-                 ((b & (0b1<< 3)) >>  3).astype(np.int8),
-                 ((b & (0b1<< 2)) >>  2).astype(np.int8),
-                 ((b & (0b1<< 1)) >>  1).astype(np.int8),
-                 ( b &  0b1)            .astype(np.int8)]
+    bitplanes = [((b & (0b1 << 31)) >> 31).astype(np.int8),  # Split the coeffs into bitplanes.
+                 ((b & (0b1 << 30)) >> 30).astype(np.int8),
+                 ((b & (0b1 << 29)) >> 29).astype(np.int8),
+                 ((b & (0b1 << 28)) >> 28).astype(np.int8),
+                 ((b & (0b1 << 27)) >> 27).astype(np.int8),
+                 ((b & (0b1 << 26)) >> 26).astype(np.int8),
+                 ((b & (0b1 << 25)) >> 25).astype(np.int8),
+                 ((b & (0b1 << 24)) >> 24).astype(np.int8),
+                 ((b & (0b1 << 23)) >> 23).astype(np.int8),
+                 ((b & (0b1 << 22)) >> 22).astype(np.int8),
+                 ((b & (0b1 << 21)) >> 21).astype(np.int8),
+                 ((b & (0b1 << 20)) >> 20).astype(np.int8),
+                 ((b & (0b1 << 19)) >> 19).astype(np.int8),
+                 ((b & (0b1 << 18)) >> 18).astype(np.int8),
+                 ((b & (0b1 << 17)) >> 17).astype(np.int8),
+                 ((b & (0b1 << 16)) >> 16).astype(np.int8),
+                 ((b & (0b1 << 15)) >> 15).astype(np.int8),
+                 ((b & (0b1 << 14)) >> 14).astype(np.int8),
+                 ((b & (0b1 << 13)) >> 13).astype(np.int8),
+                 ((b & (0b1 << 12)) >> 12).astype(np.int8),
+                 ((b & (0b1 << 11)) >> 11).astype(np.int8),
+                 ((b & (0b1 << 10)) >> 10).astype(np.int8),
+                 ((b & (0b1 <<  9)) >>  9).astype(np.int8),
+                 ((b & (0b1 <<  8)) >>  8).astype(np.int8),
+                 ((b & (0b1 <<  7)) >>  7).astype(np.int8),
+                 ((b & (0b1 <<  6)) >>  6).astype(np.int8),
+                 ((b & (0b1 <<  5)) >>  5).astype(np.int8),
+                 ((b & (0b1 <<  4)) >>  4).astype(np.int8),
+                 ((b & (0b1 <<  3)) >>  3).astype(np.int8),
+                 ((b & (0b1 <<  2)) >>  2).astype(np.int8),
+                 ((b & (0b1 <<  1)) >>  1).astype(np.int8),
+                 ( b &  0b1)              .astype(np.int8)]
     return bitplanes
 
 # INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
 # OUTPUT: Returns a list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
 def create_subbands(bitplanes, dwt_levels):
-    a = (bitplanes[31] << 31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
-         bitplanes[30] << 30 |
-         bitplanes[29] << 29 |
-         bitplanes[28] << 28 |
-         bitplanes[27] << 27 |
-         bitplanes[26] << 26 |
-         bitplanes[25] << 25 | 
-         bitplanes[24] << 24 |
-         bitplanes[23] << 23 |
-         bitplanes[22] << 22 |
-         bitplanes[21] << 21 |
-         bitplanes[20] << 20 |
-         bitplanes[19] << 19 |
-         bitplanes[18] << 18 | 
-         bitplanes[17] << 17 |
-         bitplanes[16] << 16 |
-         bitplanes[15] << 15 |
-         bitplanes[14] << 14 |
-         bitplanes[13] << 13 |
-         bitplanes[12] << 12 |
-         bitplanes[11] << 11 |
-         bitplanes[10] << 10 |
-         bitplanes[ 9] <<  9 |
-         bitplanes[ 8] <<  8 |
-         bitplanes[ 7] <<  7 |
-         bitplanes[ 6] <<  6 |
-         bitplanes[ 5] <<  5 |
-         bitplanes[ 4] <<  4 |
-         bitplanes[ 3] <<  3 |
-         bitplanes[ 2] <<  2 |
-         bitplanes[ 1] <<  1 |
-         bitplanes[ 0]).astype(np.int32).astype(float)
+    a = (bitplanes[31].astype(np.int32) << 31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
+         bitplanes[30].astype(np.int32) << 30 |
+         bitplanes[29].astype(np.int32) << 29 |
+         bitplanes[28].astype(np.int32) << 28 |
+         bitplanes[27].astype(np.int32) << 27 |
+         bitplanes[26].astype(np.int32) << 26 |
+         bitplanes[25].astype(np.int32) << 25 | 
+         bitplanes[24].astype(np.int32) << 24 |
+         bitplanes[23].astype(np.int32) << 23 |
+         bitplanes[22].astype(np.int32) << 22 |
+         bitplanes[21].astype(np.int32) << 21 |
+         bitplanes[20].astype(np.int32) << 20 |
+         bitplanes[19].astype(np.int32) << 19 |
+         bitplanes[18].astype(np.int32) << 18 | 
+         bitplanes[17].astype(np.int32) << 17 |
+         bitplanes[16].astype(np.int32) << 16 |
+         bitplanes[15].astype(np.int32) << 15 |
+         bitplanes[14].astype(np.int32) << 14 |
+         bitplanes[13].astype(np.int32) << 13 |
+         bitplanes[12].astype(np.int32) << 12 |
+         bitplanes[11].astype(np.int32) << 11 |
+         bitplanes[10].astype(np.int32) << 10 |
+         bitplanes[ 9].astype(np.int32) <<  9 |
+         bitplanes[ 8].astype(np.int32) <<  8 |
+         bitplanes[ 7].astype(np.int32) <<  7 |
+         bitplanes[ 6].astype(np.int32) <<  6 |
+         bitplanes[ 5].astype(np.int32) <<  5 |
+         bitplanes[ 4].astype(np.int32) <<  4 |
+         bitplanes[ 3].astype(np.int32) <<  3 |
+         bitplanes[ 2].astype(np.int32) <<  2 |
+         bitplanes[ 1].astype(np.int32) <<  1 |
+         bitplanes[ 0].astype(np.int32)).astype(np.int32).astype(float)
     # Now, create the subbands splitting this array.
     subbands = []
     buf = []
@@ -195,14 +195,6 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
-        samples = np.random.rand(1024).astype(np.int16)
-        if __debug__:
-            counter = 0
-            for i in samples:
-                print('o ' + str(i))
-                counter += 1
-                if counter > 10:
-                    break            
         max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
 
