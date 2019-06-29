@@ -1,7 +1,7 @@
 # intercom.py
-
-# P2P real-time audio/video sender and receiver. Extra info at:
 # https://github.com/Tecnologias-multimedia/intercom
+#
+# P2P real-time audio/video sender and receiver.
 
 import pyaudio                      # http://people.csail.mit.edu/hubert/pyaudio/
 import numpy as np                  # https://www.numpy.org
@@ -13,43 +13,94 @@ import multiprocessing              # https://docs.python.org/3/library/multipro
 import socket                       # https://docs.python.org/3/library/socket.html
 import time                         # https://docs.python.org/3/library/time.html
 
-# Function that take all component and passes in 32-bit planes assigned to a list
-def array_to_planos(subbands):
-    a_subbands = np.concatenate(subbands, axis=0)   # Join all subbands in a single array.
-    b = a_subbands.astype(np.int32)                 # Converts all coefficiets into int32.
-    list_32planes = [(b & (0b1<<31)) >> 31,         # Split the coeffs into bitplanes of one 1.
-                     (b & (0b1<<30)) >> 30,
-                     (b & (0b1<<29)) >> 29,
-                     (b & (0b1<<28)) >> 28,
-                     (b & (0b1<<27)) >> 27,
-                     (b & (0b1<<26)) >> 26,
-                     (b & (0b1<<25)) >> 25,
-                     (b & (0b1<<24)) >> 24,
-                     (b & (0b1<<23)) >> 23,
-                     (b & (0b1<<22)) >> 22,
-                     (b & (0b1<<21)) >> 21,
-                     (b & (0b1<<20)) >> 20,
-                     (b & (0b1<<19)) >> 19,
-                     (b & (0b1<<18)) >> 18,
-                     (b & (0b1<<17)) >> 17,
-                     (b & (0b1<<16)) >> 16,
-                     (b & (0b1<<15)) >> 15,
-                     (b & (0b1<<14)) >> 14,
-                     (b & (0b1<<13)) >> 13,
-                     (b & (0b1<<12)) >> 12,
-                     (b & (0b1<<11)) >> 11,
-                     (b & (0b1<<10)) >> 10,
-                     (b & (0b1<<9)) >> 9,
-                     (b & (0b1<<8)) >> 8,
-                     (b & (0b1<<7)) >> 7,
-                     (b & (0b1<<6)) >> 6,
-                     (b & (0b1<<5)) >> 5,
-                     (b & (0b1<<4)) >> 4,
-                     (b & (0b1<<3)) >> 3,
-                     (b & (0b1<<2)) >> 2,
-                     (b & (0b1<<1)) >> 1,
-                     (b & (0b1<<0)) >> 0]
-    return list_32planes
+# INPUT: A list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
+# OUTPUT: Returns a list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
+def create_bitplanes(subbands):
+    a = np.concatenate(subbands, axis=0)                   # Join all subbands in a single array. a: numpy.ndarray, a[0]: numpy.float64.
+    b = a.astype(np.int32)                                 # Converts all coefficiets into int32. b: numpy.ndarray, b[0]: numpy.int32.
+    bitplanes = [((b & (0b1<<31)) >> 31).astype(np.int8),  # Split the coeffs into bitplanes.
+                 ((b & (0b1<<30)) >> 30).astype(np.int8),
+                 ((b & (0b1<<29)) >> 29).astype(np.int8),
+                 ((b & (0b1<<28)) >> 28).astype(np.int8),
+                 ((b & (0b1<<27)) >> 27).astype(np.int8),
+                 ((b & (0b1<<26)) >> 26).astype(np.int8),
+                 ((b & (0b1<<25)) >> 25).astype(np.int8),
+                 ((b & (0b1<<24)) >> 24).astype(np.int8),
+                 ((b & (0b1<<23)) >> 23).astype(np.int8),
+                 ((b & (0b1<<22)) >> 22).astype(np.int8),
+                 ((b & (0b1<<21)) >> 21).astype(np.int8),
+                 ((b & (0b1<<20)) >> 20).astype(np.int8),
+                 ((b & (0b1<<19)) >> 19).astype(np.int8),
+                 ((b & (0b1<<18)) >> 18).astype(np.int8),
+                 ((b & (0b1<<17)) >> 17).astype(np.int8),
+                 ((b & (0b1<<16)) >> 16).astype(np.int8),
+                 ((b & (0b1<<15)) >> 15).astype(np.int8),
+                 ((b & (0b1<<14)) >> 14).astype(np.int8),
+                 ((b & (0b1<<13)) >> 13).astype(np.int8),
+                 ((b & (0b1<<12)) >> 12).astype(np.int8),
+                 ((b & (0b1<<11)) >> 11).astype(np.int8),
+                 ((b & (0b1<<10)) >> 10).astype(np.int8),
+                 ((b & (0b1<< 9)) >>  9).astype(np.int8),
+                 ((b & (0b1<< 8)) >>  8).astype(np.int8),
+                 ((b & (0b1<< 7)) >>  7).astype(np.int8),
+                 ((b & (0b1<< 6)) >>  6).astype(np.int8),
+                 ((b & (0b1<< 5)) >>  5).astype(np.int8),
+                 ((b & (0b1<< 4)) >>  4).astype(np.int8),
+                 ((b & (0b1<< 3)) >>  3).astype(np.int8),
+                 ((b & (0b1<< 2)) >>  2).astype(np.int8),
+                 ((b & (0b1<< 1)) >>  1).astype(np.int8),
+                 ( b &  0b1)            .astype(np.int8)]
+    return bitplanes
+
+# INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
+# OUTPUT: Returns a list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
+def create_subbands(bitplanes, dwt_levels):
+    a = (bitplanes[31]<<31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
+         bitplanes[30]<<30 |
+         bitplanes[29]<<29 |
+         bitplanes[28]<<28 |
+         bitplanes[27]<<27 |
+         bitplanes[26]<<26 |
+         bitplanes[25]<<25 | 
+         bitplanes[24]<<24 |
+         bitplanes[23]<<23 |
+         bitplanes[22]<<22 |
+         bitplanes[21]<<21 |
+         bitplanes[20]<<20 |
+         bitplanes[19]<<19 |
+         bitplanes[18]<<18 | 
+         bitplanes[17]<<17 |
+         bitplanes[16]<<16 |
+         bitplanes[15]<<15 |
+         bitplanes[14]<<14 |
+         bitplanes[13]<<13 |
+         bitplanes[12]<<12 |
+         bitplanes[11]<<11 |
+         bitplanes[10]<<10 |
+         bitplanes[ 9]<< 9 |
+         bitplanes[ 8]<< 8 |
+         bitplanes[ 7]<< 7 |
+         bitplanes[ 6]<< 6 |
+         bitplanes[ 5]<< 5 |
+         bitplanes[ 4]<< 4 |
+         bitplanes[ 3]<< 3 |
+         bitplanes[ 2]<< 2 |
+         bitplanes[ 1]<< 1 |
+         bitplanes[ 0]).astype(np.int32).astype(float)
+    # Now, create the subbands splitting this array.
+    subbands = []
+    buf = []
+    jumps = [0]*(dwt_levels+1)
+    for z in range(0, dwt_levels+1):
+        jumps[z] = 2**(int(math.log(len(a),2))-(dwt_levels-z))-1
+    count = 0
+    for x in range(0, len(a)):
+        buf.append(a[x])
+        if (x == jumps[count]):
+            subbands.append(np.array(buf))
+            buf = []
+            count += 1
+    return subbands
 
 def encode(plane):
     # Recive plano a plano (del 31 al 0)
@@ -78,28 +129,6 @@ def encode(plane):
         inicio = fin
     return buffer
 
-
-# Function that passes the list of 32 bits to decimal array
-def planos_to_array(plano, levels):
-    var1 = (plano[31]<<31 | plano[30]<<30 | plano[29]<<29 | plano[28]<<28 | plano[27]<<27 | plano[26]<<26 | plano[25]<<25 | 
-            plano[24]<<24 | plano[23]<<23 | plano[22]<<22 | plano[21]<<21 | plano[20]<<20 | plano[19]<<19 | plano[18]<<18 | 
-            plano[17]<<17 | plano[16]<<16 | plano[15]<<15 | plano[14]<<14 | plano[13]<<13 | plano[12]<<12 | plano[11]<<11 | 
-            plano[10]<<10 | plano[9]<<9 | plano[8]<<8 | plano[7]<<7 | plano[6]<<6 | plano[5]<<5 | plano[4]<<4 | 
-            plano[3]<<3 | plano[2]<<2 | plano[1]<<1 | plano[0]<<0).astype(np.int32).astype(float)
-    subbands = []
-    buffer = []
-    jumps = [0]*(levels+1)
-    for z in range(0, levels+1):
-        jumps[z] = 2**(int(math.log(len(var1),2))-(levels-z))-1
-    count = 0
-    for x in range(0, len(var1)):
-        buffer.append(var1[x])
-        if (x == jumps[count]):
-            subbands.append(np.array(buffer))
-            buffer = []
-            count += 1
-    return subbands
-
 def decode(plane):
     a = [(plane & np.uint64(0b1<<63)) >> 63,(plane & np.uint64(0b1<<62)) >> 62, (plane & np.uint64(0b1<<61)) >> 61, (plane & np.uint64(0b1<<60)) >> 60
         , (plane & np.uint64(0b1<<59)) >> 59, (plane & np.uint64(0b1<<58)) >> 58, (plane & np.uint64(0b1<<57)) >> 57, (plane & np.uint64(0b1<<56)) >> 56
@@ -119,104 +148,88 @@ def decode(plane):
         , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
     return np.concatenate(list(zip(*a)))
 
-def sender(direccionIp, port, channels, depth, rate, chunk_size, levels, sent):
-    p = pyaudio.PyAudio()
-    stream = p.open(format=p.get_format_from_width(depth),
+def send(IPaddr, port, channels, depth, rate, chunk_size, dwt_levels, sent):
+    p = pyaudio.PyAudio()                                             # Create the audio handler.
+    stream = p.open(format=p.get_format_from_width(depth),            # Configure the sound card.
                     channels=channels,
                     rate=rate,
                     input=True,
                     frames_per_buffer=chunk_size)
 
-    udpEnviar = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
 
-    while True:
+    while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)   # Read a chunk from the sound card.
         array_In = np.frombuffer(data, dtype=np.int16)                # Converts the chunk to a Numpy array.
-        coeffs = pywt.wavedec(array_In, 'db1', level=levels)          # Multilevel forward wavelet transform.
-                                                                      # coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1] : list,
-                                                                      # where n=levels.
-        # Pass each component to 32-bit planes
-        coeffs_planos = array_to_planos(coeffs) # Me devuelve una lista de 32, con 1024 muestras numericas entre 0 y 1
-        # Send 32-bit planes
-        enviar = []
-        for i in range(0,32):
-            plano_encode = encode(coeffs_planos[i])
-            enviar = np.insert(plano_encode,0,(31-i))
-            #print('ENVIAR -->', enviar)
-            udpEnviar.sendto(enviar.tobytes(), (direccionIp, port))
-            
+        coeffs = pywt.wavedec(array_In, "db1", level=dwt_levels)      # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
+        bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
+        for i in range(32):                                           # For all bitplanes.
+            sock.sendto(bitplanes[i].tobytes(), (IPaddr, port))       # Send the bitplane.
 
-def receiver(port, channels, depth, rate, chunk_size, levels, received):
-    udpRecibir = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    direccion = ('0.0.0.0', port)
-    udpRecibir.bind(direccion)
-
+def receive(port, channels, depth, rate, chunk_size, dwt_levels, received):
     p = pyaudio.PyAudio()
     stream = p.open(format=p.get_format_from_width(depth),
                     channels=channels,
                     rate=rate,
                     output=True,
                     frames_per_buffer=chunk_size)
-    # Create buffer 
-    buffer_planes = [0]*32
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    listening_at = ("0.0.0.0", port)
+    sock.bind(listening_at)
+
+    # Create buffer
+    bitplanes = [None]*32
     while True:
         received.value += 1
-        # receive 32 packages
-        for i in range(0,32):
-            plane, addr = udpRecibir.recvfrom(1025)
-            plane = np.frombuffer(plane, dtype=np.uint64)
-            # print("RECIVIR -->",plane)
-            # Example: plane [32,0,0,0,0, ... ,1,0,1]
-            index = plane[0]
-            buffer_planes[index]=decode(plane[1:])
-        # Pass each list of list in 32 planes to original subbands
-        subbands = planos_to_array(buffer_planes, levels)
-        # Calculate the inverse transform and store as int16
-        # with the numpy library
-        a_Out = pywt.waverec(subbands, 'db1').astype(np.int16)
-        # Transmit to the sound card the wavelet array casted
-        # to bytes
-        stream.write(a_Out.tobytes())
+        for i in range(31,-1,-1):
+            bitplane, addr = sock.recvfrom(4096)
+            bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
+        subbands = create_subbands(bitplanes, dwt_levels)
+        samples = pywt.waverec(subbands, "db1").astype(np.int16)
+        stream.write(samples.tobytes())
 
 def main():
     # Receive parameters for command line, if not, they have default parameters 
-    parser = argparse.ArgumentParser(description = 'Arguments')
+    parser = argparse.ArgumentParser(description = "Arguments")
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--chunk_size', help='Chunk size in bytes.', type=int, default=1024)
-    parser.add_argument('-r', '--rate', help='Sampling rate in samples/second.', type=int, default=44100)
-    parser.add_argument('-n', '--nchannels', help='Number of channels.', type=int, default=1)
-    parser.add_argument('-l', '--levels', help='Numbers of levels dwt.', type=int, default=5)
-    parser.add_argument('-p', '--port', help='Listening port in the receiver and the destination port in the sender.', type=int, default=4443)
-    parser.add_argument('-a', '--address', help='IP address of the receiver.', type=str, default='0.0.0.0')
-    parser.add_argument('-d', '--depth', help='Depth in bytes of the samples of audio.', type=int, default=2)
+    parser.add_argument("-c", "--chunk_size", help="Samples per chunk.", type=int, default=1024)
+    parser.add_argument("-r", "--rate", help="Sampling rate in samples/second.", type=int, default=44100)
+    parser.add_argument("-n", "--nchannels", help="Number of channels.", type=int, default=1)
+    parser.add_argument("-d", "--depth", help="Depth in bytes of the samples of audio.", type=int, default=2)
+    parser.add_argument("-l", "--levels", help="Numbers of levels of the Discrete Wavelet Transform.", type=int, default=5)
+    parser.add_argument("-p", "--my_port", help="Listening port.", type=int, default=4444)
+    parser.add_argument("-i", "--interlocutor_address", help="Interlocutor's IP address or name.", type=str, default="localhost")
+    parser.add_argument("-t", "--interlocutor_port", help="Interlocutor's listening port.", type=int, default=4445)
 
     args = parser.parse_args()
     # Check if the level of dwt stay in range
     if (args.chunk_size < 2**args.levels):
-        print('Numbers of levels dwt is not valid. The max levels dwt for chunk size', args.chunk, 'is', int(math.log(args.chunk,2)))
+        print(f"Numbers of levels dwt is not valid. The max levels dwt for chunk size {args.chunk} is {int(math.log(args.chunk,2))}")
         quit()
 
     # Print input parameters 
     if __debug__:
-        print('Chunk size:',args.chunk_size)
-        print('Sampling rate:',args.rate)
-        print('Numbers of channels:',args.nchannels)
-        print('Numbers of levels of dwt:',args.levels)
-        print('Port to send:',args.port)
-        print('Address to send:',args.address)
-        print('Sampling depth:', args.depth)
+        print(f"Chunk size: {args.chunk_size}")
+        print(f"Sampling rate: {args.rate}")
+        print(f"Numbers of channels: {args.nchannels}")
+        print(f"Numbers of levels of the DWT: {args.levels}")
+        print(f"Sampling depth: {args.depth}")
+        print(f"I'm listening at port: {args.my_port}")
+        print(f"Interlocutor's port: {args.interlocutor_port}")
+        print(f"Interlocutor's address: {args.interlocutor_address}")
 
     # Number of chunks of data sent by the sender process
-    sent_counter = multiprocessing.Value('i', 0)
+    sent_counter = multiprocessing.Value("i", 0)
 
     # Number of chunks of data received by the receiver process
-    received_counter = multiprocessing.Value('i', 0)
+    received_counter = multiprocessing.Value("i", 0)
         
-    receiver_process = multiprocessing.Process(target=receiver, args=(args.port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter))
+    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, received_counter))
     receiver_process.daemon = True
 
-    sender_process = multiprocessing.Process(target=sender, args=(args.address, args.port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter))
+    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.nchannels, args.depth, args.rate, args.chunk_size, args.levels, sent_counter))
     sender_process.daemon = True
 
     receiver_process.start()
@@ -225,8 +238,8 @@ def main():
     #sender_process.join()
     while True:
         time.sleep(1)
-        print(f'Sent {sent_counter.value} chunks, received {received_counter.value} chunks')
+        print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks")
     input()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
