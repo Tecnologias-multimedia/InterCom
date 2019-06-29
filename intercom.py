@@ -166,6 +166,7 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
+        print(samples)
         max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
 
