@@ -50,6 +50,9 @@ def create_bitplanes(subbands):
                  ((b & (0b1 <<  2)) >>  2).astype(np.int8),
                  ((b & (0b1 <<  1)) >>  1).astype(np.int8),
                  ( b &  0b1)              .astype(np.int8)]
+    bitplanes = []
+    for i in range(32):
+        bitplanes.append( ((b & (0b1 << i)) >> i).astype(np.int8) )
     return bitplanes
 
 # INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
