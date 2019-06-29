@@ -201,7 +201,7 @@ def main():
     parser.add_argument("-l", "--levels", help="Numbers of levels of the Discrete Wavelet Transform.", type=int, default=5)
     parser.add_argument("-p", "--my_port", help="Listening port.", type=int, default=4444)
     parser.add_argument("-i", "--interlocutor_address", help="Interlocutor's IP address or name.", type=str, default="localhost")
-    parser.add_argument("-t", "--interlocutor_port", help="Interlocutor's listening port.", type=int, default=4445)
+    parser.add_argument("-t", "--interlocutor_port", help="Interlocutor's listening port.", type=int, default=4444)
 
     args = parser.parse_args()
     # Check if the level of dwt stay in range
