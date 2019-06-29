@@ -18,41 +18,9 @@ import time                         # https://docs.python.org/3/library/time.htm
 def create_bitplanes(subbands):
     a = np.concatenate(subbands, axis=0)                   # Join all subbands in a single array. a: numpy.ndarray, a[0]: numpy.float64.
     b = a.astype(np.int32)                                 # Converts all coefficiets into int32. b: numpy.ndarray, b[0]: numpy.int32.
-    bitplanes = [((b & (0b1 << 31)) >> 31).astype(np.int8),  # Split the coeffs into bitplanes.
-                 ((b & (0b1 << 30)) >> 30).astype(np.int8),
-                 ((b & (0b1 << 29)) >> 29).astype(np.int8),
-                 ((b & (0b1 << 28)) >> 28).astype(np.int8),
-                 ((b & (0b1 << 27)) >> 27).astype(np.int8),
-                 ((b & (0b1 << 26)) >> 26).astype(np.int8),
-                 ((b & (0b1 << 25)) >> 25).astype(np.int8),
-                 ((b & (0b1 << 24)) >> 24).astype(np.int8),
-                 ((b & (0b1 << 23)) >> 23).astype(np.int8),
-                 ((b & (0b1 << 22)) >> 22).astype(np.int8),
-                 ((b & (0b1 << 21)) >> 21).astype(np.int8),
-                 ((b & (0b1 << 20)) >> 20).astype(np.int8),
-                 ((b & (0b1 << 19)) >> 19).astype(np.int8),
-                 ((b & (0b1 << 18)) >> 18).astype(np.int8),
-                 ((b & (0b1 << 17)) >> 17).astype(np.int8),
-                 ((b & (0b1 << 16)) >> 16).astype(np.int8),
-                 ((b & (0b1 << 15)) >> 15).astype(np.int8),
-                 ((b & (0b1 << 14)) >> 14).astype(np.int8),
-                 ((b & (0b1 << 13)) >> 13).astype(np.int8),
-                 ((b & (0b1 << 12)) >> 12).astype(np.int8),
-                 ((b & (0b1 << 11)) >> 11).astype(np.int8),
-                 ((b & (0b1 << 10)) >> 10).astype(np.int8),
-                 ((b & (0b1 <<  9)) >>  9).astype(np.int8),
-                 ((b & (0b1 <<  8)) >>  8).astype(np.int8),
-                 ((b & (0b1 <<  7)) >>  7).astype(np.int8),
-                 ((b & (0b1 <<  6)) >>  6).astype(np.int8),
-                 ((b & (0b1 <<  5)) >>  5).astype(np.int8),
-                 ((b & (0b1 <<  4)) >>  4).astype(np.int8),
-                 ((b & (0b1 <<  3)) >>  3).astype(np.int8),
-                 ((b & (0b1 <<  2)) >>  2).astype(np.int8),
-                 ((b & (0b1 <<  1)) >>  1).astype(np.int8),
-                 ( b &  0b1)              .astype(np.int8)]
     bitplanes = []
     for i in range(32):
-        bitplanes.append( ((b & (0b1 << i)) >> i).astype(np.int8) )
+        bitplanes.append( ((b & (0b1 << i)) >> i).astype(np.int8) )  # Split the coeffs into bitplanes.
     return bitplanes
 
 # INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
@@ -174,7 +142,7 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
         max_sent.value = np.max(np.abs(samples))
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, …, cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
-        for i in range(32):                                           # For all bitplanes.
+        for i in range(31,-1,-1):                                           # For all bitplanes.
             sock.sendto(bitplanes[i].tobytes(), (IPaddr, port))       # Send the bitplane.
 
 def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_received):
