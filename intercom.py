@@ -140,8 +140,8 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, ..., cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
         for i in range(31,-1,-1):                                           # For all bitplanes.
-            print("send bitplane[", i, "]", bitplanes[i], len(bitplanes[i]))
             packet_number = sent.value*32 + i
+            print(f"send packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
             msg = (packet_number, bitplanes[i].tobytes())
             packet = struct.pack(packet_format, *msg)
             sock.sendto(packet, (IPaddr, port))       # Send the bitplane.
@@ -169,7 +169,7 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
             packet_number = msg[0]
             bitplane = msg[1] #, addr = sock.recvfrom(4096)
             bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
-            print("receive bitplane[", packet_number, "]", bitplanes[i], len(bitplanes[i]))
+            print("receive packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
