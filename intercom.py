@@ -12,6 +12,7 @@ import math                         # https://docs.python.org/3/library/math.htm
 import multiprocessing              # https://docs.python.org/3/library/multiprocessing.html
 import socket                       # https://docs.python.org/3/library/socket.html
 import time                         # https://docs.python.org/3/library/time.html
+import struct                       # https://docs.python.org/3/library/struct.html
 
 # INPUT: A list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
 # OUTPUT: Returns a list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
@@ -128,17 +129,22 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
                         frames_per_buffer=chunk_size)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
 
+    packet_format = "!i" + str(chunk_size)+"s"
+    
     while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)    # Read a chunk from the sound card.
         samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
-        print("send" + str(samples))
+        print("send samples", samples, len(samples))
         max_sent.value = np.max(np.abs(samples))
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, ..., cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
         for i in range(31,-1,-1):                                           # For all bitplanes.
-            print("send", bitplanes[i])
-            sock.sendto(bitplanes[i].tobytes(), (IPaddr, port))       # Send the bitplane.
+            print("send bitplane[", i, "]", bitplanes[i], len(bitplanes[i]))
+            packet_number = sent.value*32 + i
+            msg = (packet_number, bitplanes[i].tobytes())
+            packet = struct.pack(packet_format, *msg)
+            sock.sendto(packet, (IPaddr, port))       # Send the bitplane.
 
 def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_received):
     audio = pyaudio.PyAudio()                                      # Create the audio handler.
@@ -152,11 +158,16 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
     listening_at = ("0.0.0.0", port)
     sock.bind(listening_at)
 
+    packet_format = "!i" + str(chunk_size)+"s"
+    
     # Create buffer
     bitplanes = [None]*32
     while True:
         for i in range(31,-1,-1):
-            bitplane, addr = sock.recvfrom(4096)
+            packet, addr = sock.recvfrom(4096)
+            msg = struct.unpack(packet_format, packet)
+            packet_number = msg[0]
+            bitplane = msg[1] #, addr = sock.recvfrom(4096)
             bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
             print("receive", bitplanes[i])
         received.value += 1
