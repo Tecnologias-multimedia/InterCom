@@ -132,6 +132,7 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)    # Read a chunk from the sound card.
         samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
+        print("send" + str(samples))
         #if __debug__:
         #    counter = 0
         #    for i in samples:
@@ -166,7 +167,7 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
-        print(samples)
+        print("receive" + str(samples))
         max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
 
