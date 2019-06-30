@@ -169,7 +169,7 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
             packet_number = msg[0]
             bitplane = msg[1] #, addr = sock.recvfrom(4096)
             bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
-            print("receive", bitplanes[i])
+            print("receive bitplane[", packet_number, "]", bitplanes[i], len(bitplanes[i]))
         received.value += 1
         subbands = create_subbands(bitplanes, dwt_levels)
         samples = pywt.waverec(subbands, "db1").astype(np.int16)
