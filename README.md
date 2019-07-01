@@ -34,5 +34,6 @@ Task 3. SamplerAndSender
 ## Resources
 
 * [PyWavelet](https://pywavelets.readthedocs.io).
-* [Public chat room at Gitter](https://gitter.im/Tecnologias-multimedia/intercom).
+* [Public chat room for intercom at Gitter](https://gitter.im/Tecnologias-multimedia/intercom).
+* [Public chat room for Tecnologías Multimedia at Gitter](https://gitter.im/Tecnologias-multimedia/community).
 <!-- * [Slack channel](https://tec-multimedia-ual.slack.com/messages/intercom_2018/). -->
