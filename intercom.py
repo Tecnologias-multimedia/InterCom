@@ -14,7 +14,8 @@ import socket                       # https://docs.python.org/3/library/socket.h
 import time                         # https://docs.python.org/3/library/time.html
 import struct                       # https://docs.python.org/3/library/struct.html
 
-# INPUT: A list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
+# INPUT: subbands (a list of subbands): [],
+#        subbands[0] (the first : numpy.ndarray, subbands[0][0]: numpy.float64.
 # OUTPUT: Returns a list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
 def create_bitplanes(subbands):
     a = np.concatenate(subbands, axis=0)                   # Join all subbands in a single array. a: numpy.ndarray, a[0]: numpy.float64.
@@ -24,8 +25,14 @@ def create_bitplanes(subbands):
         bitplanes.append( ((b & (0b1 << i)) >> i).astype(np.int8) )  # Split the coeffs into bitplanes.
     return bitplanes
 
-# INPUT: A list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
-# OUTPUT: Returns a list of subbands of coefficiets. subbands: [], subbands[0]: numpy.ndarray, subbands[0][0]: numpy.float64.
+# INPUT: bitplanes (the list of 32 "bitplanes"): [],
+#        bitplanes[0] (the first bitplane): numpy.ndarray,
+#        bitplanes[0][0] (the first element of the first bitplane): numpy.int8.
+#        Notice that 7 out of 8 bits of bitplanes[0][0] (the 7 more significative) are wasted.
+# INPUT: dwt_levels (the number of DWT levels): int.
+# OUTPUT: RETURNS (a list of subbands): [],
+#         RETURNS[0]: (the first subband): numpy.ndarray,
+#         RETURNS[0][0]: (the first coefficient of the first subband): numpy.float64.
 def create_subbands(bitplanes, dwt_levels):
     a = (bitplanes[31].astype(np.int32) << 31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
          bitplanes[30].astype(np.int32) << 30 |
@@ -76,12 +83,12 @@ def create_subbands(bitplanes, dwt_levels):
 
 def encode(plane):
     # Recive plano a plano (del 31 al 0)
-    length = int(len(plane)/64)
-    buffer = np.zeros((length,), dtype = np.uint64)
+    length = int(len(plane)/8)
+    buffer = np.zeros((length,), dtype = np.uint8)
     inicio = 0
     fin = 0
     for i in range(0, length):
-        fin += 64
+        fin += 8
         buffer[i] = (plane[0+inicio]<<63 | plane[1+inicio]<<62 | plane[2+inicio]<<61 | plane[3+inicio]<<60
             | plane[4+inicio]<<59 | plane[5+inicio]<<58 | plane[6+inicio]<<57 | plane[7+inicio]<<56
             | plane[8+inicio]<<55 | plane[9+inicio]<<54 | plane[10+inicio]<<53 | plane[11+inicio]<<52
@@ -129,8 +136,8 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
                         frames_per_buffer=chunk_size)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
 
-    packet_format = "!i" + str(chunk_size)+"s"
-    
+    packet_format = "!i" + str(chunk_size/8)+"s"
+
     while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
         data = stream.read(chunk_size, exception_on_overflow=False)    # Read a chunk from the sound card.
@@ -139,10 +146,12 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
         max_sent.value = np.max(np.abs(samples))
         coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, ..., cD2, cD1]: list, where n=dwt_levels.
         bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
-        for i in range(31,-1,-1):                                           # For all bitplanes.
-            packet_number = sent.value*32 + (32-i)
+        for i in range(31, -1, -1):                                           # For all bitplanes.
+            packet_number = sent.value*32 + (31-i)
             print(f"send packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
-            msg = (packet_number, bitplanes[i].tobytes())
+            compressed_bitplane = encode(bitplanes[i])
+            #msg = (packet_number, bitplanes[i].tobytes())
+            msg = (packet_number, compressed_bitplane)
             packet = struct.pack(packet_format, *msg)
             sock.sendto(packet, (IPaddr, port))       # Send the bitplane.
 
@@ -163,11 +172,11 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
     # Create buffer
     bitplanes = [None]*32
     while True:
-        for i in range(31,-1,-1):
+        for i in range(31, -1, -1):
             packet, addr = sock.recvfrom(4096)
             msg = struct.unpack(packet_format, packet)
             packet_number = msg[0]
-            bitplane = msg[1] #, addr = sock.recvfrom(4096)
+            bitplane = decode(msg[1])
             bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
             print(f"receive packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
         received.value += 1

@@ -122,7 +122,6 @@ def sender(direccionIp, port, channels, depth, rate, chunk_size, levels, sent):
             enviar = np.insert(plano_encode,0,(31-i))
             #print('ENVIAR -->', enviar)
             udpEnviar.sendto(enviar.tobytes(), (direccionIp, port))
-            
 
 def receiver(port, channels, depth, rate, chunk_size, levels, received):
     udpRecibir = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
