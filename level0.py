@@ -1,8 +1,6 @@
-# intercom.py
-#
+# No video, no DWT, no compression, no data-flow control.
+# 
 # https://github.com/Tecnologias-multimedia/intercom
-#
-# P2P real-time audio/video sender and receiver.
 
 import pyaudio                      # http://people.csail.mit.edu/hubert/pyaudio/
 import numpy as np                  # https://www.numpy.org
@@ -127,6 +125,22 @@ def decode(plane):
         , (plane & np.uint64(0b1<<7)) >> 7, (plane & np.uint64(0b1<<6)) >> 6, (plane & np.uint64(0b1<<5)) >> 5, (plane & np.uint64(0b1<<4)) >> 4
         , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
     return np.concatenate(list(zip(*a)))
+
+class Intercom:
+    def __init__(self, bytes_per_sample, channels, sampling_rate, audio_buffer_size):
+        self.bytes_per_sample = bits_per_sample
+        self.channels = channels
+        self.sampling_rate = sampling_rate
+        self.audio_buffer_size = audio_buffer_size
+
+    def send(destination_IP, destination_port, number_of_bytes_sent):
+        audio = pyaudio.PyAudio()                                      # Create the audio handler.
+        stream = audio.open(                                           # Configure the sound card for reading
+            format=audio.get_format_from_width(depth),
+            channels=nchannels,
+            rate=rate,
+            input=True,
+            frames_per_buffer=chunk_size)
 
 def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max_sent):
     audio = pyaudio.PyAudio()                                      # Create the audio handler.
