@@ -13,17 +13,6 @@ import socket                       # https://docs.python.org/3/library/socket.h
 import time                         # https://docs.python.org/3/library/time.html
 import struct                       # https://docs.python.org/3/library/struct.html
 
-# INPUT: subbands (a list of subbands): [],
-#        subbands[0] (the first : numpy.ndarray, subbands[0][0]: numpy.float64.
-# OUTPUT: Returns a list of 32 "bitplanes". bitplanes: [], bp[0]: numpy.ndarray, bp[0][0]: numpy.int8.
-def create_bitplanes(subbands):
-    a = np.concatenate(subbands, axis=0)                   # Join all subbands in a single array. a: numpy.ndarray, a[0]: numpy.float64.
-    b = a.astype(np.int32)                                 # Converts all coefficiets into int32. b: numpy.ndarray, b[0]: numpy.int32.
-    bitplanes = []
-    for i in range(32):
-        bitplanes.append( ((b & (0b1 << i)) >> i).astype(np.int8) )  # Split the coeffs into bitplanes.
-    return bitplanes
-
 # INPUT: bitplanes (the list of 32 "bitplanes"): [],
 #        bitplanes[0] (the first bitplane): numpy.ndarray,
 #        bitplanes[0][0] (the first element of the first bitplane): numpy.int8.
@@ -127,56 +116,45 @@ def decode(plane):
     return np.concatenate(list(zip(*a)))
 
 class Intercom:
-    def __init__(self, bytes_per_sample, channels, sampling_rate, audio_buffer_size):
-        self.bytes_per_sample = bits_per_sample
-        self.channels = channels
+    def __init__(self, bytes_per_sample, number_of_channels, sampling_rate, audio_buffer_size, chunk_size):
+        self.bytes_per_sample = bytes_per_sample
+        self.number_of_channels = number_of_channels
         self.sampling_rate = sampling_rate
         self.audio_buffer_size = audio_buffer_size
-
-    def send(destination_IP, destination_port, number_of_bytes_sent):
+        self.chunk_size = chunk_size
+        self.packet_format = "!i" + str(self.chunk_size/8)+"s"                      # <chunk_number, chunk_data>
+        
+    def send(self, destination_IP_addr, destination_port, number_of_bytes_sent):
         audio = pyaudio.PyAudio()                                      # Create the audio handler.
         stream = audio.open(                                           # Configure the sound card for reading
-            format=audio.get_format_from_width(depth),
-            channels=nchannels,
-            rate=rate,
+            format=audio.get_format_from_width(self.bytes_per_sample),
+            channels=self.number_of_channels,
+            rate=self.sampling_rate,
             input=True,
-            frames_per_buffer=chunk_size)
+            frames_per_buffer=self.chunk_size)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
+        while True:
+            number_of_chunks_sent.value += 1
+            _buffer = stream.read(self.chunk_size, exception_on_overflow=False)
+            array_of_samples = np.frombuffer(_buffer, dtype=np.int16)
+            list_of_bitplanes = from_array_to_bitplanes(array_of_samples)
+            for i in range(15, -1, -1):
+                compressed_bitplane = self.compress(list_of_bitplanes[i])
+                chunk_number = number_of_chunks_sent.value*15 + (15-i)
+                message = (chunk_number, compressed_bitplane)
+                packet = struct.pack(packet_format, *message)
+                sock.sendto(packet, (destination_IP_addr, destination_port))       # Send the bitplane.
 
-def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max_sent):
-    audio = pyaudio.PyAudio()                                      # Create the audio handler.
-    stream = audio.open(format=audio.get_format_from_width(depth), # Configure the sound card.
-                        channels=nchannels,
-                        rate=rate,
-                        input=True,
-                        frames_per_buffer=chunk_size)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
-
-    packet_format = "!i" + str(chunk_size/8)+"s"                      # <chunk_number, chunk_data>
-
-    while True:                                                       # Forever.
-        sent.value += 1                                               # Number of sent chunks.
-        data = stream.read(chunk_size, exception_on_overflow=False)    # Read a chunk from the sound card.
-        samples = np.frombuffer(data, dtype=np.int16)                 # Converts the chunk to a Numpy array.
-        print("send samples", samples, len(samples))
-        max_sent.value = np.max(np.abs(samples))
-        coeffs = pywt.wavedec(samples, "db1", level=dwt_levels)       # Multilevel forward wavelet transform, coeffs = [cA_n, cD_n, cD_n-1, ..., cD2, cD1]: list, where n=dwt_levels.
-        bitplanes = create_bitplanes(coeffs)                          # A list of 32 bitplanes.
-        for i in range(31, -1, -1):                                           # For all bitplanes.
-            packet_number = sent.value*32 + (31-i)
-            print(f"send packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
-            compressed_bitplane = encode(bitplanes[i])
-            #msg = (packet_number, bitplanes[i].tobytes())
-            msg = (packet_number, compressed_bitplane)
-            packet = struct.pack(packet_format, *msg)
-            sock.sendto(packet, (IPaddr, port))       # Send the bitplane.
-
+    def receive(self, listening_port):
+        audio = pyaudio.PyAudio()
+        stream = audio.open(
+            format=audio.get_format_from_width(self.bytes_per_sample),
+            channels=self.number_of_channels,
+            rate=self.sampling_rate,
+            output=True,
+            frames_per_buffer=self.chunk_size)
 def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_received):
-    audio = pyaudio.PyAudio()                                      # Create the audio handler.
-    stream = audio.open(format=audio.get_format_from_width(depth), # Configure the sound card.
-                        channels=nchannels,
-                        rate=rate,
-                        output=True,
-                        frames_per_buffer=chunk_size)
+    
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     listening_at = ("0.0.0.0", port)
@@ -200,6 +178,35 @@ def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_
         print("receive", samples, len(samples))
         max_received.value = np.max(np.abs(samples))
         stream.write(samples.tobytes())
+
+    def from_array_to_bitplanes(self, array):
+        bitplanes = []
+        for i in range(16):
+            bitplanes.append( ((array & (0b1 << i)) >> i).astype(np.int8) )
+        return bitplanes
+
+    def encode(self, list_of_bitplanes):
+        length = int(len(list_of_bitplanes)/8)
+        codestream = np.zeros((length,), dtype = np.uint8)
+        for i in range(0, length):
+            codestream[i] = (
+                plane[ 0 + i*8] << 15 |
+                plane[ 1 + i*8] << 14 |
+                plane[ 2 + i*8] << 13 |
+                plane[ 3 + i*8] << 12 |
+                plane[ 4 + i*8] << 11 |
+                plane[ 5 + i*8] << 10 |
+                plane[ 6 + i*8] <<  9 |
+                plane[ 7 + i*8] <<  8 |
+                plane[ 8 + i*8] <<  7 |
+                plane[ 9 + i*8] <<  6 |
+                plane[10 + i*8] <<  5 |
+                plane[11 + i*8] <<  4 |
+                plane[12 + i*8] <<  3 |
+                plane[13 + i*8] <<  2 |
+                plane[14 + i*8] <<  1 |
+                plane[15 + i*8] <<  0).astype(np.uint64)
+        return buffer
 
 def main():
     # Receive parameters for command line, if not, they have default parameters 
