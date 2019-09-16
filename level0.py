@@ -1,4 +1,6 @@
-# No video, no DWT, no compression, no data-flow control.
+# No video, no DWT, no compression, no bitplanes, no data-flow
+# control. Only the transmission of the raw audio data, splitted into
+# chunks.
 # 
 # https://github.com/Tecnologias-multimedia/intercom
 
@@ -13,252 +15,153 @@ import socket                       # https://docs.python.org/3/library/socket.h
 import time                         # https://docs.python.org/3/library/time.html
 import struct                       # https://docs.python.org/3/library/struct.html
 
-# INPUT: bitplanes (the list of 32 "bitplanes"): [],
-#        bitplanes[0] (the first bitplane): numpy.ndarray,
-#        bitplanes[0][0] (the first element of the first bitplane): numpy.int8.
-#        Notice that 7 out of 8 bits of bitplanes[0][0] (the 7 more significative) are wasted.
-# INPUT: dwt_levels (the number of DWT levels): int.
-# OUTPUT: RETURNS (a list of subbands): [],
-#         RETURNS[0]: (the first subband): numpy.ndarray,
-#         RETURNS[0][0]: (the first coefficient of the first subband): numpy.float64.
-def create_subbands(bitplanes, dwt_levels):
-    a = (bitplanes[31].astype(np.int32) << 31 |    # Join all bitplanes in a single array. a: numpy.ndarray, a[0]: numpy.float64.
-         bitplanes[30].astype(np.int32) << 30 |
-         bitplanes[29].astype(np.int32) << 29 |
-         bitplanes[28].astype(np.int32) << 28 |
-         bitplanes[27].astype(np.int32) << 27 |
-         bitplanes[26].astype(np.int32) << 26 |
-         bitplanes[25].astype(np.int32) << 25 | 
-         bitplanes[24].astype(np.int32) << 24 |
-         bitplanes[23].astype(np.int32) << 23 |
-         bitplanes[22].astype(np.int32) << 22 |
-         bitplanes[21].astype(np.int32) << 21 |
-         bitplanes[20].astype(np.int32) << 20 |
-         bitplanes[19].astype(np.int32) << 19 |
-         bitplanes[18].astype(np.int32) << 18 | 
-         bitplanes[17].astype(np.int32) << 17 |
-         bitplanes[16].astype(np.int32) << 16 |
-         bitplanes[15].astype(np.int32) << 15 |
-         bitplanes[14].astype(np.int32) << 14 |
-         bitplanes[13].astype(np.int32) << 13 |
-         bitplanes[12].astype(np.int32) << 12 |
-         bitplanes[11].astype(np.int32) << 11 |
-         bitplanes[10].astype(np.int32) << 10 |
-         bitplanes[ 9].astype(np.int32) <<  9 |
-         bitplanes[ 8].astype(np.int32) <<  8 |
-         bitplanes[ 7].astype(np.int32) <<  7 |
-         bitplanes[ 6].astype(np.int32) <<  6 |
-         bitplanes[ 5].astype(np.int32) <<  5 |
-         bitplanes[ 4].astype(np.int32) <<  4 |
-         bitplanes[ 3].astype(np.int32) <<  3 |
-         bitplanes[ 2].astype(np.int32) <<  2 |
-         bitplanes[ 1].astype(np.int32) <<  1 |
-         bitplanes[ 0].astype(np.int32)).astype(np.int32).astype(float)
-    # Now, create the subbands splitting this array.
-    subbands = []
-    buf = []
-    jumps = [0]*(dwt_levels+1)
-    for z in range(0, dwt_levels+1):
-        jumps[z] = 2**(int(math.log(len(a),2))-(dwt_levels-z))-1
-    count = 0
-    for x in range(0, len(a)):
-        buf.append(a[x])
-        if (x == jumps[count]):
-            subbands.append(np.array(buf))
-            buf = []
-            count += 1
-    return subbands
-
-def encode(plane):
-    # Recive plano a plano (del 31 al 0)
-    length = int(len(plane)/8)
-    buffer = np.zeros((length,), dtype = np.uint8)
-    inicio = 0
-    fin = 0
-    for i in range(0, length):
-        fin += 8
-        buffer[i] = (plane[0+inicio]<<63 | plane[1+inicio]<<62 | plane[2+inicio]<<61 | plane[3+inicio]<<60
-            | plane[4+inicio]<<59 | plane[5+inicio]<<58 | plane[6+inicio]<<57 | plane[7+inicio]<<56
-            | plane[8+inicio]<<55 | plane[9+inicio]<<54 | plane[10+inicio]<<53 | plane[11+inicio]<<52
-            | plane[12+inicio]<<51 | plane[13+inicio]<<50 | plane[14+inicio]<<49 | plane[15+inicio]<<48
-            | plane[16+inicio]<<47 | plane[17+inicio]<<46 | plane[18+inicio]<<45 | plane[19+inicio]<<44
-            | plane[20+inicio]<<43 | plane[21+inicio]<<42 | plane[22+inicio]<<41 | plane[23+inicio]<<40
-            | plane[24+inicio]<<39 | plane[25+inicio]<<38 | plane[26+inicio]<<37 | plane[27+inicio]<<36
-            | plane[28+inicio]<<35 | plane[29+inicio]<<34 | plane[30+inicio]<<33 | plane[31+inicio]<<32
-            | plane[32+inicio]<<31 | plane[33+inicio]<<30 | plane[34+inicio]<<29 | plane[35+inicio]<<28
-            | plane[36+inicio]<<27 | plane[37+inicio]<<26 | plane[38+inicio]<<25 | plane[39+inicio]<<24
-            | plane[40+inicio]<<23 | plane[41+inicio]<<22 | plane[42+inicio]<<21 | plane[43+inicio]<<20
-            | plane[44+inicio]<<19 | plane[45+inicio]<<18 | plane[46+inicio]<<17 | plane[47+inicio]<<16
-            | plane[48+inicio]<<15 | plane[49+inicio]<<14 | plane[50+inicio]<<13 | plane[51+inicio]<<12
-            | plane[52+inicio]<<11 | plane[53+inicio]<<10 | plane[54+inicio]<<9 | plane[55+inicio]<<8
-            | plane[56+inicio]<<7 | plane[57+inicio]<<6 | plane[58+inicio]<<5 | plane[59+inicio]<<4
-            | plane[60+inicio]<<3 | plane[61+inicio]<<2 | plane[62+inicio]<<1 | plane[63+inicio]<<0).astype(np.uint64)
-        inicio = fin
-    return buffer
-
-def decode(plane):
-    a = [(plane & np.uint64(0b1<<63)) >> 63,(plane & np.uint64(0b1<<62)) >> 62, (plane & np.uint64(0b1<<61)) >> 61, (plane & np.uint64(0b1<<60)) >> 60
-        , (plane & np.uint64(0b1<<59)) >> 59, (plane & np.uint64(0b1<<58)) >> 58, (plane & np.uint64(0b1<<57)) >> 57, (plane & np.uint64(0b1<<56)) >> 56
-        , (plane & np.uint64(0b1<<55)) >> 55, (plane & np.uint64(0b1<<54)) >> 54, (plane & np.uint64(0b1<<53)) >> 53, (plane & np.uint64(0b1<<52)) >> 52
-        , (plane & np.uint64(0b1<<51)) >> 51, (plane & np.uint64(0b1<<50)) >> 50, (plane & np.uint64(0b1<<49)) >> 49, (plane & np.uint64(0b1<<48)) >> 48
-        , (plane & np.uint64(0b1<<47)) >> 47, (plane & np.uint64(0b1<<46)) >> 46, (plane & np.uint64(0b1<<45)) >> 45, (plane & np.uint64(0b1<<44)) >> 44
-        , (plane & np.uint64(0b1<<43)) >> 43, (plane & np.uint64(0b1<<42)) >> 42, (plane & np.uint64(0b1<<41)) >> 41, (plane & np.uint64(0b1<<40)) >> 40
-        , (plane & np.uint64(0b1<<39)) >> 39, (plane & np.uint64(0b1<<38)) >> 38, (plane & np.uint64(0b1<<37)) >> 37, (plane & np.uint64(0b1<<36)) >> 36
-        , (plane & np.uint64(0b1<<35)) >> 35, (plane & np.uint64(0b1<<34)) >> 34, (plane & np.uint64(0b1<<33)) >> 33, (plane & np.uint64(0b1<<32)) >> 32
-        , (plane & np.uint64(0b1<<31)) >> 31, (plane & np.uint64(0b1<<30)) >> 30, (plane & np.uint64(0b1<<29)) >> 29, (plane & np.uint64(0b1<<28)) >> 28
-        , (plane & np.uint64(0b1<<27)) >> 27, (plane & np.uint64(0b1<<26)) >> 26, (plane & np.uint64(0b1<<25)) >> 25, (plane & np.uint64(0b1<<24)) >> 24
-        , (plane & np.uint64(0b1<<23)) >> 23, (plane & np.uint64(0b1<<22)) >> 22, (plane & np.uint64(0b1<<21)) >> 21, (plane & np.uint64(0b1<<20)) >> 20
-        , (plane & np.uint64(0b1<<19)) >> 19, (plane & np.uint64(0b1<<18)) >> 18, (plane & np.uint64(0b1<<17)) >> 17, (plane & np.uint64(0b1<<16)) >> 16
-        , (plane & np.uint64(0b1<<15)) >> 15, (plane & np.uint64(0b1<<14)) >> 14, (plane & np.uint64(0b1<<13)) >> 13, (plane & np.uint64(0b1<<12)) >> 12
-        , (plane & np.uint64(0b1<<11)) >> 11, (plane & np.uint64(0b1<<10)) >> 10, (plane & np.uint64(0b1<<9)) >> 9, (plane & np.uint64(0b1<<8)) >> 8
-        , (plane & np.uint64(0b1<<7)) >> 7, (plane & np.uint64(0b1<<6)) >> 6, (plane & np.uint64(0b1<<5)) >> 5, (plane & np.uint64(0b1<<4)) >> 4
-        , (plane & np.uint64(0b1<<3)) >> 3, (plane & np.uint64(0b1<<2)) >> 2, (plane & np.uint64(0b1<<1)) >> 1, (plane & np.uint64(0b1<<0)) >> 0]
-    return np.concatenate(list(zip(*a)))
-
 class Intercom:
-    def __init__(self, bytes_per_sample, number_of_channels, sampling_rate, audio_buffer_size, chunk_size):
-        self.bytes_per_sample = bytes_per_sample
-        self.number_of_channels = number_of_channels
-        self.sampling_rate = sampling_rate
-        self.audio_buffer_size = audio_buffer_size
-        self.chunk_size = chunk_size
-        self.packet_format = "!i" + str(self.chunk_size/8)+"s"                      # <chunk_number, chunk_data>
-        
-    def send(self, destination_IP_addr, destination_port, number_of_bytes_sent):
-        audio = pyaudio.PyAudio()                                      # Create the audio handler.
-        stream = audio.open(                                           # Configure the sound card for reading
-            format=audio.get_format_from_width(self.bytes_per_sample),
+
+    max_packet_size = 4096  # In bytes
+    
+    def init(self, args):
+        self.bytes_per_sample = args.bytes_per_sample
+        self.number_of_channels = args.number_of_channels
+        self.sampling_rate = args.sampling_rate
+        self.samples_per_chunk = args.samples_per_chunk
+        self.packet_format = "!i" + str(self.samples_per_chunk)+"s"             # <chunk_number, chunk_data>
+
+    def send(self, destination_IP_addr, destination_port, number_of_chunks_sent):
+
+        # Audio stuff
+        audio_handler = pyaudio.PyAudio()
+        audio = audio_handler.open(
+            format=audio_handler.get_format_from_width(self.bytes_per_sample),
             channels=self.number_of_channels,
             rate=self.sampling_rate,
             input=True,
-            frames_per_buffer=self.chunk_size)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
+            frames_per_buffer=self.samples_per_chunk)
+
+        # Socket stuff
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)                 # UDP.
+
+        # Sample and send
+        chunk_number = 0
         while True:
             number_of_chunks_sent.value += 1
-            _buffer = stream.read(self.chunk_size, exception_on_overflow=False)
-            array_of_samples = np.frombuffer(_buffer, dtype=np.int16)
-            list_of_bitplanes = from_array_to_bitplanes(array_of_samples)
-            for i in range(15, -1, -1):
-                compressed_bitplane = self.compress(list_of_bitplanes[i])
-                chunk_number = number_of_chunks_sent.value*15 + (15-i)
-                message = (chunk_number, compressed_bitplane)
-                packet = struct.pack(packet_format, *message)
-                sock.sendto(packet, (destination_IP_addr, destination_port))       # Send the bitplane.
+            samples = audio.read(self.samples_per_chunk)
+            message = (chunk_number, samples)
+            packed_chunk = struct.pack(self.packet_format, *message)
+            sock.sendto(packed_chunk, (destination_IP_addr, destination_port))        # Send the chunk
 
-    def receive(self, listening_port):
-        audio = pyaudio.PyAudio()
-        stream = audio.open(
-            format=audio.get_format_from_width(self.bytes_per_sample),
+    def receive(self, listening_port, number_of_chunks_received):
+
+        # Audio stuff
+        audio_handler = pyaudio.PyAudio()
+        audio = audio_handler.open(
+            format=audio_handler.get_format_from_width(self.bytes_per_sample),
             channels=self.number_of_channels,
             rate=self.sampling_rate,
             output=True,
-            frames_per_buffer=self.chunk_size)
-def receive(port, depth, nchannels, rate, chunk_size, dwt_levels, received, max_received):
-    
+            frames_per_buffer=self.samples_per_chunk)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    listening_at = ("0.0.0.0", port)
-    sock.bind(listening_at)
+        # Socket stuff
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        listening_endpoint = ("0.0.0.0", listening_port)
+        sock.bind(listening_endpoint)
 
-    packet_format = "!i" + str(chunk_size)+"s"
-    
-    # Create buffer
-    bitplanes = [None]*32
-    while True:
-        for i in range(31, -1, -1):
-            packet, addr = sock.recvfrom(4096)
-            msg = struct.unpack(packet_format, packet)
-            packet_number = msg[0]
-            bitplane = decode(msg[1])
-            bitplanes[i] = np.frombuffer(bitplane, dtype=np.int8)
-            print(f"receive packet_number={packet_number} bitplane[{i}]={bitplanes[i]} with length={len(bitplanes[i])}")
-        received.value += 1
-        subbands = create_subbands(bitplanes, dwt_levels)
-        samples = pywt.waverec(subbands, "db1").astype(np.int16)
-        print("receive", samples, len(samples))
-        max_received.value = np.max(np.abs(samples))
-        stream.write(samples.tobytes())
+        # Receive and play
+        while True:
+            packed_chunk, source_address = sock.recvfrom(Intercom.max_packet_size)
+            message = struct.unpack(self.packet_format, packet)
+            chunk_number, samples = message[0], message[1]
+            audio.write(samples)
 
-    def from_array_to_bitplanes(self, array):
-        bitplanes = []
-        for i in range(16):
-            bitplanes.append( ((array & (0b1 << i)) >> i).astype(np.int8) )
-        return bitplanes
+    def parse_args(self):
+        parser = argparse.ArgumentParser(
+            description = "Real-time intercom",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser.add_argument("-s",
+                            "--samples_per_chunk",
+                            help="Samples per chunk.",
+                            type=int,
+                            default=1024)
+        parser.add_argument("-r",
+                            "--sampling_rate",
+                            help="Sampling rate in samples/second.",
+                            type=int,
+                            default=44100)
+        parser.add_argument("-c",
+                            "--number_of_channels",
+                            help="Number of channels.",
+                            type=int,
+                            default=2)
+        parser.add_argument("-b",
+                            "--bytes_per_sample",
+                            help="Depth in bytes of the samples of audio.",
+                            type=int,
+                            default=2)
+        parser.add_argument("-p",
+                            "--mlp",
+                            help="My listening port.",
+                            type=int,
+                            default=4444)
+        parser.add_argument("-i",
+                            "--ilp",
+                            help="Interlocutor's listening port.",
+                            type=int,
+                            default=4444)
+        parser.add_argument("-a",
+                            "--ia",
+                            help="Interlocutor's IP address or name.",
+                            type=str,
+                            default="localhost")
 
-    def encode(self, list_of_bitplanes):
-        length = int(len(list_of_bitplanes)/8)
-        codestream = np.zeros((length,), dtype = np.uint8)
-        for i in range(0, length):
-            codestream[i] = (
-                plane[ 0 + i*8] << 15 |
-                plane[ 1 + i*8] << 14 |
-                plane[ 2 + i*8] << 13 |
-                plane[ 3 + i*8] << 12 |
-                plane[ 4 + i*8] << 11 |
-                plane[ 5 + i*8] << 10 |
-                plane[ 6 + i*8] <<  9 |
-                plane[ 7 + i*8] <<  8 |
-                plane[ 8 + i*8] <<  7 |
-                plane[ 9 + i*8] <<  6 |
-                plane[10 + i*8] <<  5 |
-                plane[11 + i*8] <<  4 |
-                plane[12 + i*8] <<  3 |
-                plane[13 + i*8] <<  2 |
-                plane[14 + i*8] <<  1 |
-                plane[15 + i*8] <<  0).astype(np.uint64)
-        return buffer
+        args = parser.parse_args()
+        return args
 
-def main():
-    # Receive parameters for command line, if not, they have default parameters 
-    parser = argparse.ArgumentParser(description = "Arguments")
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-c", "--chunk_size", help="Samples per chunk.", type=int, default=1024)
-    parser.add_argument("-r", "--rate", help="Sampling rate in samples/second.", type=int, default=44100)
-    parser.add_argument("-n", "--nchannels", help="Number of channels.", type=int, default=1)
-    parser.add_argument("-d", "--depth", help="Depth in bytes of the samples of audio.", type=int, default=2)
-    parser.add_argument("-l", "--levels", help="Numbers of levels of the Discrete Wavelet Transform.", type=int, default=5)
-    parser.add_argument("-p", "--my_port", help="Listening port.", type=int, default=4444)
-    parser.add_argument("-i", "--interlocutor_address", help="Interlocutor's IP address or name.", type=str, default="localhost")
-    parser.add_argument("-t", "--interlocutor_port", help="Interlocutor's listening port.", type=int, default=4444)
+        # Print input parameters
+        if __debug__:
+            print(f"Samples per chunk: {self.args.samples_per_chunk}")
+            print(f"Sampling rate: {self.args.sampling_rate}")
+            print(f"Numbers of channels: {self.args.number_of_channels}")
+            print(f"Bytes per sample: {self.args.bytes_per_sample}")
+            print(f"I'm listening at port: {self.args.mlp}")
+            print(f"Interlocutor's listening port: {self.args.ilp}")
+            print(f"Interlocutor's IP address: {self.args.ia}")
 
-    args = parser.parse_args()
-    # Check if the level of dwt stay in range
-    if (args.chunk_size < 2**args.levels):
-        print(f"Numbers of levels dwt is not valid. The max levels dwt for chunk size {args.chunk} is {int(math.log(args.chunk,2))}")
-        quit()
+    def instance(self):
+        self.intercom = Intercom(
+            bytes_per_sample = args.bytes_per_sample,
+            number_of_channels = args.number_of_channels,
+            samping_rate = args.sampling_rate,
+            samples_per_chunk = args.samples_per_chunk
+        )
 
-    # Print input parameters 
-    if __debug__:
-        print(f"Chunk size: {args.chunk_size}")
-        print(f"Sampling rate: {args.rate}")
-        print(f"Numbers of channels: {args.nchannels}")
-        print(f"Numbers of levels of the DWT: {args.levels}")
-        print(f"Sampling depth: {args.depth}")
-        print(f"I'm listening at port: {args.my_port}")
-        print(f"Interlocutor's port: {args.interlocutor_port}")
-        print(f"Interlocutor's address: {args.interlocutor_address}")
+    def run(self):
+        # Shared variables
+        number_of_chunks_sent = multiprocessing.Value("i", 0)
+        number_of_chunks_received = multiprocessing.Value("i", 0)
 
-    # Shared variables.
-    sent_counter = multiprocessing.Value("i", 0)     # Number of chunks of data sent by the sender process.
-    received_counter = multiprocessing.Value("i", 0) # Number of chunks of data received by the receiver process.
-    max_sent = multiprocessing.Value("i", 0)         # Max sample sent (in absolute value).
-    max_received = multiprocessing.Value("i", 0)     # Max sample received (in absolute value).
+        # Running processes
+        sender_process = multiprocessing.Process(
+            target=self.send,
+            args=(
+                args.ia,
+                args.ilp,
+                number_of_chunks_sent))
+        sender_process.daemon = True
+        receiver_process = multiprocessing.Process(
+            target=self.receive,
+            args=(
+                args.mlp,
+                number_of_chunks_received))
+        receiver_process.daemon = True
+        receiver_process.start()
+        sender_process.start()
 
-    receiver_process = multiprocessing.Process(target=receive, args=(args.my_port, args.depth, args.nchannels, args.rate, args.chunk_size, args.levels, received_counter, max_received))
-    receiver_process.daemon = True
-
-    sender_process = multiprocessing.Process(target=send, args=(args.interlocutor_address, args.interlocutor_port, args.depth, args.nchannels, args.rate, args.chunk_size, args.levels, sent_counter, max_sent))
-    sender_process.daemon = True
-
-    receiver_process.start()
-    sender_process.start()
-
-    while True:
-        time.sleep(1)
-        print(f"Sent {sent_counter.value} chunks, received {received_counter.value} chunks, max_sent={max_sent.value}, max_received={max_received.value}")
-        max_sent.value = 0
-        max_received.value = 0
-    input()
+        while True:
+            time.sleep(1)
+            print(f"Sent {number_of_chunks_sent.value} chunks, received {number_of_chunks_received.value} chunks")
 
 if __name__ == "__main__":
-    main()
+
+    intercom = Intercom()
+    args = intercom.parse_args()
+    intercom.init(args)
+    intercom.run()
