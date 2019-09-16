@@ -1,4 +1,5 @@
 # intercom.py
+#
 # https://github.com/Tecnologias-multimedia/intercom
 #
 # P2P real-time audio/video sender and receiver.
@@ -136,7 +137,7 @@ def send(IPaddr, port, depth, nchannels, rate, chunk_size, dwt_levels, sent, max
                         frames_per_buffer=chunk_size)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)           # Create an UDP socket.
 
-    packet_format = "!i" + str(chunk_size/8)+"s"
+    packet_format = "!i" + str(chunk_size/8)+"s"                      # <chunk_number, chunk_data>
 
     while True:                                                       # Forever.
         sent.value += 1                                               # Number of sent chunks.
