@@ -5,15 +5,14 @@
 # https://github.com/Tecnologias-multimedia/intercom
 
 import pyaudio                      # http://people.csail.mit.edu/hubert/pyaudio/
-import numpy as np                  # https://www.numpy.org
-import pywt                         # https://pywavelets.readthedocs.io
-#import scipy.stats as st            # https://www.scipy.org/
 import argparse                     # https://docs.python.org/3/library/argparse.html
-import math                         # https://docs.python.org/3/library/math.html
 import multiprocessing              # https://docs.python.org/3/library/multiprocessing.html
 import socket                       # https://docs.python.org/3/library/socket.html
 import time                         # https://docs.python.org/3/library/time.html
 import struct                       # https://docs.python.org/3/library/struct.html
+
+if __debug__:
+    import sys
 
 class Intercom:
 
@@ -24,7 +23,8 @@ class Intercom:
         self.number_of_channels = args.number_of_channels
         self.sampling_rate = args.sampling_rate
         self.samples_per_chunk = args.samples_per_chunk
-        self.packet_format = "!i" + str(self.samples_per_chunk)+"s"             # <chunk_number, chunk_data>
+        self.packet_format = "!i" + str(self.samples_per_chunk*self.bytes_per_sample*self.number_of_channels)+"s"             # <chunk_number, chunk_data>
+        sys.stderr.write(self.packet_format)
 
     def send(self, destination_IP_addr, destination_port, number_of_chunks_sent):
 
@@ -43,11 +43,12 @@ class Intercom:
         # Sample and send
         chunk_number = 0
         while True:
-            number_of_chunks_sent.value += 1
             samples = audio.read(self.samples_per_chunk)
             message = (chunk_number, samples)
             packed_chunk = struct.pack(self.packet_format, *message)
             sock.sendto(packed_chunk, (destination_IP_addr, destination_port))        # Send the chunk
+            number_of_chunks_sent.value += 1
+            chunk_number += 1
 
     def receive(self, listening_port, number_of_chunks_received):
 
@@ -68,9 +69,10 @@ class Intercom:
         # Receive and play
         while True:
             packed_chunk, source_address = sock.recvfrom(Intercom.max_packet_size)
-            message = struct.unpack(self.packet_format, packet)
+            message = struct.unpack(self.packet_format, packed_chunk)
             chunk_number, samples = message[0], message[1]
             audio.write(samples)
+            number_of_chunks_received.value += 1
 
     def parse_args(self):
         parser = argparse.ArgumentParser(
