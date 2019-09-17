@@ -6,7 +6,7 @@ few samples and play them back immediately).
 import pyaudio
 import sys
 
-CHUNK = 4096
+CHUNK = 256
 WIDTH = 2
 CHANNELS = 2
 RATE = 44100
