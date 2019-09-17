@@ -16,7 +16,7 @@ if __debug__:
 
 class Intercom:
 
-    max_packet_size = 4096  # In bytes
+    max_packet_size = 32768  # In bytes
     
     def init(self, args):
         self.bytes_per_sample = args.bytes_per_sample
@@ -24,10 +24,19 @@ class Intercom:
         self.sampling_rate = args.sampling_rate
         self.samples_per_chunk = args.samples_per_chunk
         self.packet_format = "!i" + str(self.samples_per_chunk*self.bytes_per_sample*self.number_of_channels)+"s"             # <chunk_number, chunk_data>
-        sys.stderr.write(self.packet_format)
+
+        if __debug__:
+            print(f"bytes_per_sample={self.bytes_per_sample}")
+            print(f"number_of_channels={self.number_of_channels}")
+            print(f"sampling_rate={self.sampling_rate}")
+            print(f"samples_per_chunk={self.samples_per_chunk}")
 
     def send(self, destination_IP_addr, destination_port, number_of_chunks_sent):
 
+        if __debug__:
+            print(f"send: destination_IP_addr={destination_IP_addr}, \
+destination_port={destination_port}")
+        
         # Audio stuff
         audio_handler = pyaudio.PyAudio()
         audio = audio_handler.open(
@@ -51,6 +60,9 @@ class Intercom:
             chunk_number += 1
 
     def receive(self, listening_port, number_of_chunks_received):
+
+        if __debug__:
+            print(f"receive: listening_port={listening_port}")
 
         # Audio stuff
         audio_handler = pyaudio.PyAudio()
