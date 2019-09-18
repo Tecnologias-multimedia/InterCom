@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+# https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
+
+"""Pass input directly to output.
+
+See https://www.assembla.com/spaces/portaudio/subversion/source/HEAD/portaudio/trunk/test/patest_wire.c
+
+"""
+import argparse
+#import logging
+import sounddevice as sd
+import numpy as np  # Make sure NumPy is loaded before it is used in the callback
+assert np  # avoid "imported but unused" message (W0611)
+import sys
+import socket
+import numpy
+
+def int_or_str(text):
+    """Helper function for argument parsing."""
+    try:
+        return int(text)
+    except ValueError:
+        return text
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('-i', '--input-device', type=int_or_str,
+                    help='input device ID or substring')
+parser.add_argument('-o', '--output-device', type=int_or_str,
+                    help='output device ID or substring')
+parser.add_argument('-c', '--channels', type=int, default=2,
+                    help='number of channels')
+parser.add_argument('-t', '--dtype', help='audio data type', default=np.int16)
+parser.add_argument('-s', '--samplerate', type=float, help='sampling rate')
+parser.add_argument('-b', '--blocksize', type=int, help='block size')
+parser.add_argument('-l', '--latency', type=float, help='latency in seconds')
+args = parser.parse_args()
+
+print(args)
+
+listening_port = 4444
+destination_IP_addr = "localhost"
+destination_port = 4444
+
+sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+listening_endpoint = ("0.0.0.0", listening_port)
+receiving_sock.bind(listening_endpoint)
+
+try:
+    def callback(indata, outdata, frames, time, status):
+        sending_sock.sendto(indata, (destination_IP_addr, destination_port))
+        message, source_address = receiving_sock.recvfrom(32000)
+        outdata[:] = numpy.frombuffer(message, numpy.int16).reshape(args.blocksize, args.channels)
+        #sys.stderr.write(f" ({len(indata)},{len(outdata)})"); sys.stderr.flush()
+        #outdata[:] = indate
+        #print(len(indata), len(outdata))
+
+    print(args)
+        
+    with sd.Stream(device=(args.input_device, args.output_device),
+                   samplerate=args.samplerate, blocksize=args.blocksize,
+                   dtype=numpy.int16, latency=args.latency,
+                   channels=args.channels, callback=callback):
+        print('#' * 80)
+        print('press Return to quit')
+        print('#' * 80)
+        input()
+except KeyboardInterrupt:
+    parser.exit('\nInterrupted by user')
+except Exception as e:
+    parser.exit(type(e).__name__ + ': ' + str(e))
