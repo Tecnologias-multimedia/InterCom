@@ -39,17 +39,18 @@ class Intercom:
             print("destination_port={}".format(self.destination_port))
 
     def run(self):
-        sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sending_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listening_endpoint = ("0.0.0.0", self.listening_port)
         receiving_sock.bind(listening_endpoint)
+        receiving_sock.listen(1)
 
         def callback(indata, outdata, frames, time, status):
             sending_sock.sendto(
                 indata,
                 (self.destination_IP_addr, self.destination_port))
-            message, source_address = receiving_sock.recvfrom(
-                Intercom.max_packet_size)
+            message, source_address = receiving_sock.recvfrom(Intercom.max_packet_size)
+            #message = numpy.ndarray((1024,2),numpy.int16)
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
