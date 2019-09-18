@@ -44,7 +44,7 @@ destination_port={destination_port}")
             sock.sendto(indata, (destination_IP_addr, destination_port))
             number_of_chunks_sent.value += 1
 
-        stream = sd.RawInputStream(
+        stream = sd.InputStream(
             device=None,
             channels=self.number_of_channels,
             samplerate=self.samples_per_second,
@@ -69,7 +69,7 @@ destination_port={destination_port}")
             outdata, source_address = self.sock.recvfrom(Intercom.max_packet_size)
             number_of_chunks_received.value += 1
 
-        with sd.RawOutputStream(
+        with sd.OutputStream(
                 samplerate=self.samples_per_second,
                 blocksize=self.samples_per_chunk,
                 device=None,
