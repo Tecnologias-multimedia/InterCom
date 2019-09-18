@@ -11,6 +11,8 @@ import sounddevice as sd                                                        
 import numpy                                                                    # https://numpy.org/
 import argparse                                                                 # https://docs.python.org/3/library/argparse.html
 import socket                                                                   # https://docs.python.org/3/library/socket.html
+import multiprocessing              # https://docs.python.org/3/library/multiprocessing.html
+import queue
 
 if __debug__:
     import sys
@@ -44,12 +46,18 @@ class Intercom:
         listening_endpoint = ("0.0.0.0", self.listening_port)
         receiving_sock.bind(listening_endpoint)
 
+        q = queue.Queue(maxsize=100000)
+
+        def receive_and_buffer():
+            message, source_address = receiving_sock.recvfrom(
+                Intercom.max_packet_size)
+            q.put(message)
+        
         def callback(indata, outdata, frames, time, status):
             sending_sock.sendto(
                 indata,
                 (self.destination_IP_addr, self.destination_port))
-            message, source_address = receiving_sock.recvfrom(
-                Intercom.max_packet_size)
+            message = q.get()
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
@@ -64,7 +72,8 @@ class Intercom:
                 channels=self.number_of_channels,
                 callback=callback):
             print('press <Return> to quit')
-            input()
+            while True:
+                receive_and_buffer()
 
     def parse_args(self):
         parser = argparse.ArgumentParser(
