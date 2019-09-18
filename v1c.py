@@ -40,11 +40,25 @@ destination_port={destination_port}")
         # UDP socket to send
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        def callback(indata, frames, time, status):
-            print("->", len(indata))
+        def record_callback(indata, frames, time, status):
+            print("hola")
             sock.sendto(indata, (destination_IP_addr, destination_port))
             number_of_chunks_sent.value += 1
 
+        stream = sd.RawInputStream(
+            device=None,
+            channels=self.number_of_channels,
+            samplerate=self.samples_per_second,
+            dtype=numpy.int16,
+            callback=record_callback)
+        with stream:
+            while True:
+                time.sleep(1)
+                print("O")
+        while True:
+           callback(bytes(1024), None, None, None)
+           time.sleep(1)
+           print("O")
         with sd.RawInputStream(
                 samplerate=self.samples_per_second,
                 device=None,
@@ -53,7 +67,7 @@ destination_port={destination_port}")
                 dtype=numpy.int16,
                 callback=callback):
             while True:
-                time.sleep(1)
+               time.sleep(1)
 
     def receive(self, listening_port, number_of_chunks_received):
 
@@ -66,26 +80,18 @@ destination_port={destination_port}")
         self.sock.bind(listening_endpoint)
 
         def callback(outdata, frames, time, status):
-            print(frames, time)
-            assert frames == self.samples_per_chunk
-            if status.output_underflow:
-                print('Output underflow: increase blocksize?', file=sys.stderr)
-                raise sd.CallbackAbort
-            assert not status
-            #print(sock)
             outdata, source_address = self.sock.recvfrom(Intercom.max_packet_size)
             number_of_chunks_received.value += 1
 
-        with sd.RawOutputStream(
-                samplerate=self.samples_per_second,
-                blocksize=self.samples_per_chunk,
-                device=None,
-                channels=self.number_of_channels,
-                dtype=numpy.int16,
-                callback=callback):
+        while True:
+            callback(None, None, None, None)
 
-            while True:
-                time.sleep(1)
+#        with sd.RawOutputStream(
+#                samplerate=self.samples_per_second,
+#                blocksize=self.samples_per_chunk,
+#                device=None,
+#                channels=self.number_of_channels,
+#                callback=callback):
 
     def parse_args(self):
         parser = argparse.ArgumentParser(

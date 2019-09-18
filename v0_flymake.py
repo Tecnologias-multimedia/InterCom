@@ -10,6 +10,7 @@ import argparse                     # https://docs.python.org/3/library/argparse
 import multiprocessing              # https://docs.python.org/3/library/multiprocessing.html
 import socket                       # https://docs.python.org/3/library/socket.html
 import time                         # https://docs.python.org/3/library/time.html
+import struct                       # https://docs.python.org/3/library/struct.html
 
 if __debug__:
     import sys
@@ -21,14 +22,14 @@ class Intercom:
     def init(self, args):
         self.bytes_per_sample = args.bytes_per_sample
         self.number_of_channels = args.number_of_channels
-        self.samples_per_second = args.samples_per_second
+        self.sampling_rate = args.sampling_rate
         self.samples_per_chunk = args.samples_per_chunk
-        self.packet_format = "!i" + str(self.samples_per_chunk)+"h"             # <chunk_number, chunk_data>
+        self.packet_format = "!i" + str(self.samples_per_chunk*self.bytes_per_sample*self.number_of_channels)+"s"             # <chunk_number, chunk_data>
 
         if __debug__:
             print(f"bytes_per_sample={self.bytes_per_sample}")
             print(f"number_of_channels={self.number_of_channels}")
-            print(f"samples_per_second={self.samples_per_second}")
+            print(f"sampling_rate={self.sampling_rate}")
             print(f"samples_per_chunk={self.samples_per_chunk}")
 
     def send(self, destination_IP_addr, destination_port, number_of_chunks_sent):
@@ -40,17 +41,20 @@ destination_port={destination_port}")
         # UDP socket to send
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        def callback(indata, frames, time, status):
-            print("->", len(indata))
-            sock.sendto(indata, (destination_IP_addr, destination_port))
-            number_of_chunks_sent.value += 1
+        chunk_number = 0
 
-        with sd.RawInputStream(
-                samplerate=self.samples_per_second,
+        def callback(indata, frames, time, status):
+            message = (chunk_number, indata)
+            packed_chunk = struct.pack(self.packet_format, *message)
+            sock.sendto(packed_chunk, (destination_IP_addr, destination_port))
+            number_of_chunks_sent.value += 1
+            chunk_number += 1
+            #q.put(indata.copy())
+
+        with sd.InputStream(
+                samplerate=self.sampling_rate,
                 device=None,
-                blocksize=self.samples_per_chunk,
                 channels=args.number_of_channels,
-                dtype=numpy.int16,
                 callback=callback):
             while True:
                 time.sleep(1)
@@ -61,29 +65,35 @@ destination_port={destination_port}")
             print(f"receive: listening_port={listening_port}")
 
         # UDP socket to receive
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         listening_endpoint = ("0.0.0.0", listening_port)
-        self.sock.bind(listening_endpoint)
+        sock.bind(listening_endpoint)
 
         def callback(outdata, frames, time, status):
-            print(frames, time)
             assert frames == self.samples_per_chunk
             if status.output_underflow:
                 print('Output underflow: increase blocksize?', file=sys.stderr)
                 raise sd.CallbackAbort
             assert not status
-            #print(sock)
-            outdata, source_address = self.sock.recvfrom(Intercom.max_packet_size)
+            packed_chunk, source_address = sock.recvfrom(Intercom.max_packet_size)
+            message = struct.unpack(self.packet_format, packed_chunk)
+            chunk_number, data = message[0], message[1]
+            if len(data) < len(outdata):
+                outdata[:len(data)] = data
+                outdata[len(data):] = b'\x00' * (len(outdata) - len(data))
+                raise sd.CallbackStop
+            else:
+                outdata[:] = data
             number_of_chunks_received.value += 1
 
-        with sd.RawOutputStream(
-                samplerate=self.samples_per_second,
-                blocksize=self.samples_per_chunk,
-                device=None,
-                channels=self.number_of_channels,
-                dtype=numpy.int16,
-                callback=callback):
-
+        stream = sd.RawOutputStream(
+            samplerate=self.sampling_rate,
+            blocksize=self.samples_per_chunk,
+            device=None,
+            channels=self.number_of_channels,
+            dtype=numpy.int16,
+            callback=callback)
+        with stream:
             while True:
                 time.sleep(1)
 
@@ -97,7 +107,7 @@ destination_port={destination_port}")
                             type=int,
                             default=1024)
         parser.add_argument("-r",
-                            "--samples_per_second",
+                            "--sampling_rate",
                             help="Sampling rate in samples/second.",
                             type=int,
                             default=44100)
@@ -133,7 +143,7 @@ destination_port={destination_port}")
         # Print input parameters
         if __debug__:
             print(f"Samples per chunk: {self.args.samples_per_chunk}")
-            print(f"Samples per second: {self.args.samples_per_second}")
+            print(f"Sampling rate: {self.args.sampling_rate}")
             print(f"Numbers of channels: {self.args.number_of_channels}")
             print(f"Bytes per sample: {self.args.bytes_per_sample}")
             print(f"I'm listening at port: {self.args.mlp}")
@@ -144,7 +154,7 @@ destination_port={destination_port}")
         self.intercom = Intercom(
             bytes_per_sample = args.bytes_per_sample,
             number_of_channels = args.number_of_channels,
-            samping_rate = args.samples_per_second,
+            samping_rate = args.sampling_rate,
             samples_per_chunk = args.samples_per_chunk
         )
 
@@ -172,7 +182,7 @@ destination_port={destination_port}")
 
         while True:
             time.sleep(1)
-            print(f"Sent {number_of_chunks_sent.value}, received {number_of_chunks_received.value} chunks")
+            print(f"Sent {number_of_chunks_sent.value} chunks, received {number_of_chunks_received.value} chunks")
 
 if __name__ == "__main__":
 

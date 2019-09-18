@@ -40,20 +40,13 @@ destination_port={destination_port}")
         # UDP socket to send
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        def callback(indata, frames, time, status):
-            print("->", len(indata))
+        def callback(indata):
             sock.sendto(indata, (destination_IP_addr, destination_port))
             number_of_chunks_sent.value += 1
 
-        with sd.RawInputStream(
-                samplerate=self.samples_per_second,
-                device=None,
-                blocksize=self.samples_per_chunk,
-                channels=args.number_of_channels,
-                dtype=numpy.int16,
-                callback=callback):
-            while True:
-                time.sleep(1)
+        while True:
+            callback(bytes(1024))
+            time.sleep(1)
 
     def receive(self, listening_port, number_of_chunks_received):
 
@@ -65,27 +58,12 @@ destination_port={destination_port}")
         listening_endpoint = ("0.0.0.0", listening_port)
         self.sock.bind(listening_endpoint)
 
-        def callback(outdata, frames, time, status):
-            print(frames, time)
-            assert frames == self.samples_per_chunk
-            if status.output_underflow:
-                print('Output underflow: increase blocksize?', file=sys.stderr)
-                raise sd.CallbackAbort
-            assert not status
-            #print(sock)
+        def callback(outdata):
             outdata, source_address = self.sock.recvfrom(Intercom.max_packet_size)
             number_of_chunks_received.value += 1
 
-        with sd.RawOutputStream(
-                samplerate=self.samples_per_second,
-                blocksize=self.samples_per_chunk,
-                device=None,
-                channels=self.number_of_channels,
-                dtype=numpy.int16,
-                callback=callback):
-
-            while True:
-                time.sleep(1)
+        while True:
+            callback(None)
 
     def parse_args(self):
         parser = argparse.ArgumentParser(
