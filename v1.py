@@ -57,7 +57,10 @@ class Intercom:
             sending_sock.sendto(
                 indata,
                 (self.destination_IP_addr, self.destination_port))
-            message = q.get()
+            try:
+                message = q.get_nowait()
+            except queue.Empty:
+                message = numpy.ndarray((1024, 2), numpy.int16)
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
