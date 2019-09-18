@@ -35,6 +35,8 @@ class Intercom:
             print("samples_per_second={}".format(self.samples_per_second))
             print("samples_per_chunk={}".format(self.samples_per_chunk))
             print("listening_port={}".format(self.listening_port))
+            print("destination_IP_address={}".format(self.destination_IP_addr))
+            print("destination_port={}".format(self.destination_port))
 
     def run(self):
         sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -52,6 +54,8 @@ class Intercom:
                 message,
                 numpy.int16).reshape(
                     self.samples_per_chunk, self.number_of_channels)
+            if __debug__:
+                sys.stderr.write("."); sys.stderr.flush()
 
         with sd.Stream(
                 samplerate=self.samples_per_second,
