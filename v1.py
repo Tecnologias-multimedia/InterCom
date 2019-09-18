@@ -35,28 +35,23 @@ class Intercom:
             print("samples_per_second={}".format(self.samples_per_second))
             print("samples_per_chunk={}".format(self.samples_per_chunk))
             print("listening_port={}".format(self.listening_port))
-            print("destination_IP_address={}".format(self.destination_IP_addr))
-            print("destination_port={}".format(self.destination_port))
 
     def run(self):
-        sending_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         listening_endpoint = ("0.0.0.0", self.listening_port)
         receiving_sock.bind(listening_endpoint)
-        receiving_sock.listen(1)
 
         def callback(indata, outdata, frames, time, status):
             sending_sock.sendto(
                 indata,
                 (self.destination_IP_addr, self.destination_port))
-            message, source_address = receiving_sock.recvfrom(Intercom.max_packet_size)
-            #message = numpy.ndarray((1024,2),numpy.int16)
+            message, source_address = receiving_sock.recvfrom(
+                Intercom.max_packet_size)
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
                     self.samples_per_chunk, self.number_of_channels)
-            if __debug__:
-                sys.stderr.write("."); sys.stderr.flush()
 
         with sd.Stream(
                 samplerate=self.samples_per_second,
