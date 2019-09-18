@@ -80,7 +80,7 @@ class Intercom:
                 dtype=self.dtype,
                 channels=self.number_of_channels,
                 callback=record_send_and_play):
-            print('press <Return> to quit')
+            print('-=- Press <CTRL> + <C> to quit -=-')
             while True:
                 receive_and_buffer()
 
