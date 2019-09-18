@@ -60,7 +60,7 @@ class Intercom:
             try:
                 message = q.get_nowait()
             except queue.Empty:
-                message = numpy.ndarray((1024, 2), numpy.int16)
+                message = numpy.zeros((1024, 2), numpy.int16)
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
