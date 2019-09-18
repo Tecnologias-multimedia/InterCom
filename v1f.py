@@ -26,22 +26,22 @@ class Intercom:
         self.packet_format = "!i" + str(self.samples_per_chunk)+"h"             # <chunk_number, chunk_data>
 
         if __debug__:
-            print(f"bytes_per_sample={self.bytes_per_sample}")
-            print(f"number_of_channels={self.number_of_channels}")
-            print(f"samples_per_second={self.samples_per_second}")
-            print(f"samples_per_chunk={self.samples_per_chunk}")
+            print("bytes_per_sample={}".format(self.bytes_per_sample))
+            print("number_of_channels={}".format(self.number_of_channels))
+            print("samples_per_second={}".format(self.samples_per_second))
+            print("samples_per_chunk={}".format(self.samples_per_chunk))
 
     def send(self, destination_IP_addr, destination_port, number_of_chunks_sent):
 
         if __debug__:
-            print(f"send: destination_IP_addr={destination_IP_addr}, \
-destination_port={destination_port}")
+            print("send: destination_IP_addr={}, destination_port={}".
+                  format(destination_IP_addr, destination_port))
 
         # UDP socket to send
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         def record_callback(indata, frames, time, status):
-            print(len(indata))
+            print(indata[0])
             sock.sendto(indata, (destination_IP_addr, destination_port))
             number_of_chunks_sent.value += 1
 
@@ -60,17 +60,17 @@ destination_port={destination_port}")
     def receive(self, listening_port, number_of_chunks_received):
 
         if __debug__:
-            print(f"receive: listening_port={listening_port}")
+            print("receive: listening_port={}".format(listening_port))
 
         # UDP socket to receive
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         listening_endpoint = ("0.0.0.0", listening_port)
         self.sock.bind(listening_endpoint)
 
-        def callback(outdata, frames, time, status):
+        def play_callback(outdata, frames, time, status):
             message, source_address = self.sock.recvfrom(Intercom.max_packet_size)
             outdata = numpy.frombuffer(message, numpy.int16).reshape(self.samples_per_chunk, self.number_of_channels)
-            print(len(outdata))
+            print("->", outdata[0])
             number_of_chunks_received.value += 1
 
         with sd.OutputStream(
@@ -79,7 +79,7 @@ destination_port={destination_port}")
                 device=None,
                 channels=self.number_of_channels,
                 dtype=numpy.int16,
-                callback=callback):
+                callback=play_callback):
 
             while True:
                 time.sleep(1)
@@ -139,13 +139,13 @@ destination_port={destination_port}")
 
         # Print input parameters
         if __debug__:
-            print(f"Samples per chunk: {self.args.samples_per_chunk}")
-            print(f"Samples per second: {self.args.samples_per_second}")
-            print(f"Numbers of channels: {self.args.number_of_channels}")
-            print(f"Bytes per sample: {self.args.bytes_per_sample}")
-            print(f"I'm listening at port: {self.args.mlp}")
-            print(f"Interlocutor's listening port: {self.args.ilp}")
-            print(f"Interlocutor's IP address: {self.args.ia}")
+            print("Samples per chunk: {}".format(self.args.samples_per_chunk))
+            print("Samples per second: {}".format(self.args.samples_per_second))
+            print("Numbers of channels: {}".format(self.args.number_of_channels))
+            print("Bytes per sample: {}".format(self.args.bytes_per_sample))
+            print("I'm listening at port: {}".format(self.args.mlp))
+            print("Interlocutor's listening port: {}".format(self.args.ilp))
+            print("Interlocutor's IP address: {}".format(self.args.ia))
 
     def instance(self):
         self.intercom = Intercom(
@@ -179,7 +179,8 @@ destination_port={destination_port}")
 
         while True:
             time.sleep(1)
-            print(f"Sent {number_of_chunks_sent.value}, received {number_of_chunks_received.value} chunks")
+            print("Sent {}, received {} chunks".
+                  format(number_of_chunks_sent.value, number_of_chunks_received.value))
 
 if __name__ == "__main__":
 
