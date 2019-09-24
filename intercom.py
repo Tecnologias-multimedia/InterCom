@@ -65,7 +65,7 @@ class Intercom:
                 message = q.get_nowait()
             except queue.Empty:
                 message = numpy.zeros(
-                    (self.samples_per_chunk, self.bytes_per_sample),
+                    (self.samples_per_chunk, self.number_of_channels),
                     self.dtype)
             outdata[:] = numpy.frombuffer(
                 message,
