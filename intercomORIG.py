@@ -16,15 +16,10 @@ import queue                                                                    
 if __debug__:
     import sys
 
-packet_send=0
-packet_received=0
-packet_list=[None,None,None,None]
-buffer_size=4
-    
 class Intercom:
 
     max_packet_size = 32768                                                     # In bytes
-        
+   
     def init(self, args):
         self.bytes_per_sample = args.bytes_per_sample
         self.number_of_channels = args.number_of_channels
@@ -54,51 +49,30 @@ class Intercom:
         receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         listening_endpoint = ("0.0.0.0", self.listening_port)
         receiving_sock.bind(listening_endpoint)
-        
-        #q = queue.Queue(maxsize=100000)
+
+        q = queue.Queue(maxsize=100000)
 
         def receive_and_buffer():
-            global packet_send
-            global packet_list
-            global buffer_size
-            messagepack, source_address = receiving_sock.recvfrom(
+            message, source_address = receiving_sock.recvfrom(
                 Intercom.max_packet_size)
-            packet_list[messagepack[0]]=messagepack[1]
+            q.put(message)
         
         def record_send_and_play(indata, outdata, frames, time, status):
-            global packet_received
-            global packet_list
-            global buffer_size
-            global packet_send
-            
-            datapack=np.arange(2)
-            datapack[0]=packet_send
-            datapack[1][:]=indata
-            
             sending_sock.sendto(
-                datapack,
+                indata,
                 (self.destination_IP_addr, self.destination_port))
-            
-            packet_send=packet_send+1
-            
             try:
-                message=packet_list[packet_received % buffer_size]
-                if message==None:
-                    raise TypeError
-                #packet_list[packet_received % buffer_size]=None
-            except TypeError:
-                #sys.stderr.write(" EMPTY "); sys.stderr.flush()
+                message = q.get_nowait()
+            except queue.Empty:
                 message = numpy.zeros(
                     (self.samples_per_chunk, self.bytes_per_sample),
                     self.dtype)
-            packet_received=packet_received+1
             outdata[:] = numpy.frombuffer(
                 message,
                 numpy.int16).reshape(
                     self.samples_per_chunk, self.number_of_channels)
             if __debug__:
                 sys.stderr.write("."); sys.stderr.flush()
-                #sys.stderr.write("\nPackets " + str(numpy.count_nonzero(packet_list))); sys.stderr.flush()
 
         with sd.Stream(
                 samplerate=self.samples_per_second,
