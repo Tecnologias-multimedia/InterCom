@@ -6,7 +6,6 @@
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
-# SOULUTION 1 working solution
 
 import sounddevice as sd                                                        # https://python-sounddevice.readthedocs.io
 import numpy                                                                    # https://numpy.org/

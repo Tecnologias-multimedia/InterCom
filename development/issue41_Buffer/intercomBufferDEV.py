@@ -6,12 +6,15 @@
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
+# SOULUTION 2 some problems with not clear sound
+
 
 import sounddevice as sd 
 import intercom as intercomOriginal
 import numpy                                                                    # https://numpy.org/
 import argparse                                                                 # https://docs.python.org/3/library/argparse.html
 import socket  
+import pickle
 
 if __debug__:
     import sys
@@ -20,6 +23,20 @@ packet_send=0
 packet_received=0
 packet_list=[[],[],[],[]]
 buffer_size=4
+
+class msgpack:
+    idx=0
+    message=[]
+    
+    def __init__(self, index, msgarray): 
+        type(self).idx=index
+        type(self).message=msgarray
+
+    def get_idx(self): 
+        return self.idx
+    
+    def get_msg(self): 
+        return self.message
     
 class IntercomBuffer(intercomOriginal.Intercom):
 
@@ -30,61 +47,48 @@ class IntercomBuffer(intercomOriginal.Intercom):
         receiving_sock.bind(listening_endpoint)
         
         def receive_and_buffer():
-            global packet_list
+            global packet_send
+            global packet_received
             global buffer_size
             messagepack, source_address = receiving_sock.recvfrom(
                 intercomOriginal.Intercom.max_packet_size)
 
-            messagearray=messagepack[0]            
-            sys.stderr.write("\nMP0:" + str(messagepack[0])); sys.stderr.flush()
-            sys.stderr.write("\nMP1:" + str(messagepack[1])); sys.stderr.flush()
-            sys.stderr.write("\nARRAY:" + str(messagearray)); sys.stderr.flush()
-            outidx=messagepack[0]
-            outmessage=messagepack[1]
-            #out=numpy.frombuffer(messagepack,numpy.int16)
-            #idx=out[0]
-            #message=numpy.delete(out,0)
-            packet_list[outidx%buffer_size]=outmessage
-            sys.stderr.write("\nIDX_REC:" + str(outidx)); sys.stderr.flush()
+            outdata=pickle.loads(messagepack)
+
+            sys.stderr.write("\nMSG_REC:"  + "[" + str(outdata.get_idx()) + "]" + str(outdata.get_msg())); sys.stderr.flush()
+            packet_list[outdata.get_idx() %buffer_size]=outdata.get_msg()
+            del outdata
             
         def record_send_and_play(indata, outdata, frames, time, status):
+            global packet_send
             global packet_received
             global packet_list
             global buffer_size
-            global packet_send
-
-            x=packet_send
-            y=numpy.frombuffer(
-                indata,
-                numpy.int16)
-
-            wtype=numpy.dtype([('idx',self.dtype),('msg',y.dtype)])
-            datapack=numpy.array([1,1],dtype=wtype)
-            datapack['idx']=x
-            datapack['msg']=y
-
-            #datapack=numpy.insert(numpy.frombuffer(
-            #    indata,
-            #    numpy.int16),0,packet_send)
             
+            datapack=pickle.dumps(msgpack(packet_send, numpy.frombuffer(
+                indata,
+                numpy.int16)))
+           
             sending_sock.sendto( 
                 datapack,
                 (self.destination_IP_addr, self.destination_port))
-            packet_send=packet_send+1
-            sys.stderr.write("\nIDX_SEND:" + str(packet_send-1)); sys.stderr.flush()
             
+            packet_send+=1
+
             try:
                 message=packet_list[packet_received % buffer_size]
-                sys.stderr.write("\nmessage:" + str(message)); sys.stderr.flush()
+                sys.stderr.write("\nMSG_PLY:" + "[" + str(packet_received) + "]" + str(message)) ; sys.stderr.flush()
                 
-                if (message)==0:
+                if len(message)==0:
                     raise ValueError
             except ValueError:
                 message = numpy.zeros(
                     (self.samples_per_chunk, self.bytes_per_sample),
                     self.dtype)
             
-            packet_received=packet_received+1
+            packet_received+=1
+
+
             outdata[:] = numpy.reshape(message,(
                     self.samples_per_chunk, self.number_of_channels))
             if __debug__:
