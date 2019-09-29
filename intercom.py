@@ -65,7 +65,7 @@ class Intercom:
                 message = q.get_nowait()
             except queue.Empty:
                 message = numpy.zeros(
-                    (self.samples_per_chunk, self.bytes_per_sample),
+                    (self.samples_per_chunk, self.number_of_channels),
                     self.dtype)
             outdata[:] = numpy.frombuffer(
                 message,
@@ -126,15 +126,6 @@ class Intercom:
 
         args = parser.parse_args()
         return args
-
-        if __debug__:
-            print("Samples per chunk: {}".format(self.args.samples_per_chunk))
-            print("Samples per second: {}".format(self.args.samples_per_second))
-            print("Numbers of channels: {}".format(self.args.number_of_channels))
-            print("Bytes per sample: {}".format(self.args.bytes_per_sample))
-            print("I'm listening at port: {}".format(self.args.mlp))
-            print("Interlocutor's listening port: {}".format(self.args.ilp))
-            print("Interlocutor's IP address: {}".format(self.args.ia))
 
 if __name__ == "__main__":
 
