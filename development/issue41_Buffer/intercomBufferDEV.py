@@ -34,22 +34,38 @@ class IntercomBuffer(intercomOriginal.Intercom):
             global buffer_size
             messagepack, source_address = receiving_sock.recvfrom(
                 intercomOriginal.Intercom.max_packet_size)
-            
-            out=numpy.frombuffer(messagepack,numpy.int16)
-            idx=out[0]
-            message=numpy.delete(out,0)
-            packet_list[idx%buffer_size]=message
-            sys.stderr.write("\nIDX_REC:" + str(idx)); sys.stderr.flush()
+
+            messagearray=messagepack[0]            
+            sys.stderr.write("\nMP0:" + str(messagepack[0])); sys.stderr.flush()
+            sys.stderr.write("\nMP1:" + str(messagepack[1])); sys.stderr.flush()
+            sys.stderr.write("\nARRAY:" + str(messagearray)); sys.stderr.flush()
+            outidx=messagepack[0]
+            outmessage=messagepack[1]
+            #out=numpy.frombuffer(messagepack,numpy.int16)
+            #idx=out[0]
+            #message=numpy.delete(out,0)
+            packet_list[outidx%buffer_size]=outmessage
+            sys.stderr.write("\nIDX_REC:" + str(outidx)); sys.stderr.flush()
             
         def record_send_and_play(indata, outdata, frames, time, status):
             global packet_received
             global packet_list
             global buffer_size
             global packet_send
-            
-            datapack=numpy.insert(numpy.frombuffer(
+
+            x=packet_send
+            y=numpy.frombuffer(
                 indata,
-                numpy.int16),0,packet_send)
+                numpy.int16)
+
+            wtype=numpy.dtype([('idx',self.dtype),('msg',y.dtype)])
+            datapack=numpy.array([1,1],dtype=wtype)
+            datapack['idx']=x
+            datapack['msg']=y
+
+            #datapack=numpy.insert(numpy.frombuffer(
+            #    indata,
+            #    numpy.int16),0,packet_send)
             
             sending_sock.sendto( 
                 datapack,
@@ -61,7 +77,7 @@ class IntercomBuffer(intercomOriginal.Intercom):
                 message=packet_list[packet_received % buffer_size]
                 sys.stderr.write("\nmessage:" + str(message)); sys.stderr.flush()
                 
-                if len(message)==0:
+                if (message)==0:
                     raise ValueError
             except ValueError:
                 message = numpy.zeros(

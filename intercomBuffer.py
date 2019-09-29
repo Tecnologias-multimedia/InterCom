@@ -39,7 +39,7 @@ class IntercomBuffer(intercomOriginal.Intercom):
             idx=out[0]
             message=numpy.delete(out,0)
             packet_list[idx%buffer_size]=message
-            sys.stderr.write("\nIDX_REC:" + str(idx)); sys.stderr.flush()
+            #sys.stderr.write("\nIDX_REC:" + str(idx)); sys.stderr.flush()
             
         def record_send_and_play(indata, outdata, frames, time, status):
             global packet_received
@@ -55,11 +55,11 @@ class IntercomBuffer(intercomOriginal.Intercom):
                 datapack,
                 (self.destination_IP_addr, self.destination_port))
             packet_send=packet_send+1
-            sys.stderr.write("\nIDX_SEND:" + str(packet_send-1)); sys.stderr.flush()
+            #sys.stderr.write("\nIDX_SEND:" + str(packet_send-1)); sys.stderr.flush()
             
             try:
                 message=packet_list[packet_received % buffer_size]
-                sys.stderr.write("\nmessage:" + str(message)); sys.stderr.flush()
+                #sys.stderr.write("\nmessage:" + str(message)); sys.stderr.flush()
                 
                 if len(message)==0:
                     raise ValueError
@@ -72,7 +72,7 @@ class IntercomBuffer(intercomOriginal.Intercom):
             outdata[:] = numpy.reshape(message,(
                     self.samples_per_chunk, self.number_of_channels))
             if __debug__:
-                sys.stderr.write("."); sys.stderr.flush()
+                #sys.stderr.write("."); sys.stderr.flush()
 
         with sd.Stream(
                 samplerate=self.samples_per_second,
