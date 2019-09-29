@@ -71,8 +71,9 @@ class IntercomBuffer(intercomOriginal.Intercom):
             packet_received=packet_received+1
             outdata[:] = numpy.reshape(message,(
                     self.samples_per_chunk, self.number_of_channels))
+
             if __debug__:
-                #sys.stderr.write("."); sys.stderr.flush()
+                sys.stderr.write("."); sys.stderr.flush()
 
         with sd.Stream(
                 samplerate=self.samples_per_second,
