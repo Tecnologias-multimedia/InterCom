@@ -110,7 +110,7 @@ class IntercomBuffer(Intercom):
                             help="tamaño de buffer",
                             type=int,
                             default=4) 
-        
+        parser.set_defaults(samples_per_chunk=1024)
         args = parser.parse_args()
         return args
     

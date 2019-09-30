@@ -27,7 +27,6 @@ class Intercom:
         self.number_of_channels = args.number_of_channels
         self.samples_per_second = args.samples_per_second
         self.samples_per_chunk = args.samples_per_chunk
-        self.packet_format = "!i" + str(self.samples_per_chunk)+"h"             # <chunk_number, chunk_data>        
         self.listening_port = args.mlp
         self.destination_IP_addr = args.ia
         self.destination_port = args.ilp
