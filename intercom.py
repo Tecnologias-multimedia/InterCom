@@ -60,7 +60,6 @@ class Intercom:
             q.put(message)
         
         def record_send_and_play(indata, outdata, frames, time, status):
-            print(len(indata))
             sending_sock.sendto(indata, (self.destination_IP_addr, self.destination_port))
             try:
                 message = q.get_nowait()
