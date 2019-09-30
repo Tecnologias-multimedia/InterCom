@@ -22,6 +22,7 @@ class Intercom:
     max_packet_size = 32768                                                     # In bytes
    
     def init(self, args):
+        print("test")
         self.bytes_per_sample = args.bytes_per_sample
         self.number_of_channels = args.number_of_channels
         self.samples_per_second = args.samples_per_second

@@ -14,7 +14,7 @@ import intercom as intercomOriginal
 import numpy                                                                    # https://numpy.org/
 import argparse                                                                 # https://docs.python.org/3/library/argparse.html
 import socket  
-import pickle
+import Cpickle as pickle
 
 if __debug__:
     import sys
@@ -64,7 +64,10 @@ class IntercomBuffer(intercomOriginal.Intercom):
             global packet_received
             global packet_list
             global buffer_size
-            
+
+            #datapack=pickle.dumps(msgpack(packet_send,numpy.full(
+            #                    (self.samples_per_chunk, self.bytes_per_sample),-3524)))
+               
             datapack=pickle.dumps(msgpack(packet_send, numpy.frombuffer(
                 indata,
                 numpy.int16)))
