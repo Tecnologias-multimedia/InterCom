@@ -14,7 +14,7 @@ import intercom as intercomOriginal
 import numpy                                                                    # https://numpy.org/
 import argparse                                                                 # https://docs.python.org/3/library/argparse.html
 import socket  
-import Cpickle as pickle
+import pickle
 
 if __debug__:
     import sys
@@ -29,8 +29,8 @@ class msgpack:
     message=[]
     
     def __init__(self, index, msgarray): 
-        type(self).idx=index
-        type(self).message=msgarray
+        self.idx=index
+        self.message=msgarray
 
     def get_idx(self): 
         return self.idx

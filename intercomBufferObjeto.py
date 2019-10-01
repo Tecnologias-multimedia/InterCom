@@ -14,13 +14,27 @@ import numpy                                                                    
 import argparse                                                                 # https://docs.python.org/3/library/argparse.html
 import socket  
 import math
+import pickle
 import psutil
 
 if __debug__:
     import sys
+
+class msgpack:
+    idx=0
+    message=[]
+    
+    def __init__(self, index, msgarray): 
+        self.idx=index
+        self.message=msgarray
+
+    def get_idx(self): 
+        return self.idx
+    
+    def get_msg(self): 
+        return self.message
     
 class IntercomBuffer(Intercom):
-
     def init(self, args):
         Intercom.init(self,args)
         self.buffer_size=args.buffer_size
@@ -42,13 +56,12 @@ class IntercomBuffer(Intercom):
         receiving_sock.bind(listening_endpoint)
         
         def receive_and_buffer():
-            messagepack, source_address = receiving_sock.recvfrom(
+            datapack, source_address = receiving_sock.recvfrom(
                 Intercom.max_packet_size)
             
-            out=numpy.frombuffer(messagepack,numpy.int16)   #get 1d-array of message
-            idx=out[0]                                      #get value of first position (index o package)
-            self.packet_list[idx % self.buffer_size]=out    #save message with index in buffer at position index modulo buffer_size
-            sys.stderr.write("\nMSGSIZE" + str(sys.getsizeof(messagepack))); sys.stderr.flush()
+            msgobj=pickle.loads(datapack)   #get 1d-array of message
+            self.packet_list[msgobj.get_idx() % self.buffer_size]=msgobj.get_msg()    #save message with index in buffer at position index modulo buffer_size
+            sys.stderr.write("\nMSGSIZE" + str(sys.getsizeof(datapack))); sys.stderr.flush()
             cpu=psutil.cpu_percent()
             if self.cpu_max<cpu:
                 self.cpu_max=cpu
@@ -56,14 +69,14 @@ class IntercomBuffer(Intercom):
             sys.stderr.write("\nCPU_LOAD" + str(self.cpu_load)); sys.stderr.flush()
             sys.stderr.write("\nCPU_MAX" + str(self.cpu_max)); sys.stderr.flush()
             
-            #sys.stderr.write("\nIDX_REC:" + str(idx)); sys.stderr.flush()
-            
         def record_send_and_play(indata, outdata, frames, time, status):
-            
-            datapack=numpy.insert(numpy.frombuffer(
+
+            msgobj=msgpack(self.packet_send,numpy.frombuffer(
                 indata,
-                numpy.int16),0,self.packet_send)            #create datapackage with message and add in first position index of package
-            
+                numpy.int16))            #create datapackage with message and add in first position index of package
+
+            datapack=pickle.dumps(msgobj)
+
             sending_sock.sendto( 
                 datapack,
                 (self.destination_IP_addr, self.destination_port))
@@ -82,12 +95,9 @@ class IntercomBuffer(Intercom):
 
             try:
                 message=self.packet_list[self.packet_received]
-                
                 if len(message)<=1:
                     raise ValueError
 
-                idx=message[0]
-                message=numpy.delete(message,0)
                 sys.stderr.write("\nmessage:" + str(message)); sys.stderr.flush()
     
             except ValueError:
