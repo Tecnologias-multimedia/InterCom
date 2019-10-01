@@ -76,7 +76,7 @@ class Intercom:
 
     def add_args(self):
         parser = argparse.ArgumentParser(description="Real-time intercom", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument("-s", "--samples_per_chunk", help="Samples per chunk.", type=int, default=256)
+        parser.add_argument("-s", "--samples_per_chunk", help="Samples per chunk.", type=int, default=1024)
         parser.add_argument("-r", "--samples_per_second", help="Sampling rate in samples/second.", type=int, default=44100)
         parser.add_argument("-c", "--number_of_channels", help="Number of channels.", type=int, default=2)
         parser.add_argument("-b", "--bytes_per_sample", help="Depth in bytes of the samples of audio.", type=int, default=2)
