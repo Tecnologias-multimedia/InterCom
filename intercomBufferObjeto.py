@@ -83,10 +83,11 @@ class IntercomBuffer(Intercom):
             self.packet_send=(self.packet_send+1)%(2**16)
             #sys.stderr.write("\nIDX_SEND:" + str(self.packet_send-1)); sys.stderr.flush()
             
-            nonzeros=[]                                     #check non-zero elements in buffer
-            for s in range(self.buffer_size):
-                if len(self.packet_list[s])!=0:
-                    nonzeros.append(s)
+            if self.packet_received<0:
+                nonzeros=[]                                     #check non-zero elements in buffer
+                for s in range(self.buffer_size):
+                    if len(self.packet_list[s])!=0:
+                        nonzeros.append(s)
 
             if self.packet_received<0 and len(nonzeros)>0:  #if buffer is half filled and we havent started playing (packet_received < 0)
                 if max(nonzeros)-min(nonzeros) >= math.ceil(self.buffer_size/2): #if distnace between lowest received package and highest on is higher than half-size of buffer, bypass and start playing
