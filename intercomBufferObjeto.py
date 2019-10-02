@@ -42,6 +42,7 @@ class IntercomBuffer(Intercom):
         for x in range(self.buffer_size):
             self.packet_list.append([])
         self.packet_send=0
+        self.cycle=0
         self.cpu_load=0
         self.cpu_max=0
         self.packet_received=-1 #first index -1 for delaying play
@@ -61,12 +62,13 @@ class IntercomBuffer(Intercom):
             
             msgobj=pickle.loads(datapack)   #get 1d-array of message
             self.packet_list[msgobj.get_idx() % self.buffer_size]=msgobj.get_msg()    #save message with index in buffer at position index modulo buffer_size
+            self.cycle+=1
             sys.stderr.write("\nMSGSIZE" + str(sys.getsizeof(datapack))); sys.stderr.flush()
-            cpu=psutil.cpu_percent()
+            cpu=psutil.cpu_percent() / psutil.cpu_count()
             if self.cpu_max<cpu:
                 self.cpu_max=cpu
-            self.cpu_load=(self.cpu_load+cpu)/2
-            sys.stderr.write("\nCPU_LOAD" + str(self.cpu_load)); sys.stderr.flush()
+            self.cpu_load+=cpu
+            sys.stderr.write("\nCPU_LOAD" + str(self.cpu_load/self.cycle)); sys.stderr.flush()
             sys.stderr.write("\nCPU_MAX" + str(self.cpu_max)); sys.stderr.flush()
             
         def record_send_and_play(indata, outdata, frames, time, status):

@@ -30,6 +30,7 @@ class IntercomBuffer(Intercom):
         self.packet_send=0
         self.cpu_load=0
         self.cpu_max=0
+        self.cycle=0
         self.packet_received=-1 #first index -1 for delaying play
 
         if __debug__:
@@ -48,12 +49,13 @@ class IntercomBuffer(Intercom):
             out=numpy.frombuffer(messagepack,numpy.int16)   #get 1d-array of message
             idx=out[0]                                      #get value of first position (index o package)
             self.packet_list[idx % self.buffer_size]=out    #save message with index in buffer at position index modulo buffer_size
+            self.cycle+=1
             sys.stderr.write("\nMSGSIZE" + str(sys.getsizeof(messagepack))); sys.stderr.flush()
-            cpu=psutil.cpu_percent()
+            cpu=psutil.cpu_percent() / psutil.cpu_count()
             if self.cpu_max<cpu:
                 self.cpu_max=cpu
-            self.cpu_load=(self.cpu_load+cpu)/2
-            sys.stderr.write("\nCPU_LOAD" + str(self.cpu_load)); sys.stderr.flush()
+            self.cpu_load+=cpu
+            sys.stderr.write("\nCPU_LOAD" + str(self.cpu_load/self.cycle)); sys.stderr.flush()
             sys.stderr.write("\nCPU_MAX" + str(self.cpu_max)); sys.stderr.flush()
             
             #sys.stderr.write("\nIDX_REC:" + str(idx)); sys.stderr.flush()
