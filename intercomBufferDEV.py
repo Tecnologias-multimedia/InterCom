@@ -38,8 +38,8 @@ class IntercomBuffer(Intercom):
         #first index -1 for delaying play
         self.packet_received=-1
         
-        #calc size of message example: s. per chunk = 1024 & channel=2 (1024*2)
-        self.msgsize=(self.samples_per_chunk*self.number_of_channels)
+        #calc size of message example: s. per chunk = 1024 & channel=2 & Index = (1024*2)+1
+        self.msgsize=(self.samples_per_chunk*self.number_of_channels)+1
 
         if __debug__:
                 print("buffer_size={}".format(self.buffer_size))
@@ -54,7 +54,7 @@ class IntercomBuffer(Intercom):
             messagepack, source_address = receiving_sock.recvfrom(
                 Intercom.max_packet_size)
             
-            out=struct.unpack('<H{}h'.format(self.msgsize),messagepack) #unpack structure
+            out=struct.unpack('<{}i'.format(self.msgsize),messagepack) #unpack structure
             self.packet_list[out[0] % self.buffer_size]=out    #out[0]=index, out=index & message
 
             #--------------Benchmark-------------------------
@@ -77,16 +77,13 @@ class IntercomBuffer(Intercom):
                 indata,
                 numpy.int16),0,self.packet_send)
             
-            #Put datapack in structure and define "little-endian" format with size of messages and index ("<")
-            #H = unsigned short integer (0 - 65535) for index (2^16), h = signed short integer (-32768 - 32767)
-            datapack=struct.pack('<H{}h'.format(self.msgsize),*data)
+            #Put datapack in structure and define "little-endian" format with size of message ("<")
+            datapack=struct.pack('<{}i'.format(self.msgsize),*data)
             sys.stderr.write("\nPACKSIZE: {}".format(sys.getsizeof(datapack)));sys.stderr.flush()
             
             sending_sock.sendto( 
                 datapack,
                 (self.destination_IP_addr, self.destination_port))
-
-            #calc next index, if bigger than 65535 reset to zero
             self.packet_send=(self.packet_send+1)%(2**16)
 
             #check non-zero elements in buffer for delaying playback
