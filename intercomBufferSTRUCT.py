@@ -97,6 +97,7 @@ class IntercomBuffer(Intercom):
             
             #Put datapack in structure and define "little-endian" format with size of messages and index ("<")
             #H = unsigned short integer (0 - 65535) for index (2^16), h = signed short integer (-32768 - 32767)
+            #example: 1024 samples, 2 cahnnels =  '<H2048h'
             datapack=struct.pack('<H{}h'.format(self.msgsize),*data)
             sys.stderr.write("\nPACKSIZE: {}".format(sys.getsizeof(datapack)));sys.stderr.flush()
             
