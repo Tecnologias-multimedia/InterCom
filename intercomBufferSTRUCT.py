@@ -8,6 +8,24 @@
 
 # SOULUTION 1 working solution
 
+#IMPLEMENTATION:
+#Current VERSION 1.6
+
+#1.6    -Added comments for explanation
+
+#1.5    -struct for correct byte order
+
+#1.4    -CPU and size measurement
+
+#1.3    -inheritance from parent class
+
+#1.2    -buffer dynamic by argument
+#       -implementation of delay of playback
+
+#1.1    -index sent with package
+
+#1.0    -implementation buffer 
+
 import sounddevice as sd 
 from intercom import Intercom
 import numpy                                                                    # https://numpy.org/
