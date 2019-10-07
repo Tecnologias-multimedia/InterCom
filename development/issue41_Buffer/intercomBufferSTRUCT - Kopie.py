@@ -9,8 +9,7 @@
 # SOULUTION 1 working solution
 
 #IMPLEMENTATION:
-#Current VERSION 1.7
-#1.7    -changed unpack method. Use without numpy.delete/numpy.insert
+#Current VERSION 1.6
 
 #1.6    -Added comments for explanation
 
@@ -72,36 +71,35 @@ class IntercomBuffer(Intercom):
         def receive_and_buffer():
             messagepack, source_address = receiving_sock.recvfrom(
                 Intercom.max_packet_size)
-
-            #define message array for unpacking
-            message=[]
-            #unpack index to index and message to array at pointer *message
-            idx, *message=struct.unpack('<H{}h'.format(self.msgsize),messagepack) #unpack structure
-            self.packet_list[idx % self.buffer_size]=message    #out[0]=index, out=index & message
-            sys.stderr.write("\nIDX: {} - MSG: {}".format(idx,len(message)));sys.stderr.flush()
+            
+            out=struct.unpack('<H{}h'.format(self.msgsize),messagepack) #unpack structure
+            self.packet_list[out[0] % self.buffer_size]=out    #out[0]=index, out=index & message
 
             #--------------Benchmark-------------------------
             self.cycle+=1
+            #sys.stderr.write("\nMSGSIZE: {}".format(sys.getsizeof(messagepack)));sys.stderr.flush()
             cpu=psutil.cpu_percent() / psutil.cpu_count()
             if self.cpu_max<cpu:
                 self.cpu_max=cpu
             self.cpu_load+=cpu
             
-            #sys.stderr.write("\nMSGB_SIZE:{} CPU_LOAD:{} CPU_MAX:{}".format(
-            #    sys.getsizeof(messagepack),
-            #    (self.cpu_load/self.cycle),
-            #    self.cpu_max)); sys.stderr.flush();
+            sys.stderr.write("\nMSGB_SIZE:{} CPU_LOAD:{} CPU_MAX:{}".format(
+                sys.getsizeof(messagepack),
+                (self.cpu_load/self.cycle),
+                self.cpu_max)); sys.stderr.flush();
             #--------------Benchmark END---------------------
             
         def record_send_and_play(indata, outdata, frames, time, status):
-            #get message from stream and write to data array
-            data=numpy.frombuffer(
+            #create datapackage with message and add in first position index of package
+            data=numpy.insert(numpy.frombuffer(
                 indata,
-                numpy.int16)
-            #Put index and data in structure and define "little-endian" format with size of messages and index ("<")
+                numpy.int16),0,self.packet_send)
+            
+            #Put datapack in structure and define "little-endian" format with size of messages and index ("<")
             #H = unsigned short integer (0 - 65535) for index (2^16), h = signed short integer (-32768 - 32767)
             #example: 1024 samples, 2 cahnnels =  '<H2048h'
-            datapack=struct.pack('<H{}h'.format(self.msgsize),self.packet_send,*data)
+            datapack=struct.pack('<H{}h'.format(self.msgsize),*data)
+            sys.stderr.write("\nPACKSIZE: {}".format(sys.getsizeof(datapack)));sys.stderr.flush()
             
             sending_sock.sendto( 
                 datapack,
@@ -130,12 +128,16 @@ class IntercomBuffer(Intercom):
 
             try:
                 message=self.packet_list[self.packet_received]
+
                 #if message is empty (no package in buffer[index]) raise error (override message with silence)
                 if len(message)<=0:
-                    if len(message)<=0:
-                        raise ValueError
+                    raise ValueError
+
+                idx=message[0]
+                message=numpy.delete(message,0)
     
             except ValueError:
+                #override message with silence
                 message = numpy.zeros(
                     (self.samples_per_chunk, self.bytes_per_sample),
                     self.dtype)
