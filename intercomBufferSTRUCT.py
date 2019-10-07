@@ -46,7 +46,12 @@ class IntercomBuffer(Intercom):
         self.buffer_size=args.buffer_size
         self.packet_list=[]
         for x in range(self.buffer_size):
-            self.packet_list.append([])
+            self.packet_list.append(numpy.zeros(
+                    (self.samples_per_chunk, self.bytes_per_sample),
+                    self.dtype))
+        self.silence=numpy.zeros(
+                    (self.samples_per_chunk, self.bytes_per_sample),
+                    self.dtype)
         self.packet_send=0
 
         #Benchmark Variables
@@ -78,7 +83,7 @@ class IntercomBuffer(Intercom):
             #unpack index to index and message to array at pointer *message
             idx, *message=struct.unpack('<H{}h'.format(self.msgsize),messagepack) #unpack structure
             self.packet_list[idx % self.buffer_size]=message    #out[0]=index, out=index & message
-            sys.stderr.write("\nIDX: {} - MSG: {}".format(idx,len(message)));sys.stderr.flush()
+            #sys.stderr.write("\nIDX: {} - MSG: {}".format(idx,len(message)));sys.stderr.flush()
 
             #--------------Benchmark-------------------------
             self.cycle+=1
@@ -92,7 +97,34 @@ class IntercomBuffer(Intercom):
             #    (self.cpu_load/self.cycle),
             #    self.cpu_max)); sys.stderr.flush();
             #--------------Benchmark END---------------------
-            
+
+        def record_send(indata, outdata, frames, time, status):
+            data=numpy.frombuffer(
+                indata,
+                numpy.int16)
+
+            datapack=struct.pack('<H{}h'.format(self.msgsize),self.packet_send,*data)
+            sending_sock.sendto( 
+                datapack,
+                (self.destination_IP_addr, self.destination_port))
+            self.packet_send=(self.packet_send+1)%(2**16)
+
+            if self.packet_received<0:
+                nonzeros=[]           
+                for s in range(self.buffer_size):
+                    #has to be <= 1 because size of empty message & index is 1
+                    if numpy.array_equal(self.packet_list[s],self.silence)==False:
+                        nonzeros.append(s)
+                if len(nonzeros)>0:
+                    print("NONZEROS: {} MAX: {}, MIN {}".format(nonzeros,max(nonzeros),min(nonzeros)))
+                    if max(nonzeros)-min(nonzeros) >= (math.ceil(self.buffer_size/2)-1): 
+                        self.packet_received=nonzeros[0]
+                        print("\nBUFFERING FINISHED - START PLAYING")
+                    else:
+                        print("\nBUFFER NOT FILLED")
+            if __debug__:
+                sys.stderr.write("."); sys.stderr.flush()
+                
         def record_send_and_play(indata, outdata, frames, time, status):
             #get message from stream and write to data array
             data=numpy.frombuffer(
@@ -111,38 +143,15 @@ class IntercomBuffer(Intercom):
             self.packet_send=(self.packet_send+1)%(2**16)
 
             #check non-zero elements in buffer for delaying playback
-            if self.packet_received<0:
-                nonzeros=[]                                     
-                for s in range(self.buffer_size):
-                    #has to be <= 1 because size of empty message & index is 1
-                    if len(self.packet_list[s])<=1:
-                        nonzeros.append(s)
 
-            #if buffer is half filled and we havent started playing (packet_received < 0)
-            if self.packet_received<0 and len(nonzeros)>0:
-
-                #if distnace between lowest received package and highest on is higher than half-size of buffer, bypass and start playing
-                if max(nonzeros)-min(nonzeros) >= math.ceil(self.buffer_size/2): 
-
-                    #get buffer-index of lowest received package
-                    self.packet_received=nonzeros[0] 
-                    print("\nBUFFERING FINISHED - START PLAYING")
-
-            try:
-                message=self.packet_list[self.packet_received]
-                #if message is empty (no package in buffer[index]) raise error (override message with silence)
-                if len(message)<=0:
-                    if len(message)<=0:
-                        raise ValueError
-    
-            except ValueError:
-                message = numpy.zeros(
-                    (self.samples_per_chunk, self.bytes_per_sample),
-                    self.dtype)
+            message=self.packet_list[self.packet_received]
 
             #if we started playing (after buffer was filled more than half-size) increase received counter
-            if self.packet_received>=0:             
-                self.packet_received=(self.packet_received+1)%self.buffer_size
+            self.packet_list[self.packet_received]=numpy.zeros(
+                    (self.samples_per_chunk, self.bytes_per_sample),
+                    self.dtype)
+                
+            self.packet_received=(self.packet_received+1)%self.buffer_size
                 
             outdata[:] = numpy.reshape(message,(
                     self.samples_per_chunk, self.number_of_channels))
@@ -155,11 +164,20 @@ class IntercomBuffer(Intercom):
                 blocksize=self.samples_per_chunk,
                 dtype=self.dtype,
                 channels=self.number_of_channels,
-                callback=record_send_and_play):
+                callback=record_send):
             print('-=- Press <CTRL> + <C> to quit -=-')
-            while True:
+            while self.packet_received<0:
                 receive_and_buffer()
 
+        print('\n-=- START PLAYING -=-')
+        with sd.Stream(
+                samplerate=self.samples_per_second,
+                blocksize=self.samples_per_chunk,
+                dtype=self.dtype,
+                channels=self.number_of_channels,
+                callback=record_send_and_play):
+            while True:
+                receive_and_buffer()
     
     def parse_args(self):
         parser = Intercom.add_args(self)
@@ -172,7 +190,7 @@ class IntercomBuffer(Intercom):
                             default=4)
 
         #overwrite default chunk-size by 1024 if no argument is given (system specific)
-        parser.set_defaults(samples_per_chunk=1024)
+        parser.set_defaults(samples_per_chunk=512)
         args = parser.parse_args()
         return args
     
