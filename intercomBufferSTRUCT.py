@@ -116,12 +116,13 @@ class IntercomBuffer(Intercom):
                     if numpy.array_equal(self.packet_list[s],self.silence)==False:
                         nonzeros.append(s)
                 if len(nonzeros)>0:
-                    print("NONZEROS: {} MAX: {}, MIN {}".format(nonzeros,max(nonzeros),min(nonzeros)))
+                    #print("NONZEROS: {} MAX: {}, MIN {}".format(nonzeros,max(nonzeros),min(nonzeros)))
                     if max(nonzeros)-min(nonzeros) >= (math.ceil(self.buffer_size/2)-1): 
                         self.packet_received=nonzeros[0]
-                        print("\nBUFFERING FINISHED - START PLAYING")
+                        sys.stderr.write("B"); sys.stderr.flush()
+                        print("\nBUFFERING FINISHED")
                     else:
-                        print("\nBUFFER NOT FILLED")
+                        sys.stderr.write("B"); sys.stderr.flush()
             if __debug__:
                 sys.stderr.write("."); sys.stderr.flush()
                 
