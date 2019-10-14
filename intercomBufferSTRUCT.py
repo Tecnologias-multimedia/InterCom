@@ -9,7 +9,9 @@
 # SOULUTION 1 working solution
 
 #IMPLEMENTATION:
-#Current VERSION 1.8
+#Current VERSION 1.9
+#1.9    -elimination of innessecary declaration message[]
+
 #1.8    -textoutput and code commentes
 
 #1.7    -changed unpack method. Use without numpy.delete/numpy.insert
@@ -84,7 +86,7 @@ class IntercomBuffer(Intercom):
                 Intercom.max_packet_size)
 
             #define message array for unpacking
-            message=[]
+            #message=[]
             #unpack index to idx and message to array at pointer *message
             idx, *message=struct.unpack('!H{}h'.format(self.msgsize),messagepack) #unpack structure
             self.packet_list[idx % self.buffer_size]=message    
