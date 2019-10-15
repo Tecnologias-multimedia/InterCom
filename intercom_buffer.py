@@ -62,4 +62,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     intercom.init(args)
     intercom.run()
-c
