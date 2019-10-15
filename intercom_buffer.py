@@ -47,7 +47,6 @@ class Intercom_buffer(Intercom):
             print("-=- Press CTRL + c to quit -=-")
             first_received_chunk_number = receive_and_buffer()
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
-
             while True:
                 receive_and_buffer()
 
