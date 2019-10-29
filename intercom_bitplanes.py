@@ -12,6 +12,7 @@ class Intercom_bitplanes(Intercom_buffer):
 
     def init(self, args):
         Intercom_buffer.init(self, args)
+        self.packet_format = "!HB{self.frames_per_chunk//8}B"
 
 if __name__ == "__main__":
     intercom = Intercom_bitplanes()
