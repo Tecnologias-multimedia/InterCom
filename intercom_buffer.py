@@ -27,12 +27,10 @@ class Intercom_buffer(Intercom):
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
         return chunk_number
 
-    def send(self, indata):
+    def record_and_send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
-        self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))        
-
-    def _and(self):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))        
 
     def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
@@ -44,8 +42,7 @@ class Intercom_buffer(Intercom):
 
     def record_send_and_play(self, indata, outdata, frames, time, status):    
         # record
-        self.send(indata)
-        self._and()
+        self.record_and_send(indata)
         self.play(outdata)
 
     def run(self):
