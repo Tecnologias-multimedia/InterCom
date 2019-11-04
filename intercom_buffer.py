@@ -31,15 +31,22 @@ class Intercom_buffer(Intercom):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))        
 
-    def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.send(indata)
+    def _and(self):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+
+    def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
         if __debug__:
             sys.stderr.write("."); sys.stderr.flush()
+
+    def record_send_and_play(self, indata, outdata, frames, time, status):    
+        # record
+        self.send(indata)
+        self._and()
+        self.play(outdata)
 
     def run(self):
         self.recorded_chunk_number = 0
