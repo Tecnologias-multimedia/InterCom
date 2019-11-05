@@ -2,9 +2,6 @@
 
 from intercom_bitplanes import Intercom_bitplanes
 
-if __debug__:
-    import sys
-
 class Intercom_binaural(Intercom_bitplanes):
 
     def init(self, args):
