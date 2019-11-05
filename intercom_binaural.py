@@ -1,7 +1,5 @@
 # Adding a buffer.
 
-import sounddevice as sd
-import numpy as np
 from intercom_bitplanes import Intercom_bitplanes
 
 if __debug__:
