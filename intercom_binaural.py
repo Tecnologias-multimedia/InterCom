@@ -1,4 +1,4 @@
-# Adding a buffer.
+# Exploiting binaural redundancy.
 
 from intercom_bitplanes import Intercom_bitplanes
 
