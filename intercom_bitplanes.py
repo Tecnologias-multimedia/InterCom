@@ -24,13 +24,14 @@ class Intercom_bitplanes(Intercom_buffer):
         self._buffer[chunk_number % self.cells_in_buffer][:, bitplane_number%self.number_of_channels] |= (bitplane << bitplane_number//self.number_of_channels)
         return chunk_number
 
-    def send(self, indata):
+    def record_and_send(self, indata):
         for bitplane_number in range(self.number_of_channels*16-1, -1, -1):
             bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
             bitplane = bitplane.astype(np.uint8)
             bitplane = np.packbits(bitplane)
             message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
             self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
 
 if __name__ == "__main__":
     intercom = Intercom_bitplanes()

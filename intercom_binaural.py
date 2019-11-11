@@ -10,7 +10,10 @@ class Intercom_binaural(Intercom_bitplanes):
             self.record_send_and_play = self.record_send_and_play_stereo
 
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
-        pass
+        indata[:,0] -= indata[:,1]
+        self.record_and_send(indata)
+        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
+        self.play(outdata)
 
 if __name__ == "__main__":
     intercom = Intercom_binaural()
