@@ -63,7 +63,7 @@ class Intercom:
             
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
-            print("-=- Press CTRL + c to quit -=-")
+            print("-=- Press <CTRL> + <c> to quit -=-")
             while True:
                 self.receive_and_buffer()
 
