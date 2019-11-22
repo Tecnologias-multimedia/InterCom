@@ -18,15 +18,19 @@ class Intercom_bitplanes(Intercom_buffer):
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
-        chunk_number, bitplane_number, *bitplane = struct.unpack(self.packet_format, message)
+        received_chunk_number, received_bitplane_number, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
         bitplane = bitplane.astype(np.int16)
-        self._buffer[chunk_number % self.cells_in_buffer][:, bitplane_number%self.number_of_channels] |= (bitplane << bitplane_number//self.number_of_channels)
-        return chunk_number
+        self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number%self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
+        return received_chunk_number
 
     def record_and_send(self, indata):
-        for bitplane_number in range(self.number_of_bitplanes_to_send-1, -1, -1):
+        signs = indata >> 15
+        magnitudes = abs(indata)
+        indata = (signs << 15) | magnitudes
+        last_bitplane_to_send = 16*self.number_of_channels - self.number_of_bitplanes_to_send
+        for bitplane_number in range(31, last_bitplane_to_send, -1):
             bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
             bitplane = bitplane.astype(np.uint8)
             bitplane = np.packbits(bitplane)

@@ -45,7 +45,9 @@ class Intercom:
             print(f"bytes_per_chunk={self.bytes_per_chunk}")
 
     def generate_zero_chunk(self):
-        return np.zeros((self.frames_per_chunk, self.number_of_channels), np.int16)
+        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int16)
+        return cell
+
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
