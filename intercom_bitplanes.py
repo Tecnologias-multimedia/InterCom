@@ -14,6 +14,7 @@ class Intercom_bitplanes(Intercom_buffer):
     def init(self, args):
         Intercom_buffer.init(self, args)
         self.packet_format = f"!HB{self.frames_per_chunk//8}B"
+        self.number_of_bitplanes_to_send = 16*self.number_of_channels
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
@@ -25,7 +26,7 @@ class Intercom_bitplanes(Intercom_buffer):
         return chunk_number
 
     def record_and_send(self, indata):
-        for bitplane_number in range(self.number_of_channels*16-1, -1, -1):
+        for bitplane_number in range(self.number_of_bitplanes_to_send-1, -1, -1):
             bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
             bitplane = bitplane.astype(np.uint8)
             bitplane = np.packbits(bitplane)
