@@ -40,7 +40,7 @@ class Intercom_buffer(Intercom):
         signs = chunk >> 15
         magnitudes = chunk & 0x7FFF
         chunk = magnitudes + magnitudes*signs*2
-        print(magnitudes)
+        #print(chunk)
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk

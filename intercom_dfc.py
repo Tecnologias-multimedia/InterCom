@@ -30,7 +30,7 @@ class Intercom_dfc(Intercom_binaural):
         bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
         bitplane = bitplane.astype(np.uint8)
         bitplane = np.packbits(bitplane)
-        print("*", self.received_bitplanes_per_chunk)
+        #print("*", self.received_bitplanes_per_chunk)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, self.received_bitplanes_per_chunk[(self.played_chunk_number+1) % self.cells_in_buffer]+1, *bitplane)
         #message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, 10, *bitplane)
         self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
