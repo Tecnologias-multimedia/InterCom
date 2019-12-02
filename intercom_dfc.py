@@ -57,6 +57,7 @@ class Intercom_dfc(Intercom_binaural):
     def play(self, indata):
         Intercom_binaural.play(self, indata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
+        print(*self.received_bitplanes_per_chunk)
 
 if __name__ == "__main__":
     intercom = Intercom_dfc()
