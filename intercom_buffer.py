@@ -48,6 +48,7 @@ class Intercom_buffer(Intercom):
         #chunk = magnitudes + magnitudes*signs*2
         ##chunk = ((~signs & magnitudes) | ((-magnitudes) & signs)).astype(np.int16)
         #print(chunk)
+        print(self.played_chunk_number)
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         print(chunk)

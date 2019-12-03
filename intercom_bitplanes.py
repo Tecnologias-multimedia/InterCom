@@ -22,7 +22,7 @@ class Intercom_bitplanes(Intercom_buffer):
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
         bitplane = bitplane.astype(np.int16)
-        self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number%self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
+        self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number % self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
         return received_chunk_number
 
     def record_and_send(self, indata):
