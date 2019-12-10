@@ -48,12 +48,12 @@ class Intercom_buffer(Intercom):
         chunk = magnitudes + magnitudes*signs*2
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
+        print(chunk)
         outdata[:] = chunk
         if __debug__:
             self.feedback()
 
     def record_send_and_play(self, indata, outdata, frames, time, status):    
-        # record
         self.record_and_send(indata)
         self.play(outdata)
 
