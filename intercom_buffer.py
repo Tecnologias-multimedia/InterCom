@@ -30,7 +30,7 @@ class Intercom_buffer(Intercom):
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
         return chunk_number
 
-    def record_and_send(self, indata):
+    def send(self, indata):
         #signs = indata & 0x8000
         #magnitudes = abs(indata)
         #indata = (signs | magnitudes).astype(np.int16)
@@ -43,12 +43,6 @@ class Intercom_buffer(Intercom):
 
     def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        #signs = chunk >> 15
-        #magnitudes = chunk & 0x7FFF
-        #chunk = magnitudes + magnitudes*signs*2
-        ##chunk2 = ((~signs & magnitudes) | ((-magnitudes) & signs))
-        ##if chunk1.all() != chunk2.all():
-        ##    print("!")
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         #print(chunk)
@@ -56,8 +50,8 @@ class Intercom_buffer(Intercom):
         if __debug__:
             self.feedback()
 
-    def record_send_and_play(self, indata, outdata, frames, time, status):    
-        self.record_and_send(indata)
+    def record_send_and_play(self, indata, outdata, frames, time, status):    # The recording is performed by sounddevice
+        self.send(indata)
         self.play(outdata)
 
     def run(self):

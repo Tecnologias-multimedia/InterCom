@@ -14,13 +14,13 @@ class Intercom_dfc(Intercom_binaural):
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
-        self.max_nobpts = 16*self.number_of_channels
-        self.number_of_bitplanes_to_send = self.max_nobpts
-        self.nobpts = self.number_of_bitplanes_to_send
+        self.max_NOBPTS = 16*self.number_of_channels  # Maximum number Of Bitplanes To Send
+        self.NOBPTS = self.max_NOBPTS
+        self.NORB = self.max_NOBPTS   # Number Of Received Bitplanes
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
-        received_chunk_number, received_bitplane_number, self.number_of_bitplanes_to_send, *bitplane = struct.unpack(self.packet_format, message)
+        received_chunk_number, received_bitplane_number, self.NORB, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
         bitplane = bitplane.astype(np.uint16)
@@ -38,26 +38,52 @@ class Intercom_dfc(Intercom_binaural):
     def feedback(self):
         sys.stderr.write(str(self.number_of_bitplanes_to_send) + " "); sys.stderr.flush()
 
-    def record_and_send(self, indata):
+    def send(self, indata):
+        #signs = indata & 0x8000
+        #magnitudes = abs(indata)
+        #indata = (signs | magnitudes).astype(np.int16)
         #signs = indata >> 15
         #magnitudes = abs(indata)
         #indata = (signs << 15) | magnitudes
+        signs = indata & 0x8000
+        magnitudes = abs(indata)
+        indata = signs | magnitudes
         
-        self.nobpts = int(0.9*self.pnobts+0.1*self.number_of_bitplanes_to_send)
-        self.nobpts += 1
-        if self.nobpts > self.max_nobpts:
-            self.nobpts = self.max_nobpts
-        last_bpts = self.max_nobpts - self.self.nobpts - 1
+        self.NOBPTS = int(0.75*self.NOBPTS+0.25*self.NORB)
+        self.NOBPTS += 1
+        if self.NOBPTS > self.max_NOBPTS:
+            self.NOBPTS = self.max_NOBPTS
+        last_BPTS = self.max_NOBPTS - self.NOBPTS - 1
         #print(self.number_of_bitplanes_to_send, last_bitplane_to_send)
-        self.send_bitplane(indata, self.max_nobpts-1)
-        self.send_bitplane(indata, self.max_nobpts-2)
-        for bitplane_number in range(self.max_nobpts-3, last_bpts, -1):
+        self.send_bitplane(indata, self.max_NOBPTS-1)
+        self.send_bitplane(indata, self.max_NOBPTS-2)
+        for bitplane_number in range(self.max_NOBPTS-3, last_BPTS, -1):
             self.send_bitplane(indata, bitplane_number)
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
-        #Intercom_binaural.record_and_send(self, indata)
 
-    def play(self, indata):
-        Intercom_binaural.play(self, indata)
+    def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
+        indata[:,0] -= indata[:,1]
+        self.send(indata)
+        chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
+        signs = chunk >> 15
+        magnitudes = chunk & 0x7FFF
+        #chunk = ((~signs & magnitudes) | ((-magnitudes) & signs))
+        chunk = magnitudes + magnitudes*signs*2
+        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
+        self.play(outdata)
+        self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
+        print(*self.received_bitplanes_per_chunk)
+
+    def record_send_and_play(self, indata, outdata, frames, time, status):
+        self.send(indata)
+        chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
+        signs = chunk >> 15
+        magnitudes = chunk & 0x7FFF
+        #chunk = ((~signs & magnitudes) | ((-magnitudes) & signs))
+        chunk = magnitudes + magnitudes*signs*2
+        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
+        self.play(outdata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
         print(*self.received_bitplanes_per_chunk)
 

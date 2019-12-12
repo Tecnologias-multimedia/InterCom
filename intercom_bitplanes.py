@@ -25,17 +25,17 @@ class Intercom_bitplanes(Intercom_buffer):
         self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number % self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
         return received_chunk_number
 
-    def record_and_send(self, indata):
-        #signs = indata & 0x8000
-        #magnitudes = abs(indata)
-        #indata = (signs | magnitudes).astype(np.int16)
+    def send_bitplane(self, indata, bitplane_number):
+        bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
+        bitplane = bitplane.astype(np.uint8)
+        bitplane = np.packbits(bitplane)
+        message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
+        self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
+    
+    def send(self, indata):
         last_bitplane_to_send = 16*self.number_of_channels - self.number_of_bitplanes_to_send
         for bitplane_number in range(31, last_bitplane_to_send, -1):
-            bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
-            bitplane = bitplane.astype(np.uint8)
-            bitplane = np.packbits(bitplane)
-            message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
-            self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
+            self.send_bitplane(indata, bitplane_number)
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
 
 if __name__ == "__main__":
