@@ -8,7 +8,7 @@ from intercom_binaural import Intercom_binaural
 if __debug__:
     import sys
 
-class Intercom_dfc(Intercom_binaural):
+class Intercom_DFC(Intercom_binaural):
 
     def init(self, args):
         Intercom_binaural.init(self, args)
@@ -35,9 +35,6 @@ class Intercom_dfc(Intercom_binaural):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, self.received_bitplanes_per_chunk[(self.played_chunk_number+1) % self.cells_in_buffer]+1, *bitplane)
         self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
     
-    def feedback(self):
-        sys.stderr.write(str(self.number_of_bitplanes_to_send) + " "); sys.stderr.flush()
-
     def send(self, indata):
         #signs = indata & 0x8000
         #magnitudes = abs(indata)
@@ -88,7 +85,7 @@ class Intercom_dfc(Intercom_binaural):
         print(*self.received_bitplanes_per_chunk)
 
 if __name__ == "__main__":
-    intercom = Intercom_dfc()
+    intercom = Intercom_DFC()
     parser = intercom.add_args()
     args = parser.parse_args()
     intercom.init(args)
