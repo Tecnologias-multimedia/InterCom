@@ -26,9 +26,9 @@ class Intercom_bitplanes(Intercom_buffer):
         return received_chunk_number
 
     def record_and_send(self, indata):
-        signs = indata & 0x8000
-        magnitudes = abs(indata)
-        indata = (signs | magnitudes).astype(np.int16)
+        #signs = indata & 0x8000
+        #magnitudes = abs(indata)
+        #indata = (signs | magnitudes).astype(np.int16)
         last_bitplane_to_send = 16*self.number_of_channels - self.number_of_bitplanes_to_send
         for bitplane_number in range(31, last_bitplane_to_send, -1):
             bitplane = (indata[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1

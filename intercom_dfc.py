@@ -14,7 +14,9 @@ class Intercom_dfc(Intercom_binaural):
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
-        self.number_of_bitplanes_to_send = 8*self.number_of_channels
+        self.max_nobpts = 16*self.number_of_channels
+        self.number_of_bitplanes_to_send = self.max_nobpts
+        self.nobpts = self.number_of_bitplanes_to_send
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
@@ -37,19 +39,19 @@ class Intercom_dfc(Intercom_binaural):
         sys.stderr.write(str(self.number_of_bitplanes_to_send) + " "); sys.stderr.flush()
 
     def record_and_send(self, indata):
-        signs = indata >> 15
-        magnitudes = abs(indata)
-        indata = (signs << 15) | magnitudes
-        pnobts = self.number_of_bitplanes_to_send
-        self.number_of_bitplanes_to_send = int(0.9*pnobts+0.1*self.number_of_bitplanes_to_send)
-        if self.number_of_bitplanes_to_send > 14:
-            self.number_of_bitplanes_to_send = 14
-        #self.number_of_bitplanes_to_send += 1
-        last_bitplane_to_send = (14 - self.number_of_bitplanes_to_send)*self.number_of_channels
+        #signs = indata >> 15
+        #magnitudes = abs(indata)
+        #indata = (signs << 15) | magnitudes
+        
+        self.nobpts = int(0.9*self.pnobts+0.1*self.number_of_bitplanes_to_send)
+        self.nobpts += 1
+        if self.nobpts > self.max_nobpts:
+            self.nobpts = self.max_nobpts
+        last_bpts = self.max_nobpts - self.self.nobpts - 1
         #print(self.number_of_bitplanes_to_send, last_bitplane_to_send)
-        self.send_bitplane(indata, 15*self.number_of_channels)
-        self.send_bitplane(indata, 15*self.number_of_channels-1)
-        for bitplane_number in range(14*self.number_of_channels-1, last_bitplane_to_send-1, -1):
+        self.send_bitplane(indata, self.max_nobpts-1)
+        self.send_bitplane(indata, self.max_nobpts-2)
+        for bitplane_number in range(self.max_nobpts-3, last_bpts, -1):
             self.send_bitplane(indata, bitplane_number)
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
         #Intercom_binaural.record_and_send(self, indata)
