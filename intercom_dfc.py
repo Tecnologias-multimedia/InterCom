@@ -14,9 +14,9 @@ class Intercom_DFC(Intercom_binaural):
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
-        self.max_NOBPTS = 16*self.number_of_channels  # Maximum number Of Bitplanes To Send
+        self.max_NOBPTS = 16*self.number_of_channels  # Maximum Number Of Bitplanes To Send
         self.NOBPTS = self.max_NOBPTS
-        self.NORB = self.max_NOBPTS   # Number Of Received Bitplanes
+        self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
@@ -36,22 +36,15 @@ class Intercom_DFC(Intercom_binaural):
         self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
     
     def send(self, indata):
-        #signs = indata & 0x8000
-        #magnitudes = abs(indata)
-        #indata = (signs | magnitudes).astype(np.int16)
-        #signs = indata >> 15
-        #magnitudes = abs(indata)
-        #indata = (signs << 15) | magnitudes
         signs = indata & 0x8000
         magnitudes = abs(indata)
         indata = signs | magnitudes
         
-        self.NOBPTS = int(0.75*self.NOBPTS+0.25*self.NORB)
+        self.NOBPTS = int(0.75*self.NOBPTS + 0.25*self.NORB)
         self.NOBPTS += 1
         if self.NOBPTS > self.max_NOBPTS:
             self.NOBPTS = self.max_NOBPTS
         last_BPTS = self.max_NOBPTS - self.NOBPTS - 1
-        #print(self.number_of_bitplanes_to_send, last_bitplane_to_send)
         self.send_bitplane(indata, self.max_NOBPTS-1)
         self.send_bitplane(indata, self.max_NOBPTS-2)
         for bitplane_number in range(self.max_NOBPTS-3, last_BPTS, -1):
@@ -70,7 +63,6 @@ class Intercom_DFC(Intercom_binaural):
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
         self.play(outdata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
-        print(*self.received_bitplanes_per_chunk)
 
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.send(indata)
