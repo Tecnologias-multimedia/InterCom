@@ -63,6 +63,7 @@ class Intercom_DFC(Intercom_binaural):
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
         self.play(outdata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
+        #print(*self.received_bitplanes_per_chunk)
 
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.send(indata)
@@ -74,7 +75,7 @@ class Intercom_DFC(Intercom_binaural):
         self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
         self.play(outdata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
-        print(*self.received_bitplanes_per_chunk)
+        #print(*self.received_bitplanes_per_chunk)
 
 if __name__ == "__main__":
     intercom = Intercom_DFC()
