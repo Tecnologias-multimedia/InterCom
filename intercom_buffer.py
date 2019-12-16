@@ -1,4 +1,7 @@
 # Adding a buffer.
+#
+# The buffer allows to reorder the chunks if they are not transmitted
+# in order by the network.
 
 import sounddevice as sd
 import numpy as np
@@ -31,9 +34,6 @@ class Intercom_buffer(Intercom):
         return chunk_number
 
     def send(self, indata):
-        #signs = indata & 0x8000
-        #magnitudes = abs(indata)
-        #indata = (signs | magnitudes).astype(np.int16)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
         self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
@@ -45,7 +45,6 @@ class Intercom_buffer(Intercom):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
-        #print(chunk)
         outdata[:] = chunk
         if __debug__:
             self.feedback()

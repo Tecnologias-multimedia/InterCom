@@ -1,4 +1,8 @@
-# Transmitint bitplanes.
+# Transmiting in bitplanes.
+#
+# The 16 planes of each chunk are transmitted from the most
+# significant one to the least significant, each in a different
+# packet.
 
 import sounddevice as sd
 import numpy as np

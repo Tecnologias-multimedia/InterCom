@@ -1,4 +1,11 @@
-# Implementing a Data-Flow Control algorithm.
+# Implements a Data-Flow Control algorithm.
+#
+# The receiver sends back (using piggybacking) the number of received
+# bitplanes of the played chunk. The sender sends in the next chunk
+# this number of bitplanes plus one. An weighted average is used to
+# filter the fast changes in the link bandwidth. Sign-magnitude
+# representation is used to minimize the distortion of the partially
+# received negative samples.
 
 import struct
 import numpy as np

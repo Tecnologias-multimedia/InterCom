@@ -1,4 +1,6 @@
 # Exploiting binaural redundancy.
+#
+# The channel 1 is substracted to the channel 0.
 
 from intercom_bitplanes import Intercom_bitplanes
 

@@ -1,3 +1,5 @@
+# A very simple intercom.
+#
 # No video, no DWT, no compression, no bitplanes, no data-flow
 # control, no buffering. Only the transmission of the raw audio data,
 # splitted into chunks of fixed length.
