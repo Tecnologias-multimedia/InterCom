@@ -31,7 +31,7 @@ parser.add_argument(
     '-i', '--interval', type=float, default=30,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=512, help='block size (in samples)')
 parser.add_argument(
     '-r', '--samplerate', type=float, help='sampling rate of audio device')
 parser.add_argument(
@@ -57,7 +57,6 @@ def audio_callback(indata, frames, time, status):
     coeffs = pywt.wavedec(flat, "db5", mode='per')
     coeffs_, slices = pywt.coeffs_to_array(coeffs)
     coeffs_ = coeffs_[:l].reshape((l,1))
-    #print(indata.shape, coeffs_.shape)
     #coeffs_ = coeffs_.flatten()[:shift]
     #print(type(indata), type(coeffs_))
     #print(indata[10][0], coeffs_[10], mapping)
