@@ -51,10 +51,12 @@ def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     if status:
         print(status, file=sys.stderr)
-        
-    coeffs = pywt.wavedec(indata.flatten(), "db5", mode='per')
+
+    flat = indata.flatten()
+    l = indata.shape[0]
+    coeffs = pywt.wavedec(flat, "db5", mode='per')
     coeffs_, slices = pywt.coeffs_to_array(coeffs)
-    coeffs_ = coeffs_.reshape((512,1))
+    coeffs_ = coeffs_[:l].reshape((l,1))
     #print(indata.shape, coeffs_.shape)
     #coeffs_ = coeffs_.flatten()[:shift]
     #print(type(indata), type(coeffs_))
