@@ -5,7 +5,9 @@
 # this number of bitplanes plus one. An weighted average is used to
 # filter the fast changes in the link bandwidth. Sign-magnitude
 # representation is used to minimize the distortion of the partially
-# received negative samples.
+# received negative samples. At least two bitplanes are transmitted:
+# the signs bitplane and the most significant one (less information
+# does not make sense).
 
 import struct
 import numpy as np
