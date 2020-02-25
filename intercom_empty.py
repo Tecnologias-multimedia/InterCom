@@ -1,3 +1,16 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#    |
+#    +- Intercom_bitplanes
+#       |
+#       +- Intercom_binaural
+#          |
+#          +- Intercom_DFC
+#             |
+#             +- Intercom_empty
+#
 # Don't send empty bitplanes.
 #
 # The sender of the bitplanes adds, to the number of received

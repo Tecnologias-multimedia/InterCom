@@ -1,3 +1,8 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#
 # Adding a buffer.
 #
 # The buffer allows to reorder the chunks if they are not transmitted

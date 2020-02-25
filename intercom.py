@@ -8,11 +8,11 @@
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
-import sounddevice as sd                                                        # https://python-sounddevice.readthedocs.io
-import numpy as np                                                              # https://numpy.org/
-import argparse                                                                 # https://docs.python.org/3/library/argparse.html
-import socket                                                                   # https://docs.python.org/3/library/socket.html
-import queue                                                                    # https://docs.python.org/3/library/queue.html
+import sounddevice as sd  # https://python-sounddevice.readthedocs.io
+import numpy as np        # https://numpy.org/
+import argparse           # https://docs.python.org/3/library/argparse.html
+import socket             # https://docs.python.org/3/library/socket.html
+import queue              # https://docs.python.org/3/library/queue.html
 
 if __debug__:
     import sys

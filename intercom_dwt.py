@@ -1,3 +1,18 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#    |
+#    +- Intercom_bitplanes
+#       |
+#       +- Intercom_binaural
+#          |
+#          +- Intercom_DFC
+#             |
+#             +- Intercom_empty
+#                |
+#                +- Intercom_DWT
+#
 # Using the Discrete Wavelet Transform, convert the chunks of samples
 # intro chunks of Wavelet coefficients (coeffs).
 #
@@ -71,6 +86,8 @@
 
 import struct
 import numpy as np
+import pywt as wt
+import math
 from intercom import Intercom
 from intercom_empty import Intercom_empty
 
@@ -81,6 +98,25 @@ class Intercom_DWT(Intercom_empty):
 
     def init(self, args):
         Intercom_empty.init(self, args)
+        self.levels = 4                  # Number of levels of the DWT
+        self.wavelet = 'bior3.5'         # Wavelet Biorthogonal 3.5
+        self.overlap = 4                 # Total overlap between audio chunks
+        self.padding = "periodization"   # Signal extension procedure used in the DWT
+        self.precision_type = np.uint32  # DWT coefficients precision (storing purposes)
+        self.extended_chunk_size = self.frames_per_chunk + self.overlap
+        self.precision_bits = self.get_coeffs_bitplanes()
+        print(self.precision_bits)
+
+    # Compute the number of bitplanes that the wavelet coefficients require
+    def get_coeffs_bitplanes(self):
+        random = np.random.randint(low=-32768, high=32767, size=self.frames_per_chunk)
+        coeffs = wt.wavedec(random, wavelet=self.wavelet, level=self.levels, mode=self.padding)
+        arr, coeff_slices = wt.coeffs_to_array(coeffs)
+        max = np.amax(arr)
+        min = np.amin(arr)
+        range = max - min
+        bitplanes = int(math.floor(math.log(range)/math.log(2)))
+        return bitplanes
 
 if __name__ == "__main__":
     intercom = Intercom_DWT()

@@ -1,3 +1,12 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#    |
+#    +- Intercom_bitplanes
+#       |
+#       +- Intercom_binaural
+#
 # Exploiting binaural redundancy.
 #
 # The channel 1 is substracted to the channel 0.

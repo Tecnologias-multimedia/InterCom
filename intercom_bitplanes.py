@@ -1,3 +1,10 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#    |
+#    +- Intercom_bitplanes
+#
 # Transmiting in bitplanes.
 #
 # The 16 planes of each chunk are transmitted from the most

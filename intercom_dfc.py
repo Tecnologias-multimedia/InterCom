@@ -1,3 +1,14 @@
+#
+# Intercom
+# |
+# +- Intercom_buffer
+#    |
+#    +- Intercom_bitplanes
+#       |
+#       +- Intercom_binaural
+#          |
+#          +- Intercom_DFC
+#
 # Implements a Data-Flow Control algorithm.
 #
 # The receiver sends back (using piggybacking) the number of received
@@ -21,16 +32,18 @@ class Intercom_DFC(Intercom_binaural):
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
-        self.max_NOBPTS = 16*self.number_of_channels  # Maximum Number Of Bitplanes To Send
+        self.precision_bits = 16
+        self.max_NOBPTS = self.precision_bits*self.number_of_channels  # Maximum Number Of Bitplanes To Send
         self.NOBPTS = self.max_NOBPTS
         self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
+        self.precision_type = np.uint16
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
         received_chunk_number, received_bitplane_number, self.NORB, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
-        bitplane = bitplane.astype(np.uint16)
+        bitplane = bitplane.astype(self.precision_type)
         self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number%self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
         self.received_bitplanes_per_chunk[received_chunk_number % self.cells_in_buffer] += 1
         return received_chunk_number
