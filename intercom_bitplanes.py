@@ -24,6 +24,7 @@ class Intercom_bitplanes(Intercom_buffer):
 
     def init(self, args):
         Intercom_buffer.init(self, args)
+        print("using bitplanes")
         self.packet_format = f"!HB{self.frames_per_chunk//8}B"
         self.number_of_bitplanes_to_send = 16*self.number_of_channels
 
@@ -41,7 +42,7 @@ class Intercom_bitplanes(Intercom_buffer):
         bitplane = bitplane.astype(np.uint8)
         bitplane = np.packbits(bitplane)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
-        self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
+        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
     
     def send(self, indata):
         last_bitplane_to_send = 16*self.number_of_channels - self.number_of_bitplanes_to_send

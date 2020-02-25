@@ -30,6 +30,7 @@ if __debug__:
 class Intercom_empty(Intercom_DFC):
 
     def init(self, args):
+        print("ignoring 0-bitplanes")
         Intercom_DFC.init(self, args)
         self.skipped_bitplanes = [0]*self.cells_in_buffer
 
@@ -44,16 +45,16 @@ class Intercom_empty(Intercom_DFC):
             self.skipped_bitplanes[self.recorded_chunk_number % self.cells_in_buffer] += 1
 
     def send(self, indata):
-        signs = indata & 0x8000
-        magnitudes = abs(indata)
-        indata = signs | magnitudes
+        #signs = indata & 0x8000
+        #magnitudes = abs(indata)
+        #indata = signs | magnitudes
         self.NOBPTS = int(0.75*self.NOBPTS + 0.25*self.NORB)
         self.NOBPTS += self.skipped_bitplanes[(self.played_chunk_number+1) % self.cells_in_buffer]
         self.skipped_bitplanes[(self.played_chunk_number+1) % self.cells_in_buffer] = 0
         self.NOBPTS += 1
         if self.NOBPTS > self.max_NOBPTS:
             self.NOBPTS = self.max_NOBPTS
-        last_BPTS = self.max_NOBPTS - self.NOBPTS - 1
+        last_BPTS = self.max_NOBPTS - self.NOBPTS - 1  # last BitPlane To Send
         #self.send_bitplane(indata, self.max_NOBPTS-1)
         #self.send_bitplane(indata, self.max_NOBPTS-2)
         #for bitplane_number in range(self.max_NOBPTS-3, last_BPTS, -1):

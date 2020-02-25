@@ -37,6 +37,7 @@ class Intercom_DFC(Intercom_binaural):
         self.NOBPTS = self.max_NOBPTS
         self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
         self.precision_type = np.uint16
+        print("controlling data-flow")
 
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
@@ -53,13 +54,9 @@ class Intercom_DFC(Intercom_binaural):
         bitplane = bitplane.astype(np.uint8)
         bitplane = np.packbits(bitplane)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, self.received_bitplanes_per_chunk[(self.played_chunk_number+1) % self.cells_in_buffer]+1, *bitplane)
-        self.sending_sock.sendto(message, (self.destination_IP_addr, self.destination_port))
+        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
     
     def send(self, indata):
-        signs = indata & 0x8000
-        magnitudes = abs(indata)
-        indata = signs | magnitudes
-        
         self.NOBPTS = int(0.75*self.NOBPTS + 0.25*self.NORB)
         self.NOBPTS += 1
         if self.NOBPTS > self.max_NOBPTS:
@@ -73,6 +70,9 @@ class Intercom_DFC(Intercom_binaural):
 
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,0] -= indata[:,1]
+        signs = indata & 0x8000
+        magnitudes = abs(indata)
+        indata = signs | magnitudes
         self.send(indata)
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         signs = chunk >> 15

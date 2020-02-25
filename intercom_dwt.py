@@ -97,6 +97,7 @@ if __debug__:
 class Intercom_DWT(Intercom_empty):
 
     def init(self, args):
+        print("transmitting wavelet coefficients")
         Intercom_empty.init(self, args)
         self.levels = 4                  # Number of levels of the DWT
         self.wavelet = 'bior3.5'         # Wavelet Biorthogonal 3.5
@@ -117,6 +118,21 @@ class Intercom_DWT(Intercom_empty):
         range = max - min
         bitplanes = int(math.floor(math.log(range)/math.log(2)))
         return bitplanes
+
+    def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
+        indata[:,0] -= indata[:,1]
+        signs = indata & 0x8000
+        magnitudes = abs(indata)
+        indata = signs | magnitudes
+        self.send(indata)
+        chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
+        signs = chunk >> 15
+        magnitudes = chunk & 0x7FFF
+        chunk = magnitudes + magnitudes*signs*2
+        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
+        self.play(outdata)
+        self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
 
 if __name__ == "__main__":
     intercom = Intercom_DWT()

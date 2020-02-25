@@ -19,6 +19,7 @@ class Intercom_binaural(Intercom_bitplanes):
         Intercom_bitplanes.init(self, args)
         if self.number_of_channels == 2:
             self.record_send_and_play = self.record_send_and_play_stereo
+        print("removing binaural redundancy")
 
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,0] -= indata[:,1]
