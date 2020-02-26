@@ -3,10 +3,8 @@
 # |
 # +- Intercom_buffer
 #
-# Adding a buffer.
-#
-# The buffer allows to reorder the chunks if they are not transmitted
-# in order by the network.
+# Adds a (ramdom-access) buffer, which can be used to reorder the
+# chunks if they are not transmitted in order by the network.
 
 import sounddevice as sd
 import numpy as np
@@ -34,12 +32,17 @@ class Intercom_buffer(Intercom):
             print(f"chunks_to_buffer={self.chunks_to_buffer}")
         print("buffering")
 
+    # Waits for a new chunk and insert it in the right position of the
+    # buffer.
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
         return chunk_number
 
+    # Now, attached to the chunk (as a header) we need to send the
+    # recorded chunk number. Thus, the receiver would know where to
+    # inser the chunk into the buffer.
     def send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
@@ -48,6 +51,8 @@ class Intercom_buffer(Intercom):
     def feedback(self):
         sys.stderr.write("."); sys.stderr.flush()
 
+    # Gets the next available chunk from the buffer and send it to the
+    # sound device. The played chunks are zeroed in the buffer.
     def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
@@ -56,11 +61,14 @@ class Intercom_buffer(Intercom):
         if __debug__:
             self.feedback()
 
+    # Almost identical to the parent's one.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        # The recording is performed by sounddevice, which call this method
+        # The recording is performed by sounddevice, which call this
+        # method for each recorded chunk.
         self.send(indata)
         self.play(outdata)
 
+    # Runs the intercom and implements the buffer's logic.
     def run(self):
         self.recorded_chunk_number = 0
         self.played_chunk_number = 0

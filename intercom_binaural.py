@@ -7,10 +7,8 @@
 #       |
 #       +- Intercom_binaural
 #
-# Exploiting binaural redundancy.
+# Removes binaural redundancy. The channel 1 is substracted to the channel 0.
 #
-# The channel 1 is substracted to the channel 0.
-
 from intercom_bitplanes import Intercom_bitplanes
 
 class Intercom_binaural(Intercom_bitplanes):
@@ -21,6 +19,7 @@ class Intercom_binaural(Intercom_bitplanes):
             self.record_send_and_play = self.record_send_and_play_stereo
         print("removing binaural redundancy")
 
+    # Channel 0 is a residue: channel0 -= channel1
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,0] -= indata[:,1]
         self.send(indata)

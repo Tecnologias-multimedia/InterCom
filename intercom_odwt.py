@@ -14,7 +14,7 @@
 #                +- Intercom_DWT
 #
 # Convert the chunks of samples intro chunks of wavelet coefficients
-# (coeffs in short).
+# (coefs).
 #
 # The coefficients require more bitplanes than the original samples,
 # but most of the energy of the samples of the original chunk tends to
@@ -62,9 +62,31 @@
 # bits different of 0 in the coeffs that belongs to the low-frequency
 # subbands. This will be exploited in a future issue. In a future
 # issue should be implemented also a subband weighting procedure in
-# order to sent first the most energetic coeffs. Notice, however, that
+# order to sent first the most energetic coefs. Notice, however, that
 # these subband weights depends on the selected wavelet.
 #
+# The straighforward implementation of this issue is to transform each
+# chun without considering the samples of adjacent
+# chunks. Unfortunately this produces an error in the computation of
+# the coeffs that are at the beginning and the end of each subband. To
+# compute these coeffs correctly, the samples of the adjacent chunks
+# i-1 and i+1 should be used when the chunk i is transformed:
+#
+#   chunk i-1     chunk i     chunk i+1
+# +------------+------------+------------+
+# |          OO|OOOOOOOOOOOO|OO          |
+# +------------+------------+------------+
+#
+# O = sample
+#
+# (In this example, only 2 samples are required from adajact chunks)
+#
+# The number of ajacent samples depends on the Wavelet
+# transform. However, considering that usually a chunk has a number of
+# samples larger than the number of coefficients of the Wavelet
+# filters, we don't need to be aware of this detail if we work with
+# chunks.
+
 import struct
 import numpy as np
 import pywt as wt
@@ -83,34 +105,25 @@ class Intercom_DWT(Intercom_empty):
         self.wavelet = 'bior3.5'         # Wavelet Biorthogonal 3.5
         self.overlap = 4                 # Total overlap between audio chunks
         self.padding = "periodization"   # Signal extension procedure used in the DWT
-        self.precision_type = np.int32   # DWT coefficients precision (storing purposes)
+        self.precision_type = np.uint32  # DWT coefficients precision (storing purposes)
         self.extended_chunk_size = self.frames_per_chunk + self.overlap
         self.precision_bits = self.get_coeffs_bitplanes()
         print(self.precision_bits)
-        print("using the wavelet domain")
+        print("using wavelet domain")
 
-    # Compute the number of bitplanes that the wavelet coefs require
+    # Compute the number of bitplanes that the wavelet coefficients require
     def get_coeffs_bitplanes(self):
         random = np.random.randint(low=-32768, high=32767, size=self.frames_per_chunk)
         coeffs = wt.wavedec(random, wavelet=self.wavelet, level=self.levels, mode=self.padding)
-        arr, self.slices = wt.coeffs_to_array(coeffs)
+        arr, coeff_slices = wt.coeffs_to_array(coeffs)
         max = np.amax(arr)
         min = np.amin(arr)
         range = max - min
         bitplanes = int(math.floor(math.log(range)/math.log(2)))
         return bitplanes
 
-    # After removing the binaural redundancy and before using the
-    # sign-magnitude representation, the 2-channels recorded chunk is
-    # transformed (each channel independently). Also, just before
-    # playing the chunk, this is transformed inversely. Notice that
-    # chunks in the buffer and in the network are in the wavelet
-    # domain. Only the first channel is transformed (the second
-    # channel is a residue chunk that when transformed should not
-    # provide any coding gain).
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
-        indata[:,1] -= indata[:,0]
-        indata[:,0] = self.forward_transform(indata[:,0])
+        indata[:,0] -= indata[:,1]
         signs = indata & 0x8000
         magnitudes = abs(indata)
         indata = signs | magnitudes
@@ -119,19 +132,10 @@ class Intercom_DWT(Intercom_empty):
         signs = chunk >> 15
         magnitudes = chunk & 0x7FFF
         chunk = magnitudes + magnitudes*signs*2
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
-        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.inverse_transform(self._buffer[self.played_chunk_number % self.cells_in_buffer])
+        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
         self.play(outdata)
-        self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
-
-    def forward_transform(self, chunk):
-        coeffs_in_subbands = wt.wavedec(chunk, wavelet=self.wavelet, level=self.levels, mode=self.padding)
-        return wt.coeffs_to_array(coeffs_in_subbands)[0]
-
-    def inverse_transform(self, coeffs_in_array):
-        coeffs_in_subbands = wt.array_to_coeffs(coeffs_in_array, self.slices, output_format="wavedec")
-        return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.precision_type)
+        self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
 
 if __name__ == "__main__":
     intercom = Intercom_DWT()

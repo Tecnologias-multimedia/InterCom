@@ -1,10 +1,8 @@
-# A very simple intercom.
+# A very simple intercom(municator) that sends chunked raw audio data between
+# two (or more, depending on the destination address) networked
+# processes.
 #
-# No video, no DWT, no compression, no bitplanes, no data-flow
-# control, no buffering. Only the transmission of the raw audio data,
-# splitted into chunks of fixed length.
-#
-# https://github.com/Tecnologias-multimedia/intercom
+# Repo: https://github.com/Tecnologias-multimedia/intercom
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
@@ -16,7 +14,6 @@ import queue              # https://docs.python.org/3/library/queue.html
 
 if __debug__:
     import sys
-
 
 class Intercom:
 
@@ -55,15 +52,29 @@ class Intercom:
             print(f"bytes_per_chunk={self.bytes_per_chunk}")
         print("intercom-unicating")
 
+    # The audio driver never stops recording and playing. Therefore,
+    # if the queue of chunks is empty, then zero chunks are generated
+    # in order to produce a silence at the receiver.
     def generate_zero_chunk(self):
         cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int16)
         return cell
 
+    # The audio driver runs two different threads, and this is one of
+    # them. The receive_and_buffer() method is running in a infinite
+    # loop (see the run() method), and in each iteration receives a
+    # chunk of audio and insert it in the tail of the queue of
+    # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
-        
+
+    # This is the second method that the audio driver runs in a
+    # thread. The record_send_and_play() method is called each time a
+    # new chunk of audio is available, so, it records audio (returned
+    # in "indata"). This method also allows to play chunks of audio
+    # (stored in "outdata"). "frames" is the number of frames per
+    # chunk. "time" and "status" are ignored.
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
         try:
@@ -73,10 +84,11 @@ class Intercom:
         outdata[:] = chunk
         if __debug__:
             sys.stderr.write("."); sys.stderr.flush()
-            
+
+    # Runs intercom. 
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
-            print("-=- Press <CTRL> + <c> to quit -=-")
+            print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
             while True:
                 self.receive_and_buffer()
 
