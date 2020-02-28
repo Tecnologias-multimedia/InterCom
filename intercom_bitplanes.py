@@ -25,15 +25,15 @@ class Intercom_bitplanes(Intercom_buffer):
         self.packet_format = f"!HB{self.frames_per_chunk//8}B"
         self.precision_bits = 16
         self.precision_type = np.int16
-        self.number_of_bitplanes_to_send = self.precision_bits*self.number_of_channels
-        print("transmitting by bitplanes")
+        self.number_of_bitplanes_to_send = self.precision_bits * self.number_of_channels
+        print("intercom_bitplanes: transmitting by bitplanes")
 
     # Now, each packet transports a bitplane of a chunk. Again, this
     # is a blocking method that waits for a bitplane and inserts it
     # into a chunk. Both data (the bitplane number and the chunk
     # number) form the header. The bitplanes are packed using bytes.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
+        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         received_chunk_number, received_bitplane_number, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)

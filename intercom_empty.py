@@ -32,7 +32,7 @@ class Intercom_empty(Intercom_DFC):
     def init(self, args):
         Intercom_DFC.init(self, args)
         self.skipped_bitplanes = [0]*self.cells_in_buffer
-        print("ignoring 0-bitplanes")
+        print("intercom_empty: ignoring 0-bitplanes")
 
     # Bitplanes are only sent if they have at least one bit to 1. If
     # the bitplane is not sent, we consider that it has been
@@ -59,10 +59,12 @@ class Intercom_empty(Intercom_DFC):
         self.number_of_bitplanes_to_send += 1
         if self.number_of_bitplanes_to_send > self.max_number_of_bitplanes_to_send:
             self.number_of_bitplanes_to_send = self.max_number_of_bitplanes_to_send
+        #print("intercom_empty: number_of_bitplanes_to_send={} max_number_of_bitplanes_to_send={}".format(self.number_of_bitplanes_to_send, self.max_number_of_bitplanes_to_send))
         last_BPTS = self.max_number_of_bitplanes_to_send - self.number_of_bitplanes_to_send - 1  # last BitPlane To Send
         #self.send_bitplane(indata, self.max_NOBPTS-1)
         #self.send_bitplane(indata, self.max_NOBPTS-2)
         #for bitplane_number in range(self.max_NOBPTS-3, last_BPTS, -1):
+        #print("intercom_empty: ", self.max_number_of_bitplanes_to_send)
         for bitplane_number in range(self.max_number_of_bitplanes_to_send-1, last_BPTS, -1):
             self.send_bitplane(indata, bitplane_number)
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER

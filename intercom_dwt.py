@@ -65,11 +65,13 @@
 # order to sent first the most energetic coeffs. Notice, however, that
 # these subband weights depends on the selected wavelet.
 #
+
+import sounddevice as sd
 import struct
 import numpy as np
 import pywt as wt
 import math
-from intercom import Intercom
+#from intercom import Intercom
 from intercom_empty import Intercom_empty
 
 if __debug__:
@@ -79,59 +81,72 @@ class Intercom_DWT(Intercom_empty):
 
     def init(self, args):
         Intercom_empty.init(self, args)
+        self.precision_bits = 32
+        self.precision_type = np.int32
+        self.number_of_bitplanes_to_send = self.precision_bits * self.number_of_channels
+        if __debug__:
+            print("intercom_dwt: number_of_bitplanes_to_send={}".format(self.number_of_bitplanes_to_send))
+        self.max_number_of_bitplanes_to_send = self.number_of_bitplanes_to_send
+        self.number_of_received_bitplanes = self.max_number_of_bitplanes_to_send
         self.levels = 4                  # Number of levels of the DWT
         self.wavelet = 'bior3.5'         # Wavelet Biorthogonal 3.5
-        self.overlap = 4                 # Total overlap between audio chunks
-        self.padding = "periodization"   # Signal extension procedure used in the DWT
-        self.precision_type = np.int32   # DWT coefficients precision (storing purposes)
-        self.extended_chunk_size = self.frames_per_chunk + self.overlap
-        self.precision_bits = self.get_coeffs_bitplanes()
-        print(self.precision_bits)
-        print("using the wavelet domain")
+        self.padding = "periodization"   # Signal extension procedure used in
+        self.slices = self.get_coeffs_slices()
+        print("intercom_bitplanes: transmitting by bitplanes")
 
-    # Compute the number of bitplanes that the wavelet coefs require
-    def get_coeffs_bitplanes(self):
-        random = np.random.randint(low=-32768, high=32767, size=self.frames_per_chunk)
-        coeffs = wt.wavedec(random, wavelet=self.wavelet, level=self.levels, mode=self.padding)
-        arr, self.slices = wt.coeffs_to_array(coeffs)
-        max = np.amax(arr)
-        min = np.amin(arr)
-        range = max - min
-        bitplanes = int(math.floor(math.log(range)/math.log(2)))
-        return bitplanes
+    def get_coeffs_slices(self):
+        zeros = np.zeros(shape=self.frames_per_chunk)
+        coeffs = wt.wavedec(zeros, wavelet=self.wavelet, level=self.levels, mode=self.padding)
+        return wt.coeffs_to_array(coeffs)[1]
+        #arr, self.slices = wt.coeffs_to_array(coeffs)
+        #max = np.amax(arr)
+        #min = np.amin(arr)
+        #range = max - min
+        #bitplanes = int(math.floor(math.log(range)/math.log(2)))
+        #return bitplanes
 
-    # After removing the binaural redundancy and before using the
-    # sign-magnitude representation, the 2-channels recorded chunk is
-    # transformed (each channel independently). Also, just before
-    # playing the chunk, this is transformed inversely. Notice that
-    # chunks in the buffer and in the network are in the wavelet
-    # domain. Only the first channel is transformed (the second
-    # channel is a residue chunk that when transformed should not
-    # provide any coding gain).
+    def DWT(self, chunk):
+        coeffs_in_subbands = wt.wavedec(chunk, wavelet=self.wavelet, level=self.levels, mode=self.padding)
+        return np.around(wt.coeffs_to_array(coeffs_in_subbands)[0]).astype(self.precision_type)
+
+    def iDWT(self, coeffs_in_array):
+        coeffs_in_subbands = wt.array_to_coeffs(coeffs_in_array, self.slices, output_format="wavedec")
+        return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.precision_type)
+
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,1] -= indata[:,0]
-        indata[:,0] = self.forward_transform(indata[:,0])
-        signs = indata & 0x8000
+        indata[:,0] = self.DWT(indata[:,0])
+        signs = indata & 0x80000000
         magnitudes = abs(indata)
         indata = signs | magnitudes
         self.send(indata)
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        signs = chunk >> 15
-        magnitudes = chunk & 0x7FFF
+        signs = chunk >> 31
+        magnitudes = chunk & 0x7FFFFFFF
         chunk = magnitudes + magnitudes*signs*2
+        chunk[:,0] = self.iDWT(chunk[:,0])
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.inverse_transform(self._buffer[self.played_chunk_number % self.cells_in_buffer])
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
-    def forward_transform(self, chunk):
-        coeffs_in_subbands = wt.wavedec(chunk, wavelet=self.wavelet, level=self.levels, mode=self.padding)
-        return wt.coeffs_to_array(coeffs_in_subbands)[0]
+    def record_send_and_play_mono(self, indata, outdata, frames, time, status):
+        indata[:,0] = self.DWT(indata[:,0])
+        signs = indata & 0x80000000
+        magnitudes = abs(indata)
+        indata = signs | magnitudes
+        self.send(indata)
+        chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
+        signs = chunk >> 31
+        magnitudes = chunk & 0x7FFFFFFF
+        chunk = magnitudes + magnitudes*signs*2
+        chunk[:,0] = self.iDWT(chunk[:,0])
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
+        self.play(outdata)
+        self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
-    def inverse_transform(self, coeffs_in_array):
-        coeffs_in_subbands = wt.array_to_coeffs(coeffs_in_array, self.slices, output_format="wavedec")
-        return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.precision_type)
+    def feedback(self):
+        pass
 
 if __name__ == "__main__":
     intercom = Intercom_DWT()

@@ -20,11 +20,10 @@ class Intercom:
     NUMBER_OF_CHANNELS = 2
     FRAMES_PER_SECOND = 44100
     FRAMES_PER_CHUNK = 1024
-    MAX_MESSAGE_SIZE = 32768   # In bytes
+    MAX_MESSAGE_BYTES = 32768
     MY_PORT = 4444
     DESTINATION_PORT = 4444
     DESTINATION_ADDRESS = "localhost"
-    MAX_MESSAGE_SIZE = 32768
 
     def init(self, args):
         self.number_of_channels = args.number_of_channels
@@ -40,23 +39,26 @@ class Intercom:
         self.listening_endpoint = ("0.0.0.0", self.my_port)
         self.receiving_sock.bind(self.listening_endpoint)
         self.q = queue.Queue(maxsize=100000)
+        self.precision_type = np.int16
 
         if __debug__:
-            print(f"number_of_channels={self.number_of_channels}")
-            print(f"frames_per_second={self.frames_per_second}")
-            print(f"frames_per_chunk={self.frames_per_chunk}")
-            print(f"samples_per_chunk={self.samples_per_chunk}")
-            print(f"my_port={self.my_port}")
-            print(f"destination_address={self.destination_address}")
-            print(f"destination_port={self.destination_port}")
-            print(f"bytes_per_chunk={self.bytes_per_chunk}")
-        print("intercom-unicating")
+            print(f"intercom: number_of_channels={self.number_of_channels}")
+            print(f"intercom: frames_per_second={self.frames_per_second}")
+            print(f"intercom: frames_per_chunk={self.frames_per_chunk}")
+            print(f"intercom: samples_per_chunk={self.samples_per_chunk}")
+            print(f"intercom: my_port={self.my_port}")
+            print(f"intercom: destination_address={self.destination_address}")
+            print(f"intercom: destination_port={self.destination_port}")
+            print(f"intercom: bytes_per_chunk={self.bytes_per_chunk}")
+        print("intercom: intercom-unicating")
 
     # The audio driver never stops recording and playing. Therefore,
     # if the queue of chunks is empty, then zero chunks are generated
     # in order to produce a silence at the receiver.
     def generate_zero_chunk(self):
-        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int16)
+        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
+        #cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int32)
+        #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.precision_type={}".format(self.frames_per_chunk, self.number_of_channels, self.precision_type))
         return cell
 
     # The audio driver runs two different threads, and this is one of
@@ -65,7 +67,7 @@ class Intercom:
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
+        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 

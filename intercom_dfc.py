@@ -35,18 +35,18 @@ class Intercom_DFC(Intercom_binaural):
         #self.max_NOBPTS = self.precision_bits*self.number_of_channels  # Maximum Number Of Bitplanes To Send
         self.max_number_of_bitplanes_to_send = self.number_of_bitplanes_to_send
         if __debug__:
-            print("Maximum number of bit planes to send: {}".format(self.max_number_of_bitplanes_to_send))
+            print("intercom_dfc: max_number_of_bitplanes_to_send={}".format(self.max_number_of_bitplanes_to_send))
         #self.NOBPTS = self.max_NOBPTS
         #self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
         self.number_of_received_bitplanes = self.max_number_of_bitplanes_to_send 
         #self.precision_type = np.uint16
-        print("controlling the data-flow")
+        print("intercom_dfc: controlling the data-flow")
 
     # Receives chunks, and now, in the header of each chunk, there
     # is the number of received bitplanes of the played chunk by the
     # intercolutor.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_SIZE)
+        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         received_chunk_number, received_bitplane_number, self.number_of_received_bitplanes, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
@@ -86,7 +86,7 @@ class Intercom_DFC(Intercom_binaural):
     # reconstruct the partially received chunks (when some bitplanes
     # are missing).
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
-        indata[:,0] -= indata[:,1]
+        indata[:,1] -= indata[:,0]
         signs = indata & 0x8000
         magnitudes = abs(indata)
         indata = signs | magnitudes
@@ -96,24 +96,25 @@ class Intercom_DFC(Intercom_binaural):
         magnitudes = chunk & 0x7FFF
         #chunk = ((~signs & magnitudes) | ((-magnitudes) & signs))
         chunk = magnitudes + magnitudes*signs*2
-        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
-        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1]
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
         #print(*self.received_bitplanes_per_chunk)
 
     # Mono version of the intercom.
     def record_send_and_play(self, indata, outdata, frames, time, status):
+        signs = indata & 0x8000
+        magnitudes = abs(indata)
+        indata = signs | magnitudes
         self.send(indata)
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         signs = chunk >> 15
         magnitudes = chunk & 0x7FFF
-        #chunk = ((~signs & magnitudes) | ((-magnitudes) & signs))
         chunk = magnitudes + magnitudes*signs*2
         self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
         self.play(outdata)
         self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
-        #print(*self.received_bitplanes_per_chunk)
 
     def feedback(self):
         sys.stderr.write(str(self.number_of_bitplanes_to_send) + " "); sys.stderr.flush()
