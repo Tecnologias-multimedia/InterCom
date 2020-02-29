@@ -104,6 +104,7 @@ class Intercom_DFC(Intercom_binaural):
 
     # Mono version of the intercom.
     def record_send_and_play(self, indata, outdata, frames, time, status):
+        #print(indata)
         signs = indata & 0x8000
         magnitudes = abs(indata)
         indata = signs | magnitudes

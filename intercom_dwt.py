@@ -83,6 +83,9 @@ class Intercom_DWT(Intercom_empty):
         Intercom_empty.init(self, args)
         self.precision_bits = 32
         self.precision_type = np.int32
+        self.sign_mask = (1<<(self.precision_bits-1))
+        self.precision_bits_1 = self.precision_bits-1
+        self.magnitude_mask = ((1<<(self.precision_bits_1))-1)
         self.number_of_bitplanes_to_send = self.precision_bits * self.number_of_channels
         if __debug__:
             print("intercom_dwt: number_of_bitplanes_to_send={}".format(self.number_of_bitplanes_to_send))
@@ -92,7 +95,7 @@ class Intercom_DWT(Intercom_empty):
         self.wavelet = 'bior3.5'         # Wavelet Biorthogonal 3.5
         self.padding = "periodization"   # Signal extension procedure used in
         self.slices = self.get_coeffs_slices()
-        print("intercom_bitplanes: transmitting by bitplanes")
+        print("intercom_dwt: using wavelet domain \"{}\"".format(self.wavelet))
 
     def get_coeffs_slices(self):
         zeros = np.zeros(shape=self.frames_per_chunk)
@@ -106,23 +109,25 @@ class Intercom_DWT(Intercom_empty):
         #return bitplanes
 
     def DWT(self, chunk):
+        #return chunk
         coeffs_in_subbands = wt.wavedec(chunk, wavelet=self.wavelet, level=self.levels, mode=self.padding)
         return np.around(wt.coeffs_to_array(coeffs_in_subbands)[0]).astype(self.precision_type)
 
     def iDWT(self, coeffs_in_array):
+        #return coeffs_in_array
         coeffs_in_subbands = wt.array_to_coeffs(coeffs_in_array, self.slices, output_format="wavedec")
         return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.precision_type)
 
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,1] -= indata[:,0]
         indata[:,0] = self.DWT(indata[:,0])
-        signs = indata & 0x80000000
+        signs = indata & self.sign_mask
         magnitudes = abs(indata)
         indata = signs | magnitudes
         self.send(indata)
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        signs = chunk >> 31
-        magnitudes = chunk & 0x7FFFFFFF
+        signs = chunk >> self.precision_bits_1
+        magnitudes = chunk & self.magnitude_mask
         chunk = magnitudes + magnitudes*signs*2
         chunk[:,0] = self.iDWT(chunk[:,0])
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
@@ -130,18 +135,21 @@ class Intercom_DWT(Intercom_empty):
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
-    def record_send_and_play_mono(self, indata, outdata, frames, time, status):
+    def record_send_and_play(self, indata, outdata, frames, time, status):
+        #print(indata)
         indata[:,0] = self.DWT(indata[:,0])
-        signs = indata & 0x80000000
+        signs = indata & self.sign_mask
         magnitudes = abs(indata)
         indata = signs | magnitudes
+        #print(indata)
         self.send(indata)
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        signs = chunk >> 31
-        magnitudes = chunk & 0x7FFFFFFF
+        signs = chunk >> self.precision_bits_1
+        magnitudes = chunk & self.magnitude_mask
         chunk = magnitudes + magnitudes*signs*2
         chunk[:,0] = self.iDWT(chunk[:,0])
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
+        #print(chunk)
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
