@@ -67,6 +67,7 @@ class Intercom_buffer(Intercom):
 
     # Runs the intercom and implements the buffer's logic.
     def run(self):
+        print("intercom_buffer: ¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
             self._buffer[i] = self.generate_zero_chunk()
@@ -75,7 +76,6 @@ class Intercom_buffer(Intercom):
         p = Process(target=self.feedback)
         p.start()
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=self.precision_type, channels=self.number_of_channels, callback=self.record_send_and_play):
-            print("intercom_buffer: ¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
             first_received_chunk_number = self.receive_and_buffer()
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             while True:

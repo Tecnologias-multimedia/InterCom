@@ -82,6 +82,12 @@ class Intercom_bitplanes(Intercom_buffer):
         old_time = time.time()
         total_sent = 0
         total_received = 0
+        sys.stderr.write("\n");
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("", "", "total", "total", "", ""));
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("sent", "received", "sent", "received", "sent", "received"));
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("kbps", "kbps", "kbps", "kbps", "messages", "messages"))
+        sys.stderr.write("{}\n".format("="*60))
+        sys.stderr.flush()
         while True:
             elapsed_time = time.time() - old_time
             old_time = time.time()
@@ -89,9 +95,11 @@ class Intercom_bitplanes(Intercom_buffer):
             received = int(self.received_bytes_counter.value*8/1000/elapsed_time)
             total_sent += sent
             total_received += received
-            sys.stderr.write(f"{sent:5d}{received:5d}{total_sent:10d}{total_received:10d}{self.sent_messages_counter.value:6d}{self.received_messages_counter.value:6d}\n")
+            sys.stderr.write(f"{sent:10d}{received:10d}{total_sent:10d}{total_received:10d}{self.sent_messages_counter.value:10d}{self.received_messages_counter.value:10d}\n")
             self.sent_bytes_counter.value = 0
             self.received_bytes_counter.value = 0
+            self.sent_messages_counter.value = 0
+            self.received_messages_counter.value = 0
             time.sleep(1)
 
 if __name__ == "__main__":

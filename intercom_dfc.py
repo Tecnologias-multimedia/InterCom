@@ -25,6 +25,8 @@ from intercom_binaural import Intercom_binaural
 
 if __debug__:
     import sys
+    import time
+    from multiprocessing import Value
 
 class Intercom_DFC(Intercom_binaural):
 
@@ -40,6 +42,9 @@ class Intercom_DFC(Intercom_binaural):
         #self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
         self.number_of_received_bitplanes = self.max_number_of_bitplanes_to_send 
         #self.precision_type = np.uint16
+        if __debug__:
+            self._number_of_sent_bitplanes = Value('i')
+            self._number_of_received_bitplanes = Value('i')
         print("intercom_dfc: controlling the data-flow")
 
     # Receives chunks, and now, in the header of each chunk, there
@@ -80,6 +85,8 @@ class Intercom_DFC(Intercom_binaural):
         if self.number_of_bitplanes_to_send > self.max_number_of_bitplanes_to_send:
             self.number_of_bitplanes_to_send = self.max_number_of_bitplanes_to_send
         last_BPTS = self.max_number_of_bitplanes_to_send - self.number_of_bitplanes_to_send - 1
+        if __debug__:
+            self._number_of_sent_bitplanes.value += (self.max_number_of_bitplanes_to_send - last_BPTS)
         self.send_bitplane(indata, self.max_number_of_bitplanes_to_send-1)
         self.send_bitplane(indata, self.max_number_of_bitplanes_to_send-2)
         for bitplane_number in range(self.max_number_of_bitplanes_to_send-3, last_BPTS, -1):
@@ -118,23 +125,37 @@ class Intercom_DFC(Intercom_binaural):
         signs = chunk >> 15
         magnitudes = chunk & 0x7FFF
         chunk = magnitudes + magnitudes*signs*2
-        self._buffer[self.played_chunk_number % self.cells_in_buffer]  = chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         self.play(outdata)
-        self.received_bitplanes_per_chunk [self.played_chunk_number % self.cells_in_buffer] = 0
+        if __debug__:
+            self._number_of_received_bitplanes.value += self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer]
+        self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
     def feedback(self):
-        elapsed_time = time.time() - self.old_time
-        self.old_time = time.time()
-        sent = int(self.sent_bytes_counter*8/1000/elapsed_time)
-        received = int(self.received_bytes_counter*8/1000/elapsed_time)
-        self.total_sent += sent
-        self.total_received += received
-        sys.stderr.write(f"{sent:5d}{received:5d}{self.total_sent:10d}{self.total_received:10d}{self.number_of_bitplanes_to_send:3d}{self.number_of_received_bitplanes:3d}{self.sent_messages_counter:6d}{self.received_messages_counter:6d}\n")
-        self.sent_bytes_counter = 0
-        self.received_bytes_counter = 0
-
-    #def feedback(self):
-    #    sys.stderr.write(str(self.number_of_bitplanes_to_send) + " "); sys.stderr.flush()
+        old_time = time.time()
+        total_sent = 0
+        total_received = 0
+        sys.stderr.write("\n");
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("", "", "total", "total", "", "", "", ""))
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("sent", "received", "sent", "received", "sent", "received", "sent", "received"))
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("kbps", "kbps", "kbps", "kbps", "messages", "messages", "bitplanes", "bitplanes"))
+        sys.stderr.write("{}\n".format("="*80))
+        sys.stderr.flush()
+        while True:
+            elapsed_time = time.time() - old_time
+            old_time = time.time()
+            sent = int(self.sent_bytes_counter.value*8/1000/elapsed_time)
+            received = int(self.received_bytes_counter.value*8/1000/elapsed_time)
+            total_sent += sent
+            total_received += received
+            sys.stderr.write(f"{sent:10d}{received:10d}{total_sent:10d}{total_received:10d}{self.sent_messages_counter.value:10d}{self.received_messages_counter.value:10d}{self._number_of_sent_bitplanes.value:10d}{self._number_of_received_bitplanes.value:10d}\n")
+            self.sent_bytes_counter.value = 0
+            self.received_bytes_counter.value = 0
+            self.sent_messages_counter.value = 0
+            self.received_messages_counter.value = 0
+            self._number_of_sent_bitplanes.value = 0
+            self._number_of_received_bitplanes.value = 0
+            time.sleep(1)
 
 if __name__ == "__main__":
     intercom = Intercom_DFC()
