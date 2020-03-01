@@ -33,7 +33,7 @@ class Intercom_empty(Intercom_DFC):
         Intercom_DFC.init(self, args)
         self.skipped_bitplanes = [0]*self.cells_in_buffer
         print("intercom_empty: ignoring 0-bitplanes")
-
+        
     # Bitplanes are only sent if they have at least one bit to 1. If
     # the bitplane is not sent, we consider that it has been
     # transmitted for implementing the data-flow control.
@@ -43,23 +43,24 @@ class Intercom_empty(Intercom_DFC):
             bitplane = bitplane.astype(np.uint8)
             bitplane = np.packbits(bitplane)
             message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, self.received_bitplanes_per_chunk[(self.played_chunk_number+1) % self.cells_in_buffer]+1, *bitplane)
-            self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+            self.send_message(message)
+            #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
         else:
             self.skipped_bitplanes[self.recorded_chunk_number % self.cells_in_buffer] += 1
 
     # The empty bitplanes are considered as transmitted (the rest of
     # the method is identical to the parent's one).
     def send(self, indata):
-        #signs = indata & 0x8000
-        #magnitudes = abs(indata)
-        #indata = signs | magnitudes
-        self.number_of_bitplanes_to_send = int(0.75*self.number_of_bitplanes_to_send + 0.25*self.number_of_received_bitplanes)
+        #self.number_of_bitplanes_to_send = int(0.75*self.number_of_bitplanes_to_send + 0.25*self.number_of_received_bitplanes)
+        #self.number_of_bitplanes_to_send = int(0.25*self.number_of_bitplanes_to_send)
+        #self.number_of_bitplanes_to_send = int(0.75*self.number_of_bitplanes_to_send + 0.25*(self.number_of_sent_bitplanes - self.number_of_received_bitplanes)
+        #self.number_of_bitplanes_to_send = self.number_of_received_bitplanes
+        self.number_of_bitplanes_to_send = int(0.05*self.number_of_bitplanes_to_send + 0.95*self.number_of_received_bitplanes)
         self.number_of_bitplanes_to_send += self.skipped_bitplanes[(self.played_chunk_number+1) % self.cells_in_buffer]
         self.skipped_bitplanes[(self.played_chunk_number+1) % self.cells_in_buffer] = 0
         self.number_of_bitplanes_to_send += 1
         if self.number_of_bitplanes_to_send > self.max_number_of_bitplanes_to_send:
             self.number_of_bitplanes_to_send = self.max_number_of_bitplanes_to_send
-        #print("intercom_empty: number_of_bitplanes_to_send={} max_number_of_bitplanes_to_send={}".format(self.number_of_bitplanes_to_send, self.max_number_of_bitplanes_to_send))
         last_BPTS = self.max_number_of_bitplanes_to_send - self.number_of_bitplanes_to_send - 1  # last BitPlane To Send
         #self.send_bitplane(indata, self.max_NOBPTS-1)
         #self.send_bitplane(indata, self.max_NOBPTS-2)

@@ -13,6 +13,8 @@ from intercom import Intercom
 
 if __debug__:
     import sys
+    import time
+    from multiprocessing import Process
 
 class Intercom_buffer(Intercom):
 
@@ -53,8 +55,8 @@ class Intercom_buffer(Intercom):
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
-        if __debug__:
-            self.feedback()
+#        if __debug__:
+#            self.feedback()
 
     # Almost identical to the parent's one.
     def record_send_and_play(self, indata, outdata, frames, time, status):
@@ -70,6 +72,8 @@ class Intercom_buffer(Intercom):
             self._buffer[i] = self.generate_zero_chunk()
         self.recorded_chunk_number = 0
         self.played_chunk_number = 0
+        p = Process(target=self.feedback)
+        p.start()
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=self.precision_type, channels=self.number_of_channels, callback=self.record_send_and_play):
             print("intercom_buffer: ¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
             first_received_chunk_number = self.receive_and_buffer()
@@ -78,7 +82,9 @@ class Intercom_buffer(Intercom):
                 self.receive_and_buffer()
 
     def feedback(self):
-        sys.stderr.write("."); sys.stderr.flush()
+        while True:
+            sys.stderr.write("."); sys.stderr.flush()
+            time.sleep(1)
 
     def add_args(self):
         parser = Intercom.add_args(self)

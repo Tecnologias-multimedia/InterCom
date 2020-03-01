@@ -105,9 +105,6 @@ class Intercom_WDWT(Intercom_DWT):
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
-    def feedback(self):
-        pass
-
 if __name__ == "__main__":
     intercom = Intercom_WDWT()
     parser = intercom.add_args()

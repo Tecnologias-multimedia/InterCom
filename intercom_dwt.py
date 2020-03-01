@@ -74,8 +74,9 @@ import math
 #from intercom import Intercom
 from intercom_empty import Intercom_empty
 
-if __debug__:
-    import sys
+#if __debug__:
+#    import sys
+#    import time
 
 class Intercom_DWT(Intercom_empty):
 
@@ -153,8 +154,25 @@ class Intercom_DWT(Intercom_empty):
         self.play(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
+    def send_message(self, message):
+        super().send_message(message)
+        self.sent_bytes_counter += len(message)
+
+    def receive_message(self):
+        message, source_address = super().receive_message()
+        self.received_bytes_counter += len(message)
+        return message, source_address
+        
     def feedback(self):
-        pass
+        elapsed_time = time.time() - self.old_time
+        self.old_time = time.time()
+        sent = int(self.sent_bytes_counter*8/1000/elapsed_time)
+        received = int(self.received_bytes_counter*8/1000/elapsed_time)
+        self.total_sent += sent
+        self.total_received += received
+        sys.stderr.write("{:5d}:{:5d} {:10d}:{:10d}\n".format(sent, received, self.total_sent, self.total_received))
+        self.sent_bytes_counter = 0
+        self.received_bytes_counter = 0
 
 if __name__ == "__main__":
     intercom = Intercom_DWT()

@@ -61,13 +61,19 @@ class Intercom:
         #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.precision_type={}".format(self.frames_per_chunk, self.number_of_channels, self.precision_type))
         return cell
 
+    def send_message(self, message):
+        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+
+    def receive_message(self):
+        return self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+
     # The audio driver runs two different threads, and this is one of
     # them. The receive_and_buffer() method is running in a infinite
     # loop (see the run() method), and in each iteration receives a
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 
@@ -78,7 +84,8 @@ class Intercom:
     # (stored in "outdata"). "frames" is the number of frames per
     # chunk. "time" and "status" are ignored.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
+        self.send_message(indata)
+        #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
         try:
             chunk = self.q.get_nowait()
         except queue.Empty:
