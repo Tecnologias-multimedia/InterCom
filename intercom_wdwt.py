@@ -103,6 +103,8 @@ class Intercom_WDWT(Intercom_DWT):
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0] = chunk
         #print(chunk)
         self.play(outdata)
+        if __debug__:
+            self._number_of_received_bitplanes.value += self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer]
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
 if __name__ == "__main__":

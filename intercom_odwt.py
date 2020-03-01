@@ -13,7 +13,9 @@
 #                |
 #                +- Intercom_DWT
 #                   |
-#                   +- Intercom_ODWT
+#                   +- Intercom_WDWT
+#                      |
+#                      +- Intercom_ODWT
 #
 # This intercom considers the samples of adjacent chunks to compute
 # the DWT. This should improve the correctness of the coefficients
@@ -36,12 +38,12 @@
 
 import numpy as np
 import pywt as wt
-from intercom_dwt import Intercom_DWT
+from intercom_wdwt import Intercom_WDWT
 
-class Intercom_ODWT(Intercom_DWT):
+class Intercom_ODWT(Intercom_WDWT):
 
     def init(self, args):
-        Intercom_DWT.init(self, args)
+        Intercom_WDWT.init(self, args)
         wavelet = wt.Wavelet(self.wavelet)
         self.number_of_overlapped_samples = wavelet.dec_len * self.levels
         self.extended_chunk_size = self.frames_per_chunk + self.number_of_overlapped_samples*2
@@ -76,8 +78,9 @@ class Intercom_ODWT(Intercom_DWT):
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         #print(chunk)
         self.play(outdata)
+        if __debug__:
+            self._number_of_received_bitplanes.value += self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer]
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
-
 
 if __name__ == "__main__":
     intercom = Intercom_ODWT()
