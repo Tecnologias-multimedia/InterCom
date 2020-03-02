@@ -1,4 +1,4 @@
-# intercom
+# intercom-TM-UAL
 
 A low-latency full-duplex intercom. Two or more intercom users will be
 able (the project is still unfinished) to communicate (audio and
