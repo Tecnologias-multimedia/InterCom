@@ -7,8 +7,25 @@
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
 import argparse           # https://docs.python.org/3/library/argparse.html
+try:
+    import sounddevice as sd  # https://python-sounddevice.readthedocs.io
+except ModuleNotFoundError:
+    print("Installing sounddevice package with pip")
+    import os
+    os.system("pip3 install sounddevice --user")
+try:
+    import numpy as np  # https://numpy.org
+except ModuleNotFoundError:
+    print("Installing numpy with pip")
+    import os
+    os.system("pip3 install numpy --user")
+import socket             # https://docs.python.org/3/library/socket.html
+import queue              # https://docs.python.org/3/library/queue.html
 
-class Intercom:
+if __debug__:
+    import sys
+
+class Intercom_minimal:
 
     NUMBER_OF_CHANNELS = 2
     FRAMES_PER_SECOND = 44100
@@ -58,7 +75,7 @@ class Intercom:
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     def receive_message(self):
-        return self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        return self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
 
     # The audio driver runs two different threads, and this is one of
     # them. The receive_and_buffer() method is running in a infinite
@@ -66,7 +83,7 @@ class Intercom:
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 
@@ -89,44 +106,36 @@ class Intercom:
 
     # Runs intercom. 
     def run(self):
-        import sounddevice as sd  # https://python-sounddevice.readthedocs.io
-        import numpy as np        # https://numpy.org/
-        import socket             # https://docs.python.org/3/library/socket.html
-        import queue              # https://docs.python.org/3/library/queue.html
-
-        if __debug__:
-            import sys
-
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
             print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
             while True:
                 self.receive_and_buffer()
 
     def add_args(self):
-        parser = argparse.ArgumentParser(description="Real-time intercom",
+        parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-s", "--frames_per_chunk",
                             help="Number of frames (stereo samples) per chunk.",
-                            type=int, default=Intercom.FRAMES_PER_CHUNK)
+                            type=int, default=Intercom_minimal.FRAMES_PER_CHUNK)
         parser.add_argument("-r", "--frames_per_second",
                             help="Sampling rate in frames/second.",
-                            type=int, default=Intercom.FRAMES_PER_SECOND)
+                            type=int, default=Intercom_minimal.FRAMES_PER_SECOND)
         parser.add_argument("-c", "--number_of_channels",
                             help="Number of channels.",
-                            type=int, default=Intercom.NUMBER_OF_CHANNELS)
+                            type=int, default=Intercom_minimal.NUMBER_OF_CHANNELS)
         parser.add_argument("-p", "--my_port",
                             help="My listening port.",
-                            type=int, default=Intercom.MY_PORT)
+                            type=int, default=Intercom_minimal.MY_PORT)
         parser.add_argument("-i", "--destination_port",
                             help="Interlocutor's listening port.",
-                            type=int, default=Intercom.DESTINATION_PORT)
+                            type=int, default=Intercom_minimal.DESTINATION_PORT)
         parser.add_argument("-a", "--destination_address",
                             help="Interlocutor's IP address or name.",
-                            type=str, default=Intercom.DESTINATION_ADDRESS)
+                            type=str, default=Intercom_minimal.DESTINATION_ADDRESS)
         return parser
 
 if __name__ == "__main__":
-    intercom = Intercom()
+    intercom = Intercom_minimal()
     parser = intercom.add_args()
     args = parser.parse_args()
     intercom.init(args)
