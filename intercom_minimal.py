@@ -13,12 +13,14 @@ except ModuleNotFoundError:
     print("Installing sounddevice package with pip")
     import os
     os.system("pip3 install sounddevice --user")
+    import sounddevice as sd
 try:
     import numpy as np  # https://numpy.org
 except ModuleNotFoundError:
     print("Installing numpy with pip")
     import os
     os.system("pip3 install numpy --user")
+    import numpy as np
 import socket             # https://docs.python.org/3/library/socket.html
 import queue              # https://docs.python.org/3/library/queue.html
 
