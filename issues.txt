@@ -1,0 +1,5 @@
+1. MSE computation.
+2. Provide stereo drivers for WDWT and ODWT.
+3. Bitplane compression using EOB-RLE.
+4. Psichoacoustical weighting (user tunning).
+5. Wavelet selection based on MSE.
