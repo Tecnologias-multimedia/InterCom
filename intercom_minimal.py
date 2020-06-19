@@ -10,7 +10,6 @@ import argparse           # https://docs.python.org/3/library/argparse.html
 try:
     import sounddevice as sd  # https://python-sounddevice.readthedocs.io
 except ModuleNotFoundError:
-    print("Installing sounddevice package with pip")
     import os
     os.system("pip3 install sounddevice --user")
     import sounddevice as sd

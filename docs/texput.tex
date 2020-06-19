@@ -1,0 +1,50 @@
+% Emacs, this is -*-latex-*-
+
+\title{\href{https://github.com/Tecnologias-Multimedia/intercom}{Real
+    Time Audio Intercommunicator  (RTAI)}}
+
+\author{Vicente González Ruiz}
+
+% \makeglossaries
+\maketitle
+\tableofcontents
+\section{The
+  \href{https://python-sounddevice.readthedocs.io}{\texttt{sounddevice}
+    module}}
+%{{{
+
+\texttt{sounddevice} is a \href{https://www.python.org}{Python}
+\href{https://docs.python.org/3/tutorial/modules.html}{module}
+available for Linux, OSX and MS Windows. \texttt{sounddevice} is a
+Python wrapper for the \href{http://www.portaudio.com}{PortAudio}
+library, which allows us to handle
+\href{https://en.wikipedia.org/wiki/Pulse-code_modulation}{PCM}
+\href{https://en.wikipedia.org/wiki/Digital_audio}{audio} in the
+previous platforms.
+
+%}}}
+
+\section{The
+  \href{https://python-sounddevice.readthedocs.io/en/0.3.15/api/streams.html}{\texttt{sounddevice.Stream}
+    object}}
+%{{{
+
+The \texttt{sounddevice.Stream} object allows to simulteneous input
+and output PCM digital audio through \href{https://numpy.org}{NumPy}
+arrays. The following parameters are available:
+\begin{enumerate}
+\item \texttt{samplerate}: The desired sampling frequency (for both,
+  input and output) in frames per second. By default,
+  \texttt{samplerate}=44100.
+\item \texttt{blocksize}: Number of frames (single samples
+  in the case of mono audio or tuples of samples in the case of multichannel
+  audio) passed to the callback function (see below). By default,
+  \texttt{blocksize}=0, which means that the block size possiblely
+  will have a variable size, depending on the host workload and the
+  requested latency setting (see below).
+\item \texttt{device}: Input and output device(s). By default, \texttt{device}=?
+\item (int
+\end{enumerate}
+
+%}}}
+

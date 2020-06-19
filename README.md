@@ -1,8 +1,9 @@
-# Welcome to the RTAI-PS Project
+# Welcome to the RTAI Project
 
-RTAI-PS (Real Time Audio Intercom - Peer Side) is a low-latency
-full-duplex intercommunicator designed for the transmission of audio
-in real-time between networked users. See the [RTAI Project] for more
+RTAI (Real Time Audio Intercommunicator) is a low-latency full-duplex
+intercommunicator designed for the transmission of audio in real-time
+between networked users. See the [RTI
+Project](https://github.com/Tecnologias-Multimedia/RTI) for more
 global information.
 
 ## Use
