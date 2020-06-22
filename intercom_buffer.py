@@ -3,10 +3,29 @@
 # |
 # +- Intercom_buffer
 #
-# Adds a (ramdom-access) buffer, which can be used to reorder the
-# chunks if they are not transmitted in order by the network.
+# Replaces the queue of intercom_minimal by a (ramdom-access) buffer,
+# which can be used to reorder the chunks if they are not transmitted
+# in order by the network. The buffer structure gives more control
+# than a queue.
 
 from intercom_minimal import Intercom_minimal
+try:
+    import numpy as np  # https://numpy.org
+except ModuleNotFoundError:
+    print("Installing numpy with pip")
+    import os
+    os.system("pip3 install numpy --user")
+    import numpy as np
+import struct
+if __debug__:
+    import sys
+    try:
+        import psutil
+    except ModuleNotFoundError:
+        import os
+        os.system("pip3 install psutil --user")
+        import psutil
+import time
 
 class Intercom_buffer(Intercom_minimal):
 
@@ -21,20 +40,34 @@ class Intercom_buffer(Intercom_minimal):
         self.packet_format = f"!H{self.samples_per_chunk}h"
         self.precision_type = np.int16
         if __debug__:
-            print(f"intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
-        print("intercom_buffer: buffering")
+            print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
+        print("Intercom_buffer: buffering")
 
-    # Waits for a new chunk and insert it in the right position of the
+    # Waits for a new chunk and insert it into the right position of the
     # buffer.
     def receive_and_buffer(self):
         message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        # stereo_payload {
+        #   int32 chunk_number;
+        #   stereo_frame[frames_per_chunk];
+        # }
+        # stereo_frame {
+        #   int16 left_sample, right_sample;
+        # }
+        # mono_payload {
+        #   int32 chunk_number;
+        #   mono_frame[frames_per_chunk];
+        # }
+        # mono_frame {
+        #   int16 sample;
+        # }
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
-        self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
+        self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
         return chunk_number
 
     # Now, attached to the chunk (as a header) we need to send the
-    # recorded chunk number. Thus, the receiver would know where to
-    # inser the chunk into the buffer.
+    # recorded chunk number. Thus, the receiver will know where to
+    # insert the chunk into the buffer.
     def send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
@@ -47,8 +80,6 @@ class Intercom_buffer(Intercom_minimal):
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
-#        if __debug__:
-#            self.feedback()
 
     # Almost identical to the parent's one.
     def record_send_and_play(self, indata, outdata, frames, time, status):
@@ -82,7 +113,7 @@ class Intercom_buffer(Intercom_minimal):
 
     def feedback(self):
         while True:
-            sys.stderr.write("."); sys.stderr.flush()
+            self.feedback_message()
             time.sleep(1)
 
     def add_args(self):

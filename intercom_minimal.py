@@ -1,13 +1,14 @@
 # A very simple intercom(municator) that sends chunked raw audio data
 # between two (or more, depending on the destination address)
 # networked processes. The receiver uses a queue for uncoupling the
-# reception of chunks and the playback.
+# reception of chunks and the playback. Missing chunks are replaced by
+# zeros.
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
-import argparse           # https://docs.python.org/3/library/argparse.html
+import argparse  # https://docs.python.org/3/library/argparse.html
 try:
     import sounddevice as sd  # https://python-sounddevice.readthedocs.io
 except ModuleNotFoundError:
@@ -21,8 +22,8 @@ except ModuleNotFoundError:
     import os
     os.system("pip3 install numpy --user")
     import numpy as np
-import socket             # https://docs.python.org/3/library/socket.html
-import queue              # https://docs.python.org/3/library/queue.html
+import socket  # https://docs.python.org/3/library/socket.html
+import queue  # https://docs.python.org/3/library/queue.html
 
 if __debug__:
     import sys
@@ -60,29 +61,29 @@ class Intercom_minimal:
         self.precision_type = np.int16
 
         if __debug__:
-            print(f"intercom: number_of_channels={self.number_of_channels}")
-            print(f"intercom: frames_per_second={self.frames_per_second}")
-            print(f"intercom: frames_per_chunk={self.frames_per_chunk}")
-            print(f"intercom: samples_per_chunk={self.samples_per_chunk}")
-            print(f"intercom: my_port={self.my_port}")
-            print(f"intercom: destination_address={self.destination_address}")
-            print(f"intercom: destination_port={self.destination_port}")
-            print(f"intercom: bytes_per_chunk={self.bytes_per_chunk}")
-        print("intercom: intercom-unicating ...")
+            print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
+            print(f"Intercom_minimal: frames_per_second={self.frames_per_second}")
+            print(f"Intercom_minimal: frames_per_chunk={self.frames_per_chunk}")
+            print(f"Intercom_minimal: samples_per_chunk={self.samples_per_chunk}")
+            print(f"Intercom_minimal: my_port={self.my_port}")
+            print(f"Intercom_minimal: destination_address={self.destination_address}")
+            print(f"Intercom_minimal: destination_port={self.destination_port}")
+            print(f"Intercom_minimal: bytes_per_chunk={self.bytes_per_chunk}")
+        print("Intercom_minimal: running ...")
 
     # The audio driver never stops recording and playing. Therefore,
     # if the queue of chunks is empty, then zero chunks are generated
-    # in order to produce a silence at the receiver.
+    # 0-chunks generate silence when they are played.
     def generate_zero_chunk(self):
         cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
         #cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int32)
         #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.precision_type={}".format(self.frames_per_chunk, self.number_of_channels, self.precision_type))
         return cell
 
-    def send_message(self, message):
+    def send(self, message):
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
-    def receive_message(self):
+    def receive(self):
         return self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
 
     # The audio driver runs two different threads, and this is one of
@@ -91,9 +92,12 @@ class Intercom_minimal:
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        message, source_address = self.receive() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
+
+    def feedback_message(self):
+        sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
 
     # This is the second method that the audio driver runs in a
     # thread. The record_send_and_play() method is called each time a
@@ -102,7 +106,7 @@ class Intercom_minimal:
     # (stored in "outdata"). "frames" is the number of frames per
     # chunk. "time" and "status" are ignored.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.send_message(indata)
+        self.send(indata)
         #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
         try:
             chunk = self.q.get_nowait()
@@ -110,7 +114,7 @@ class Intercom_minimal:
             chunk = self.generate_zero_chunk()
         outdata[:] = chunk
         if __debug__:
-            sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
+            self.feedback_message()
 
     # Runs intercom. 
     def run(self):
