@@ -71,7 +71,8 @@ class Intercom_buffer(Intercom_minimal):
     def send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
-        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+        #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+        Intercom_minimal.send(self, message)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
