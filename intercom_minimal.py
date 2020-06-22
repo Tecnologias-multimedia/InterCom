@@ -1,6 +1,7 @@
-# A very simple intercom(municator) that sends chunked raw audio data between
-# two (or more, depending on the destination address) networked
-# processes.
+# A very simple intercom(municator) that sends chunked raw audio data
+# between two (or more, depending on the destination address)
+# networked processes. The receiver uses a queue for uncoupling the
+# reception of chunks and the playback.
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
@@ -25,6 +26,12 @@ import queue              # https://docs.python.org/3/library/queue.html
 
 if __debug__:
     import sys
+    try:
+        import psutil
+    except ModuleNotFoundError:
+        import os
+        os.system("pip3 install psutil --user")
+        import psutil
 
 class Intercom_minimal:
 
@@ -61,7 +68,7 @@ class Intercom_minimal:
             print(f"intercom: destination_address={self.destination_address}")
             print(f"intercom: destination_port={self.destination_port}")
             print(f"intercom: bytes_per_chunk={self.bytes_per_chunk}")
-        print("intercom: intercom-unicating")
+        print("intercom: intercom-unicating ...")
 
     # The audio driver never stops recording and playing. Therefore,
     # if the queue of chunks is empty, then zero chunks are generated
@@ -103,7 +110,7 @@ class Intercom_minimal:
             chunk = self.generate_zero_chunk()
         outdata[:] = chunk
         if __debug__:
-            sys.stderr.write("."); sys.stderr.flush()
+            sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
 
     # Runs intercom. 
     def run(self):
