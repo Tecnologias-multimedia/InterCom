@@ -124,8 +124,8 @@ class Intercom_minimal:
         self.listening_endpoint = ("0.0.0.0", self.my_port)
         self.receiving_sock.bind(self.listening_endpoint)
 
-        # Queue construction.
-        self.q = queue.Queue(maxsize=100000)
+        # A queue to store up to 100 chunks.
+        self.q = queue.Queue(maxsize=100)
 
         if __debug__:
             print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
@@ -139,33 +139,43 @@ class Intercom_minimal:
         print("Intercom_minimal: running ...")
 
     # The audio driver never stops recording and playing. Therefore,
-    # if the queue of chunks is empty, then zero chunks are generated
-    # 0-chunks generate silence when they are played.
+    # if the queue were empty, then 0-chunks will be generated
+    # (0-chunks generate silence when they are played).
     def generate_zero_chunk(self):
-        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
-        #cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int32)
-        #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.precision_type={}".format(self.frames_per_chunk, self.number_of_channels, self.precision_type))
-        return cell
+        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
 
+    # Send a chunk. The destination is fixed.
     def send(self, message):
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
-    def receive(self):
-        return self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
-
-    # The audio driver runs two different threads, and this is one of
-    # them. The receive_and_buffer() method is running in a infinite
-    # loop (see the run() method), and in each iteration receives a
-    # chunk of audio and insert it in the tail of the queue of
-    # chunks. Notice that recvfrom() is a blocking method.
+    # The receive_and_buffer() method is running
+    # in a infinite loop (see the run() method), and in each iteration
+    # receives a chunk of audio and insert it in the tail of the queue
+    # of chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receive() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
-        chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
+        
+        # [Receive an UDP
+        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom). The
+        # socket returns a [bytes
+        # structure](https://docs.python.org/3/library/stdtypes.html),
+        # an object that exposes the [buffer
+        # protocol](https://docs.python.org/3/c-api/buffer.html). Basically,
+        # the message object points to a block of memory containing
+        # the payload of the packet. At this moment, Python does not
+        # know the structure of such message.
+        message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+
+        # Transforms a buffer into a NumPy 1-dimensional array of
+        # "precision_type" elements.
+        flat_chunk = np.frombuffer(message, self.precision_type)
+        chunk = flat_chunk.reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 
     def feedback_message(self):
         sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
 
+    # The audio driver runs in a
+    # [thread](https://en.wikipedia.org/wiki/Thread_(computing)).
     # This is the second method that the audio driver runs in a
     # thread. The record_send_and_play() method is called each time a
     # new chunk of audio is available, so, it records audio (returned
