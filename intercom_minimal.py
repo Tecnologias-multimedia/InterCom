@@ -5,32 +5,53 @@
 # between two (or more, depending on the destination address)
 # networked processes. The receiver uses a queue for uncoupling the
 # reception of chunks and the playback (the chunks of audio can be
-# transmitted with a jitter different to the playing chunk
-# cadence. Missing chunks are replaced by zeros.
+# transmitted with a jitter different to the playing chunk cadence,
+# producing "glitches" during the playback of the audio). Missing (not
+# received) chunks are replaced by zeros.
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
 # Based on: https://python-sounddevice.readthedocs.io/en/0.3.13/_downloads/wire.py
 
-import argparse  # https://docs.python.org/3/library/argparse.html
+# Handle command-line arguments. See:
+# https://docs.python.org/3/library/argparse.html.
+import argparse
+
+# Handle the sound card. See:
+# https://python-sounddevice.readthedocs.io
 try:
-    import sounddevice as sd  # https://python-sounddevice.readthedocs.io
+    import sounddevice as sd
 except ModuleNotFoundError:
     import os
     os.system("pip3 install sounddevice --user")
     import sounddevice as sd
+
+# Provides efficient arrays. See: https://numpy.org
 try:
-    import numpy as np  # https://numpy.org
+    import numpy as np
 except ModuleNotFoundError:
     print("Installing numpy with pip")
     import os
     os.system("pip3 install numpy --user")
     import numpy as np
-import socket  # https://docs.python.org/3/library/socket.html
-import queue  # https://docs.python.org/3/library/queue.html
 
+# Socket API for interprocess communications through the Internet. See:
+# https://docs.python.org/3/library/socket.html
+import socket
+
+# Used for implementing a FIFO queue of chunks of audio. See:
+# https://docs.python.org/3/library/queue.html
+import queue
+
+# Debug mode modules.
 if __debug__:
+
+    # Interface with the OS. See:
+    # https://docs.python.org/3/library/sys.html
     import sys
+
+    # Process and system monitoring. See:
+    # https://pypi.org/project/psutil/
     try:
         import psutil
     except ModuleNotFoundError:
@@ -40,29 +61,71 @@ if __debug__:
 
 class Intercom_minimal:
 
+    # Default audio configuration. See: 
+    
+    # 1 = Mono, 2 = Stereo
     NUMBER_OF_CHANNELS = 2
+
+    # Sampling frequency (44100 Hz -> CD quality) 
     FRAMES_PER_SECOND = 44100
+
+    # Number of frames (stereo samples) per chunk of data interchanged
+    # with the sound card.
     FRAMES_PER_CHUNK = 1024
+
+    # Default network configuration. See: 
+
+    # Maximum size of the payload of a transmitted packet. This
+    # parameter is used by the OS to allocate memory for incomming
+    # packets. Notice that this value limites the maximum length of a
+    # chunk of audio.
     MAX_MESSAGE_BYTES = 32768
+
+    # Port that my machine will use to listen to the incomming
+    # packets.
     MY_PORT = 4444
+
+    # Port that my interlocutor's machine will use to listen to the
+    # incomming packets.
     DESTINATION_PORT = 4444
+
+    # Name or IP address of my interlocutor's machine.
     DESTINATION_ADDRESS = "localhost"
 
     def init(self, args):
+        
+        # Gathers the information provided by the args object, and
+        # initializes other structures, such as the socket and the
+        # queue.
+
+        # Command-line parameters.
         self.number_of_channels = args.number_of_channels
         self.frames_per_second = args.frames_per_second
         self.frames_per_chunk = args.frames_per_chunk
         self.my_port = args.my_port
         self.destination_address = args.destination_address 
         self.destination_port = args.destination_port
-        self.bytes_per_chunk = self.frames_per_chunk * self.number_of_channels * np.dtype(np.int16).itemsize
+
+        # Data type used for NumPy arrays, which defines the number of
+        # bits per sample. See:
+        # https://numpy.org/devdocs/user/basics.types.html
+        self.precision_type = np.int16
+
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
+        self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.precision_type).itemsize
+        assert self.bytes_per_chunk <= Intercom_minimal.MAX_MESSAGE_BYTES, \
+          f"(bytes_per_chunk={self.bytes_per_chunk} > MAX_MESSAGE_BYTES={Intercom_minimal.MAX_MESSAGE_BYTES})"
+
+        # Sending and receiving sockets creation and configuration for
+        # UDP traffic. See:
+        # https://wiki.python.org/moin/UdpCommunication
         self.sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", self.my_port)
         self.receiving_sock.bind(self.listening_endpoint)
+
+        # Queue construction.
         self.q = queue.Queue(maxsize=100000)
-        self.precision_type = np.int16
 
         if __debug__:
             print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
