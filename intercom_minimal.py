@@ -1,8 +1,12 @@
+#
+# intercom_minimal.py
+#
 # A very simple intercom(municator) that sends chunked raw audio data
 # between two (or more, depending on the destination address)
 # networked processes. The receiver uses a queue for uncoupling the
-# reception of chunks and the playback. Missing chunks are replaced by
-# zeros.
+# reception of chunks and the playback (the chunks of audio can be
+# transmitted with a jitter different to the playing chunk
+# cadence. Missing chunks are replaced by zeros.
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
