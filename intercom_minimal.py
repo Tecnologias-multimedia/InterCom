@@ -109,10 +109,10 @@ class Intercom_minimal:
         # Data type used for NumPy arrays, which defines the number of
         # bits per sample. See:
         # https://numpy.org/devdocs/user/basics.types.html
-        self.precision_type = np.int16
+        self.sample_type = np.int16
 
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
-        self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.precision_type).itemsize
+        self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
         assert self.bytes_per_chunk <= Intercom_minimal.MAX_MESSAGE_BYTES, \
           f"(bytes_per_chunk={self.bytes_per_chunk} > MAX_MESSAGE_BYTES={Intercom_minimal.MAX_MESSAGE_BYTES})"
 
@@ -142,7 +142,7 @@ class Intercom_minimal:
     # if the queue were empty, then 0-chunks will be generated
     # (0-chunks generate silence when they are played).
     def generate_zero_chunk(self):
-        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
+        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
     # Send a chunk. The destination is fixed.
     def send(self, message):
@@ -162,26 +162,42 @@ class Intercom_minimal:
         # protocol](https://docs.python.org/3/c-api/buffer.html). Basically,
         # the message object points to a block of memory containing
         # the payload of the packet. At this moment, Python does not
-        # know the structure of such message.
+        # know the structure of such message. Python only knows that
+        # there is a block of memory with data.
         message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
 
-        # Transforms a buffer into a NumPy 1-dimensional array of
-        # "precision_type" elements.
-        flat_chunk = np.frombuffer(message, self.precision_type)
+        # Interprets the bytes structure into a NumPy 1-dimensional
+        # array of "sample_type" elements. See:
+        # https://numpy.org/doc/stable/reference/generated/numpy.frombuffer.html
+        flat_chunk = np.frombuffer(message, self.sample_type)
+
+        # Interprets the 1-dimensional array as a 2-dimensional array,
+        # in the case that number_of_channels == 2. See:
+        # https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
         chunk = flat_chunk.reshape(self.frames_per_chunk, self.number_of_channels)
+
+        # Puts the received chunk on the top of the queue.
         self.q.put(chunk)
 
+    # To keep happy the users.
     def feedback_message(self):
         sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
 
-    # The audio driver runs in a
-    # [thread](https://en.wikipedia.org/wiki/Thread_(computing)).
-    # This is the second method that the audio driver runs in a
-    # thread. The record_send_and_play() method is called each time a
-    # new chunk of audio is available, so, it records audio (returned
-    # in "indata"). This method also allows to play chunks of audio
-    # (stored in "outdata"). "frames" is the number of frames per
-    # chunk. "time" and "status" are ignored.
+    # The audio driver provided by sounddevice runs in a
+    # [thread](https://en.wikipedia.org/wiki/Thread_(computing))
+    # different from the main one. Thus, sounddevice calls the
+    # callback function (this function) each time a new chunk of audio
+    # is available from the
+    # [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter). The
+    # new chunk is returned in "indata". At the same time, this method
+    # allows to send audio chunks stored in "outdata" to the
+    # [DAC](https://en.wikipedia.org/wiki/Digital-to-analog_converter). Notice
+    # that if the soundcard of the sender and the receiver have been
+    # configured with the same parameters (sampling frequency and
+    # number of frames per chunk), the cadence of input and output
+    # chunks is exactly the same. This condition is a requirement for
+    # intercom. See []() for a deeper description of the callback
+    # function.
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.send(indata)
         #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
