@@ -179,7 +179,7 @@ class Intercom_minimal:
         # Puts the received chunk on the top of the queue.
         self.q.put(chunk)
 
-    # To keep happy the users.
+    # Shows CPU usage.
     def feedback_message(self):
         sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
 
@@ -200,22 +200,31 @@ class Intercom_minimal:
     # function.
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.send(indata)
-        #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
+
         try:
             chunk = self.q.get_nowait()
         except queue.Empty:
             chunk = self.generate_zero_chunk()
+
+        # Copy the data of chunk to outdata using slicing. The
+        # alternative "outdata = chunk" only copy pointers to objects
+        # (there is not data transference between "chunk" and
+        # "outdata".
         outdata[:] = chunk
+
+        # Notice that a feedback message is generated each time a
+        # chunk is processed.
         if __debug__:
             self.feedback_message()
 
-    # Runs intercom. 
+    # Runs the intercom.
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
             print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
             while True:
                 self.receive_and_buffer()
 
+    # Define the command-line arguments.
     def add_args(self):
         parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
