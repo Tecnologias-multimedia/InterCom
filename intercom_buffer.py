@@ -3,15 +3,9 @@
 # |
 # +- Intercom_buffer
 #
-# Replaces the queue of intercom_minimal by a buffer of chunks:
-#
-#   +-------+-------+   +-------+
-#   | chunk | chunk |...| chunk |
-#   +-------+-------+   +-------+
-#       0       1   CHUNKS_TO_BUFFER-1
-#
-# An arriving chunk with chunk_number C is stored at the position
-# buffer[C % cells_in_buffer].
+# Replaces the queue of intercom_minimal by a buffer of chunks that
+# allows to extract the chunks from the buffer in the playing order,
+# even if the chunks have arrived in a different order.
 #
 
 from intercom_minimal import Intercom_minimal
@@ -39,7 +33,14 @@ import time
 
 class Intercom_buffer(Intercom_minimal):
 
+    # Intercom_buffer transmits a chunk number with each chunk of
+    # audio. Such number ranges betwen [0, MAX_CHUNK_NUMBER-1].
+    # Notice that 16 bits are needed for encoding this information.
     MAX_CHUNK_NUMBER = 65536
+
+    # Buffer size in chunks. The receiver will wait for receiving at
+    # least two chunks whose chunk numbers differs at least in
+    # CHUNKS_TO_BUFFER.
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
@@ -48,6 +49,18 @@ class Intercom_buffer(Intercom_minimal):
         Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
 
+#   +-------+-------+   +-------+
+#   | chunk | chunk |...| chunk |
+#   +-------+-------+   +-------+
+#       0       1   CHUNKS_TO_BUFFER-1
+#
+# An arriving chunk with chunk_number C is stored at the position
+# buffer[C % cells_in_buffer]. This procedure 
+#
+
+        
+        # The buffer is implemented as an sliding windowwith a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
+        
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
         # it is full (and logically, the buffer is empty if there is
         # no chunks inside). However, in order to accommodate large
