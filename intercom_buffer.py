@@ -3,20 +3,29 @@
 # |
 # +- Intercom_buffer
 #
-# Replaces the queue of intercom_minimal by a (ramdom-access) buffer,
-# which can be used to reorder the chunks if they are not transmitted
-# in order by the network. The buffer structure gives more control
-# than a queue.
+# Replaces the queue of intercom_minimal by a buffer of chunks:
+#
+#   +-------+-------+   +-------+
+#   | chunk | chunk |...| chunk |
+#   +-------+-------+   +-------+
+#       0       1   CHUNKS_TO_BUFFER-1
+#
+# An arriving chunk with chunk_number C is stored at the position
+# buffer[C % cells_in_buffer].
+#
 
 from intercom_minimal import Intercom_minimal
+
 try:
-    import numpy as np  # https://numpy.org
+    import numpy as np
 except ModuleNotFoundError:
     print("Installing numpy with pip")
     import os
     os.system("pip3 install numpy --user")
     import numpy as np
+
 import struct
+
 if __debug__:
     import sys
     try:
@@ -25,6 +34,7 @@ if __debug__:
         import os
         os.system("pip3 install psutil --user")
         import psutil
+
 import time
 
 class Intercom_buffer(Intercom_minimal):
@@ -33,10 +43,31 @@ class Intercom_buffer(Intercom_minimal):
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
+
+        # Parse arguments and initialize basic stuff.
         Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
+
+        # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
+        # it is full (and logically, the buffer is empty if there is
+        # no chunks inside). However, in order to accommodate large
+        # jitters, the buffer is built using a list of
+        # 2*CHUNKS_TO_BUFFER empty chunks. Thus, in an ideal
+        # situation, half of the list will contain chunks that has
+        # been received but that has not been played, and the other
+        # half will contain old chunks (that has been played
+        # recently). Notice that the buffering time is the time that
+        # is needed for fill in half of the buffer (not necessarily
+        # starting at cell 0).
         self.cells_in_buffer = self.chunks_to_buffer * 2
-        #self._buffer = [self.generate_zero_chunk()] * self.cells_in_buffer
+
+        # The payload of the UDP packets is a structure with 2 fields:
+        #
+        #  +--------------+
+        #  | chunk_number |
+        #  +--------------+
+        #
+        #
         self.packet_format = f"!H{self.samples_per_chunk}h"
         self.precision_type = np.int16
         if __debug__:
@@ -46,21 +77,41 @@ class Intercom_buffer(Intercom_minimal):
     # Waits for a new chunk and insert it into the right position of the
     # buffer.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
-        # stereo_payload {
+
+        # Receive a chunk.
+        message = self.receive()
+        
+        # The received message can be of two types:
+        #
+        #   1. A stereo_message.
+        #   2. A mono_message.
+        #
+        # Where:
+        #
+        # stereo_message {
         #   int32 chunk_number;
         #   stereo_frame[frames_per_chunk];
         # }
+        #
+        # where:
+        #
         # stereo_frame {
         #   int16 left_sample, right_sample;
         # }
-        # mono_payload {
+        #
+        # and:
+        #
+        # mono_message {
         #   int32 chunk_number;
         #   mono_frame[frames_per_chunk];
         # }
+        #
+        # where:
+        #
         # mono_frame {
         #   int16 sample;
         # }
+        
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
         return chunk_number

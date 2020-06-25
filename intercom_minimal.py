@@ -5,9 +5,10 @@
 # between two (or more, depending on the destination address)
 # networked processes. The receiver uses a queue for uncoupling the
 # reception of chunks and the playback (the chunks of audio can be
-# transmitted with a jitter different to the playing chunk cadence,
-# producing "glitches" during the playback of the audio). Missing (not
-# received) chunks are replaced by zeros.
+# transmitted with a [jitter](https://en.wikipedia.org/wiki/Jitter)
+# different to the playing chunk cadence, producing "glitches" during
+# the playback of the audio). Missing (not received) chunks are
+# replaced by zeros.
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
@@ -144,9 +145,20 @@ class Intercom_minimal:
     def generate_zero_chunk(self):
         return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
-    # Send a chunk. The destination is fixed.
+    # Send a chunk (and possiblely, metadata). The destination is fixed.
     def send(self, message):
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+
+    # Receive a chunk.
+    def receive(self):
+        # [Receive an UDP
+        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom). The
+        # socket returns a [bytes
+        # structure](https://docs.python.org/3/library/stdtypes.html), an
+        # object that exposes the [buffer
+        # protocol](https://docs.python.org/3/c-api/buffer.html).
+        message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        return message
 
     # The receive_and_buffer() method is running
     # in a infinite loop (see the run() method), and in each iteration
@@ -154,17 +166,12 @@ class Intercom_minimal:
     # of chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
         
-        # [Receive an UDP
-        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom). The
-        # socket returns a [bytes
-        # structure](https://docs.python.org/3/library/stdtypes.html),
-        # an object that exposes the [buffer
-        # protocol](https://docs.python.org/3/c-api/buffer.html). Basically,
-        # the message object points to a block of memory containing
-        # the payload of the packet. At this moment, Python does not
-        # know the structure of such message. Python only knows that
-        # there is a block of memory with data.
-        message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        # Get a chunk. The message object points to a block of memory
+        # containing the payload of the packet. At this moment, Python
+        # does not know the structure of such message. Python only
+        # knows that there is a block of memory with data.
+        #message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        message = self.receive()
 
         # Interprets the bytes structure into a NumPy 1-dimensional
         # array of "sample_type" elements. See:
