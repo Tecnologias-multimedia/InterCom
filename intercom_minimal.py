@@ -62,7 +62,7 @@ if __debug__:
 
 class Intercom_minimal:
 
-    # Default audio configuration. See: URL_sounddevice_YAPT
+    # Default audio configuration. See: https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
     
     # 1 = Mono, 2 = Stereo
     NUMBER_OF_CHANNELS = 2
