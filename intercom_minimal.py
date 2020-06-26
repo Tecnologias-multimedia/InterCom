@@ -156,8 +156,7 @@ class Intercom_minimal:
     # if the queue were empty, then 0-chunks will be generated
     # (0-chunks generate silence when they are played).
     def generate_zero_chunk(self):
-        #return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
-        return np.zeros((self.number_of_channels, self.frames_per_chunk), self.sample_type)
+        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
     # Send a chunk (and possiblely, metadata). The destination is fixed.
     def send(self, payload):
@@ -214,7 +213,7 @@ class Intercom_minimal:
         #
         # See:
         # https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
-        chunk = flat_chunk.reshape(self.number_of_channels, self.frames_per_chunk)
+        chunk = flat_chunk.reshape(self.frames_per_chunk, self.number_of_channels)
 
         # Puts the received chunk on the top of the queue.
         self.q.put(chunk)
