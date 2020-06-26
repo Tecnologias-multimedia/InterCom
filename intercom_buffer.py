@@ -33,10 +33,9 @@ import time
 
 class Intercom_buffer(Intercom_minimal):
 
-    # Intercom_buffer transmits a chunk number with each chunk of
-    # audio. Such number ranges betwen [0, MAX_CHUNK_NUMBER-1].
-    # Notice that 16 bits are needed for encoding this information.
-    MAX_CHUNK_NUMBER = 65536
+    # Intercom_buffer transmits a chunk number of 16 bits with each
+    # chunk of audio. Such number ranges betwen [0, 2**16-1].
+    CHUNK_NUMBERS = 2**16
 
     # Buffer size in chunks. The receiver will wait for receiving at
     # least two chunks whose chunk numbers differs at least in
@@ -59,7 +58,8 @@ class Intercom_buffer(Intercom_minimal):
 #
 
         
-        # The buffer is implemented as an sliding windowwith a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
+
+        with a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
         # it is full (and logically, the buffer is empty if there is
@@ -72,15 +72,16 @@ class Intercom_buffer(Intercom_minimal):
         # recently). Notice that the buffering time is the time that
         # is needed for fill in half of the buffer (not necessarily
         # starting at cell 0).
+
+        # The buffer is implemented as an sliding window of size CHUNKS_TO_BUFFER that moves circularly over CHUNKS_TO_BUFFER*2 cells.
         self.cells_in_buffer = self.chunks_to_buffer * 2
 
         # The payload of the UDP packets is a structure with 2 fields:
         #
-        #  +--------------+
-        #  | chunk_number |
-        #  +--------------+
-        #
-        #
+        #  payload {
+        #    uint16 chunk_number;
+        #    chunk; /* See Intercom_minimal */
+        #  }
         self.packet_format = f"!H{self.samples_per_chunk}h"
         self.precision_type = np.int16
         if __debug__:
@@ -134,7 +135,7 @@ class Intercom_buffer(Intercom_minimal):
     # insert the chunk into the buffer.
     def send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
         Intercom_minimal.send(self, message)
 

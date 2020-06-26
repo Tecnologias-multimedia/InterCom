@@ -62,35 +62,50 @@ if __debug__:
 
 class Intercom_minimal:
 
-    # Default audio configuration. See: 
+    # Default audio configuration. See: URL_sounddevice_YAPT
     
     # 1 = Mono, 2 = Stereo
     NUMBER_OF_CHANNELS = 2
 
-    # Sampling frequency (44100 Hz -> CD quality) 
+    # Sampling frequency (44100 Hz -> CD quality). A frame is a
+    # structure:
+    #
+    # frame {
+    #   [number_of_channels] int16 sample;
+    # }
+    #
     FRAMES_PER_SECOND = 44100
 
-    # Number of frames (stereo samples) per chunk of data interchanged
-    # with the sound card.
+    # Number of frames per chunk of audio interchanged with the sound
+    # card.
     FRAMES_PER_CHUNK = 1024
 
     # Default network configuration. See: 
 
-    # Maximum size of the payload of a transmitted packet. This
-    # parameter is used by the OS to allocate memory for incomming
-    # packets. Notice that this value limites the maximum length of a
-    # chunk of audio.
-    MAX_MESSAGE_BYTES = 32768
+    # Maximum size of the
+    # [payload](https://en.wikipedia.org/wiki/User_Datagram_Protocol)
+    # of a transmitted packet. This parameter is used by the OS to
+    # allocate memory for incomming packets. Notice that this value
+    # limites the maximum length (in bytes) of a chunk of audio, which
+    # have the structure:
+    #
+    # chunk {
+    #   [frames_per_chunk] int16 frame;
+    # }
+    MAX_PAYLOAD_BYTES = 32768
 
-    # Port that my machine will use to listen to the incomming
-    # packets.
+    # [Port](https://en.wikipedia.org/wiki/Port_(computer_networking))
+    # that my machine will use to listen to the incomming packets.
     MY_PORT = 4444
 
     # Port that my interlocutor's machine will use to listen to the
     # incomming packets.
     DESTINATION_PORT = 4444
 
-    # Name or IP address of my interlocutor's machine.
+    # [Hostname](https://en.wikipedia.org/wiki/Hostname) or [IP
+    # address](https://en.wikipedia.org/wiki/IP_address) of my
+    # interlocutor's
+    # [host](https://en.wikipedia.org/wiki/Host_(network)).
     DESTINATION_ADDRESS = "localhost"
 
     def init(self, args):
@@ -99,7 +114,8 @@ class Intercom_minimal:
         # initializes other structures, such as the socket and the
         # queue.
 
-        # Command-line parameters.
+        # Command-line parameters. Notice that args is only an
+        # argument for init(), not for the rest of methods.
         self.number_of_channels = args.number_of_channels
         self.frames_per_second = args.frames_per_second
         self.frames_per_chunk = args.frames_per_chunk
@@ -114,8 +130,8 @@ class Intercom_minimal:
 
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
         self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
-        assert self.bytes_per_chunk <= Intercom_minimal.MAX_MESSAGE_BYTES, \
-          f"(bytes_per_chunk={self.bytes_per_chunk} > MAX_MESSAGE_BYTES={Intercom_minimal.MAX_MESSAGE_BYTES})"
+        assert self.bytes_per_chunk <= Intercom_minimal.MAX_PAYLOAD_BYTES, \
+          f"(bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={Intercom_minimal.MAX_PAYLOAD_BYTES})"
 
         # Sending and receiving sockets creation and configuration for
         # UDP traffic. See:
@@ -146,8 +162,8 @@ class Intercom_minimal:
         return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
     # Send a chunk (and possiblely, metadata). The destination is fixed.
-    def send(self, message):
-        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+    def send(self, payload):
+        self.sending_sock.sendto(payload, (self.destination_address, self.destination_port))
 
     # Receive a chunk.
     def receive(self):
@@ -157,8 +173,8 @@ class Intercom_minimal:
         # structure](https://docs.python.org/3/library/stdtypes.html), an
         # object that exposes the [buffer
         # protocol](https://docs.python.org/3/c-api/buffer.html).
-        message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
-        return message
+        payload, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        return payload
 
     # The receive_and_buffer() method is running
     # in a infinite loop (see the run() method), and in each iteration
@@ -166,17 +182,17 @@ class Intercom_minimal:
     # of chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
         
-        # Get a chunk. The message object points to a block of memory
+        # Get a chunk. The payload object points to a block of memory
         # containing the payload of the packet. At this moment, Python
         # does not know the structure of such message. Python only
         # knows that there is a block of memory with data.
         #message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
-        message = self.receive()
+        payload = self.receive()
 
         # Interprets the bytes structure into a NumPy 1-dimensional
         # array of "sample_type" elements. See:
         # https://numpy.org/doc/stable/reference/generated/numpy.frombuffer.html
-        flat_chunk = np.frombuffer(message, self.sample_type)
+        flat_chunk = np.frombuffer(payload, self.sample_type)
 
         # Interprets the 1-dimensional array as a 2-dimensional array,
         # in the case that number_of_channels == 2. See:
