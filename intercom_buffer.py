@@ -9,7 +9,9 @@
 #
 # Buffering implies to spend a buffering time (buffering chunks) that
 # increases the delay (the time from when audio is captured by the
-# sender and played by the receiver).
+# sender and played by the receiver). This time is necessary to hide
+# the network jitter. However, the buffer size (and therefore, the
+# buffering time) is configurable by the receiver.
 #
 
 from intercom_minimal import Intercom_minimal
@@ -77,7 +79,11 @@ class Intercom_buffer(Intercom_minimal):
         # is needed for fill in half of the buffer (not necessarily
         # starting at cell 0).
 
-        # The buffer is implemented as an sliding window of size CHUNKS_TO_BUFFER that moves circularly over CHUNKS_TO_BUFFER*2 cells.
+        # The buffer is implemented as an sliding window of size
+        # CHUNKS_TO_BUFFER that moves ciclically over
+        # CHUNKS_TO_BUFFER*2 cells. Thus, in an ideal scenario, half
+        # of the cells of the buffer will contain unplayed chunks and
+        # the other half, already played chunks.
         self.cells_in_buffer = self.chunks_to_buffer * 2
 
         # The payload of the UDP packets is a structure with 2 fields:
@@ -87,8 +93,8 @@ class Intercom_buffer(Intercom_minimal):
         #    chunk; /* See Intercom_minimal */
         #  }
         #
-        # See also:
-        # [struct](https://docs.python.org/3/library/struct.html)
+        # See:
+        # https://docs.python.org/3/library/struct.html#format-characters)
         self.packet_format = f"!H{self.samples_per_chunk}h"
 
         if __debug__:
@@ -100,42 +106,25 @@ class Intercom_buffer(Intercom_minimal):
     # buffer.
     def receive_and_buffer(self):
 
-        # Receive a chunk.
+        # Receives a chunk. See Intercom_minimal for the structure of a
+        # chunk.
         message = self.receive()
-        
-        # The received message can be of two types:
-        #
-        #   1. A stereo_message.
-        #   2. A mono_message.
-        #
-        # Where:
-        #
-        # stereo_message {
-        #   int32 chunk_number;
-        #   stereo_frame[frames_per_chunk];
-        # }
-        #
-        # where:
-        #
-        # stereo_frame {
-        #   int16 left_sample, right_sample;
-        # }
-        #
-        # and:
-        #
-        # mono_message {
-        #   int32 chunk_number;
-        #   mono_frame[frames_per_chunk];
-        # }
-        #
-        # where:
-        #
-        # mono_frame {
-        #   int16 sample;
-        # }
-        
+
+        # Gives structure to the payload. See:
+        # https://docs.python.org/3/library/struct.html#struct.unpack
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
-        self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
+
+        # Converts the chunk (that at this moment is a bytes object)
+        # into a NumPy array. See:
+        # https://numpy.org/doc/stable/reference/generated/numpy.asarray.html
+        chunk = np.asarray(chunk)
+
+        # Change the structure of the chunk. See Intercom_minimal.
+        chunk = chunk.reshape(self.frames_per_chunk, self.number_of_channels)
+
+        # Inserts the chunk in the buffer.
+        self._buffer[chunk_number % self.cells_in_buffer] = chunk
+        #self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
         return chunk_number
 
     # Now, attached to the chunk (as a header) we need to send the
