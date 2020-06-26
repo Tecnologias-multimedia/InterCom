@@ -7,6 +7,10 @@
 # allows to extract the chunks from the buffer in the playing order,
 # even if the chunks have arrived in a different order.
 #
+# Buffering implies to spend a buffering time that increases the delay
+# (the time from when a chunk is captured by the sender and played by
+# the receiver.
+#
 
 from intercom_minimal import Intercom_minimal
 

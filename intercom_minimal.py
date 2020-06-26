@@ -2,13 +2,16 @@
 # intercom_minimal.py
 #
 # A very simple intercom(municator) that sends chunked raw audio data
-# between two (or more, depending on the destination address)
-# networked processes. The receiver uses a queue for uncoupling the
-# reception of chunks and the playback (the chunks of audio can be
-# transmitted with a [jitter](https://en.wikipedia.org/wiki/Jitter)
-# different to the playing chunk cadence, producing "glitches" during
-# the playback of the audio). Missing (not received) chunks are
-# replaced by zeros.
+# (chunks) between two (or more, depending on if the destination
+# address is an IP multicast one) networked processes.
+#
+# The receiver uses a queue for uncoupling the reception of chunks and
+# the playback (the chunks of audio can be transmitted with a
+# [jitter](https://en.wikipedia.org/wiki/Jitter) different to the
+# playing chunk cadence, producing "glitches" during the playback of
+# the audio). The number of queued chunks uncontrolled, but small
+# (normally 1). Therefore, the delay produced by the queue is very
+# small (a chunk time).
 #
 # Repo: https://github.com/Tecnologias-multimedia/intercom
 #
@@ -153,7 +156,8 @@ class Intercom_minimal:
     # if the queue were empty, then 0-chunks will be generated
     # (0-chunks generate silence when they are played).
     def generate_zero_chunk(self):
-        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
+        #return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
+        return np.zeros((self.number_of_channels, self.frames_per_chunk), self.sample_type)
 
     # Send a chunk (and possiblely, metadata). The destination is fixed.
     def send(self, payload):
@@ -205,9 +209,12 @@ class Intercom_minimal:
         #   [number_of_channels][frames_per_chunk] int16 sample;
         # }
         #
+        # Therefore, chunk[0] is the first channel and chunk[1] is the
+        # second channel.
+        #
         # See:
         # https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
-        chunk = flat_chunk.reshape(self.frames_per_chunk, self.number_of_channels)
+        chunk = flat_chunk.reshape(self.number_of_channels, self.frames_per_chunk)
 
         # Puts the received chunk on the top of the queue.
         self.q.put(chunk)
