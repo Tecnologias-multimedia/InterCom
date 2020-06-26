@@ -59,7 +59,7 @@ class Intercom_buffer(Intercom_minimal):
 
         
 
-        with a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
+#        with a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
         # it is full (and logically, the buffer is empty if there is
@@ -82,11 +82,15 @@ class Intercom_buffer(Intercom_minimal):
         #    uint16 chunk_number;
         #    chunk; /* See Intercom_minimal */
         #  }
+        #
+        # See also:
+        # [struct](https://docs.python.org/3/library/struct.html)
         self.packet_format = f"!H{self.samples_per_chunk}h"
-        self.precision_type = np.int16
+
         if __debug__:
             print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
-        print("Intercom_buffer: buffering")
+        
+        print("Intercom_buffer: buffering ... ")
 
     # Waits for a new chunk and insert it into the right position of the
     # buffer.
@@ -171,7 +175,7 @@ class Intercom_buffer(Intercom_minimal):
         self.played_chunk_number = 0
         p = Process(target=self.feedback)
         p.start()
-        with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=self.precision_type, channels=self.number_of_channels, callback=self.record_send_and_play):
+        with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=self.sample_type, channels=self.number_of_channels, callback=self.record_send_and_play):
             first_received_chunk_number = self.receive_and_buffer()
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             while True:

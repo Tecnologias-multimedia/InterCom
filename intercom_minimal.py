@@ -73,7 +73,6 @@ class Intercom_minimal:
     # frame {
     #   [number_of_channels] int16 sample;
     # }
-    #
     FRAMES_PER_SECOND = 44100
 
     # Number of frames per chunk of audio interchanged with the sound
@@ -86,12 +85,7 @@ class Intercom_minimal:
     # [payload](https://en.wikipedia.org/wiki/User_Datagram_Protocol)
     # of a transmitted packet. This parameter is used by the OS to
     # allocate memory for incomming packets. Notice that this value
-    # limites the maximum length (in bytes) of a chunk of audio, which
-    # have the structure:
-    #
-    # chunk {
-    #   [frames_per_chunk] int16 frame;
-    # }
+    # limites the maximum length (in bytes) of a chunk of audio.
     MAX_PAYLOAD_BYTES = 32768
 
     # [Port](https://en.wikipedia.org/wiki/Port_(computer_networking))
@@ -173,7 +167,7 @@ class Intercom_minimal:
         # structure](https://docs.python.org/3/library/stdtypes.html), an
         # object that exposes the [buffer
         # protocol](https://docs.python.org/3/c-api/buffer.html).
-        payload, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        payload, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
         return payload
 
     # The receive_and_buffer() method is running
@@ -182,20 +176,36 @@ class Intercom_minimal:
     # of chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
         
-        # Get a chunk. The payload object points to a block of memory
+        # Gets a chunk. The payload object points to a block of memory
         # containing the payload of the packet. At this moment, Python
         # does not know the structure of such message. Python only
-        # knows that there is a block of memory with data.
-        #message, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        # knows that there is a block of memory with data. In other
+        # words:
+        #
+        # payload {
+        #   [len(payload)] int8 byte;
+        # }
         payload = self.receive()
 
         # Interprets the bytes structure into a NumPy 1-dimensional
-        # array of "sample_type" elements. See:
+        # array of "sample_type" elements. In other words:
+        #
+        # flat_chunk {
+        #   [len(payload)/sizeof(int16)] int16 sample;
+        # }
+        #
+        # See:
         # https://numpy.org/doc/stable/reference/generated/numpy.frombuffer.html
         flat_chunk = np.frombuffer(payload, self.sample_type)
 
         # Interprets the 1-dimensional array as a 2-dimensional array,
-        # in the case that number_of_channels == 2. See:
+        # in the case that number_of_channels == 2. Therefore:
+        #
+        # chunk {
+        #   [number_of_channels][frames_per_chunk] int16 sample;
+        # }
+        #
+        # See:
         # https://numpy.org/doc/stable/reference/generated/numpy.reshape.html
         chunk = flat_chunk.reshape(self.frames_per_chunk, self.number_of_channels)
 
