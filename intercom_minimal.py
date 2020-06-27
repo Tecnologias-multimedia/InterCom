@@ -224,7 +224,7 @@ class Intercom_minimal:
     def feedback_message(self):
         global CPU_total
         global CPU_samples
-        CPU_usage = psutil.cpu_percent()
+        CPU_usage = psutil.cpu_percent() # User (not intercom) time
         CPU_total += CPU_usage
         CPU_samples += 1
         print(f"{int(CPU_usage)}", flush=True, end=' ')
@@ -303,5 +303,5 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         print("\nIntercom_minimal: Goodbye ¯\_(ツ)_/¯")
-        print("Intercom_minimal: CPU usage = ", CPU_total/CPU_samples)
+        print("Intercom_minimal: CPU usage = ", CPU_total/CPU_samples, " %")
 

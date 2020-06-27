@@ -202,7 +202,7 @@ class Intercom_buffer(Intercom_minimal):
                 self.feedback_message()
                 time.sleep(1)
         except KeyboardInterrupt:
-            print(f"\nIntercom_buffer: CPU usage = {CPU_average}")
+            print(f"\nIntercom_buffer: CPU usage = {CPU_average} %")
 
     def add_args(self):
         parser = Intercom_minimal.add_args(self)
