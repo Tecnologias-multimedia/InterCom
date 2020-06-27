@@ -50,10 +50,6 @@ import queue
 # Debug mode modules.
 if __debug__:
 
-    # Interface with the OS. See:
-    # https://docs.python.org/3/library/sys.html
-    import sys
-
     # Process and system monitoring. See:
     # https://pypi.org/project/psutil/
     try:
@@ -62,6 +58,12 @@ if __debug__:
         import os
         os.system("pip3 install psutil --user")
         import psutil
+
+    # Accumulated CPU usage.
+    CPU_total = 0
+
+    # Number of samples of CPU usage (used for computing an average).
+    CPU_samples = 0
 
 class Intercom_minimal:
 
@@ -220,7 +222,12 @@ class Intercom_minimal:
 
     # Shows CPU usage.
     def feedback_message(self):
-        sys.stderr.write(str(int(psutil.cpu_percent())) + ' '); sys.stderr.flush()
+        global CPU_total
+        global CPU_samples
+        CPU_usage = psutil.cpu_percent()
+        CPU_total += CPU_usage
+        CPU_samples += 1
+        print(f"{int(CPU_usage)}", flush=True, end=' ')
 
     # The audio driver provided by sounddevice runs in a
     # [thread](https://en.wikipedia.org/wiki/Thread_(computing))
@@ -259,7 +266,7 @@ class Intercom_minimal:
     # Runs the intercom.
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
-            print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
+            print("Intercom_minimal: press <CTRL> + <c> to quit")
             while True:
                 self.receive_and_buffer()
 
@@ -292,4 +299,9 @@ if __name__ == "__main__":
     parser = intercom.add_args()
     args = parser.parse_args()
     intercom.init(args)
-    intercom.run()
+    try:
+        intercom.run()
+    except KeyboardInterrupt:
+        print("\nIntercom_minimal: Goodbye ¯\_(ツ)_/¯")
+        print("Intercom_minimal: CPU usage = ", CPU_total/CPU_samples)
+

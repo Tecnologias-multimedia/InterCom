@@ -17,6 +17,13 @@
 from intercom_minimal import Intercom_minimal
 
 try:
+    import sounddevice as sd
+except ModuleNotFoundError:
+    import os
+    os.system("pip3 install sounddevice --user")
+    import sounddevice as sd
+
+try:
     import numpy as np
 except ModuleNotFoundError:
     print("Installing numpy with pip")
@@ -28,14 +35,20 @@ import struct
 
 if __debug__:
     import sys
+
     try:
         import psutil
     except ModuleNotFoundError:
         import os
         os.system("pip3 install psutil --user")
         import psutil
+    
+    import time
+    from multiprocessing import Process
 
-import time
+    CPU_total = 0
+    CPU_samples = 0
+    CPU_average = 0
 
 class Intercom_buffer(Intercom_minimal):
 
@@ -110,14 +123,18 @@ class Intercom_buffer(Intercom_minimal):
         # chunk.
         message = self.receive()
 
-        # Gives structure to the payload. See:
+        # Gives structure to the payload, using the format provided by packet_format (see above): chunk_number is an integer and chunk. See:
         # https://docs.python.org/3/library/struct.html#struct.unpack
+        #print(timeit.timeit(setup='import struct", stmt="chunk_number, *chunk = struct.unpack(f"!H{self.samples_per_chunk}h", message)'))
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
+        #chunk_number, chunk = struct.unpack(f"!H{self.samples_per_chunk*2}s", message)
+        #print(type(chunk))
 
         # Converts the chunk (that at this moment is a bytes object)
         # into a NumPy array. See:
         # https://numpy.org/doc/stable/reference/generated/numpy.asarray.html
         chunk = np.asarray(chunk)
+        #chunk = np.frombuffer(chunk, self.sample_type)
 
         # Change the structure of the chunk. See Intercom_minimal.
         chunk = chunk.reshape(self.frames_per_chunk, self.number_of_channels)
@@ -153,14 +170,7 @@ class Intercom_buffer(Intercom_minimal):
 
     # Runs the intercom and implements the buffer's logic.
     def run(self):
-        import sounddevice as sd
-        import numpy as np
-        import struct
-        if __debug__:
-            import sys
-            import time
-            from multiprocessing import Process
-        print("intercom_buffer: ¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
+        print("Intercom_buffer: press <CTRL> + <c> to quit")
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
             self._buffer[i] = self.generate_zero_chunk()
@@ -174,10 +184,25 @@ class Intercom_buffer(Intercom_minimal):
             while True:
                 self.receive_and_buffer()
 
+    # Shows CPU usage.
+    def feedback_message(self):
+        global CPU_total  # Be careful, variables updated only in the subprocess
+        global CPU_samples
+        global CPU_average
+        CPU_usage = psutil.cpu_percent()
+        CPU_total += CPU_usage
+        CPU_samples += 1
+        CPU_average = CPU_total/CPU_samples
+        print(f"{int(CPU_usage)}/{int(CPU_average)}", flush=True, end=' ')
+
     def feedback(self):
-        while True:
-            self.feedback_message()
-            time.sleep(1)
+        global CPU_average
+        try:
+            while True:
+                self.feedback_message()
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print(f"\nIntercom_buffer: CPU usage = {CPU_average}")
 
     def add_args(self):
         parser = Intercom_minimal.add_args(self)
@@ -191,4 +216,7 @@ if __name__ == "__main__":
     parser = intercom.add_args()
     args = parser.parse_args()
     intercom.init(args)
-    intercom.run()
+    try:
+        intercom.run()
+    except KeyboardInterrupt:
+        print("Intercom_buffer: Goodbye ¯\_(ツ)_/¯")
