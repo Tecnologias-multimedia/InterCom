@@ -221,7 +221,7 @@ class Intercom_minimal:
         self.q.put(chunk)
 
     # Shows CPU usage.
-    def feedback_message(self):
+    def feedback(self):
         global CPU_total
         global CPU_samples
         CPU_usage = psutil.cpu_percent() # User (not intercom) time
@@ -261,7 +261,7 @@ class Intercom_minimal:
         # Notice that a feedback message is generated each time a
         # chunk is processed.
         if __debug__:
-            self.feedback_message()
+            self.feedback()
 
     # Runs the intercom.
     def run(self):
@@ -302,6 +302,6 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        print("\nIntercom_minimal: Goodbye ¯\_(ツ)_/¯")
-        print("Intercom_minimal: CPU usage = ", CPU_total/CPU_samples, " %")
+        print("\nIntercom_minimal: goodbye ¯\_(ツ)_/¯")
+        print("Intercom_minimal: average CPU usage =", CPU_total/CPU_samples, "%")
 

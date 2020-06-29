@@ -121,13 +121,14 @@ class Intercom_buffer(Intercom_minimal):
 
         # Receives a chunk. See Intercom_minimal for the structure of a
         # chunk.
-        message = self.receive()
+        payload = self.receive()
 
-        # Gives structure to the payload, using the format provided by packet_format (see above): chunk_number is an integer and chunk. See:
+        # Gives structure to the payload, using the format provided by
+        # packet_format (see above): chunk_number is an integer and
+        # chunk. See:
         # https://docs.python.org/3/library/struct.html#struct.unpack
-        #print(timeit.timeit(setup='import struct", stmt="chunk_number, *chunk = struct.unpack(f"!H{self.samples_per_chunk}h", message)'))
-        chunk_number, *chunk = struct.unpack(self.packet_format, message)
-        #chunk_number, chunk = struct.unpack(f"!H{self.samples_per_chunk*2}s", message)
+        chunk_number, *chunk = struct.unpack(self.packet_format, payload)
+        #chunk_number, chunk = struct.unpack(f"!H{self.samples_per_chunk*2}s", payload)
         #print(type(chunk))
 
         # Converts the chunk (that at this moment is a bytes object)
@@ -202,7 +203,7 @@ class Intercom_buffer(Intercom_minimal):
                 self.feedback_message()
                 time.sleep(1)
         except KeyboardInterrupt:
-            print(f"\nIntercom_buffer: CPU usage = {CPU_average} %")
+            print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
         parser = Intercom_minimal.add_args(self)
@@ -219,4 +220,4 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        print("Intercom_buffer: Goodbye ¯\_(ツ)_/¯")
+        print("Intercom_buffer: goodbye ¯\_(ツ)_/¯")
