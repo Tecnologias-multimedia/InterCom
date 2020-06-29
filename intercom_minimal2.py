@@ -155,8 +155,13 @@ class Intercom_minimal:
 
         # The received chunk is stored in this pre-allocated memory to
         # avoid the creation of a new object each time a chunk is
-        # received. 
+        # received. This empty chunk has also the structure necessary
+        # to send it to sounddevice, which means that we will sabe the
+        # NumPy instructionf for providing the format (the information
+        # about the structure in memory of the chunk is lost when
+        # travel through the Internet).
         self.recv_chunk = self.generate_zero_chunk()
+
         print("Intercom_minimal: running ...")
 
     # The audio driver never stops recording and playing. Therefore,
@@ -172,11 +177,8 @@ class Intercom_minimal:
     # Receive a chunk.
     def receive(self):
         # [Receive an UDP
-        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom). The
-        # socket returns a [bytes
-        # structure](https://docs.python.org/3/library/stdtypes.html), an
-        # object that exposes the [buffer
-        # protocol](https://docs.python.org/3/c-api/buffer.html).
+# packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom_into). The
+        # number of received bytes and the sender of the message are returned. Notice that the data is stored in self.recv_chunk.
         recv_bytes, sender = self.receiving_sock.recvfrom_into(self.recv_chunk)
 
     # The receive_and_buffer() method is running
