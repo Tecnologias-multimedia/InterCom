@@ -121,7 +121,7 @@ class Intercom_buffer(Intercom_minimal):
 
         # Receives a chunk. See Intercom_minimal for the structure of a
         # chunk.
-        self.receive_chunk()
+        self.receive()
 
         # Gives structure to the payload, using the format provided by
         # packet_format (see above): chunk_number is an integer and

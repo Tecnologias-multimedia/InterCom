@@ -71,7 +71,7 @@ class Intercom_minimal:
     # Default audio configuration. See:
     # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
     
-    # 1 = Mono, 2 = Stereo
+    # 1 = mono, 2 = stereo.
     NUMBER_OF_CHANNELS = 2
 
     # Sampling frequency (44100 Hz -> CD quality). A frame is a
@@ -155,15 +155,19 @@ class Intercom_minimal:
             print(f"Intercom_minimal: destination_port={self.destination_port}")
             print(f"Intercom_minimal: bytes_per_chunk={self.bytes_per_chunk}")
 
-        # The received chunk is stored in this pre-allocated memory to
-        # avoid the creation of a new object each time a chunk is
-        # received. This empty chunk has also the structure necessary
+        # A received chunk is stored in this statically-allocated
+        # memory to avoid the creation of a new object for each
+        # reception. This empty chunk has also the structure necessary
         # to send it to sounddevice, which is:
         #
         # chunk {
         #   [frames_per_chunk][number_of_channels] int16 sample;
         # }
-        self.a_chunk = self.generate_zero_chunk()
+        #
+        # Because we are going to use this structure in decendant
+        # classes to store the payload of the received packets, we
+        # will call to it payload.
+        self.chunk = self.generate_zero_chunk()
 
         print("Intercom_minimal: running ...")
 
@@ -174,33 +178,33 @@ class Intercom_minimal:
     def generate_zero_chunk(self):
         return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
-    # Send a chunk. The destination is fixed.
-    def send_chunk(self, chunk):
-        self.sending_sock.sendto(chunk, (self.destination_address, self.destination_port))
+    # Send data (possibly, a chunk). The destination is fixed.
+    def send(self, data):
+        self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
 
-    # Receive a chunk.
-    def receive_chunk(self):
+    # Receive a chunk of data.
+    def receive(self):
         # [Receive an UDP
         # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom_into).
         # The number of received bytes and the sender of the message
-        # are returned. Notice that the data is stored in
-        # self.a_chunk, that already has a suitable audio chunk
-        # structure (the information about the structure in memory of
-        # the chunk is lost when travel through the Internet).
-        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.a_chunk)
+        # are returned. Notice that the received data is stored in
+        # self.chunk, that in Intercom_minimal has a suitable audio
+        # chunk structure (the information about the structure in
+        # memory of the chunk is lost when travel through the
+        # Internet).
+        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.chunk)
 
-    # The receive_and_buffer() method is running
-    # in a infinite loop (see the run() method), and in each iteration
-    # receives a chunk of audio and insert it in the tail of the queue
-    # of chunks. Notice that recvfrom() is a blocking method.
-    def receive_and_buffer(self):
+    # The this method is running in a infinite loop (see the run()
+    # method), and in each iteration receives a chunk of audio and
+    # insert it in the tail of the queue of chunks. Notice that
+    # recvfrom*() are blocking methods.
+    def receive_and_queue(self):
         
-        # Gets a chunk. The payload object points to a block of memory
-        # containing the payload of the packet.
-        self.receive_chunk()
+        # Receives a chunk from the network, returned in self.chunk.
+        self.receive()
 
         # Puts the received chunk on the top of the queue.
-        self.q.put(self.a_chunk)
+        self.q.put(self.chunk)
 
     # Shows CPU usage.
     def feedback(self):
@@ -228,7 +232,8 @@ class Intercom_minimal:
     # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
     # for a deeper description of the callback function.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.send_chunk(indata)
+        # Send the chunk.
+        self.send(indata)
 
         try:
             chunk = self.q.get_nowait()
@@ -253,7 +258,7 @@ class Intercom_minimal:
                        callback=self.record_send_and_play):
             print("Intercom_minimal: press <CTRL> + <c> to quit")
             while True:
-                self.receive_and_buffer()
+                self.receive_and_queue()
 
     # Define the command-line arguments.
     def add_args(self):
