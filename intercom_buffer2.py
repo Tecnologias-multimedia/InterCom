@@ -5,22 +5,22 @@
 #
 # Replaces the queue of intercom_minimal by a random access buffer of
 # chunks, that allows to extract the chunks from the buffer in the
-# playing order, even if the chunks have arrived in a different order.
+# correct (playing) order, even if the chunks have arrived in a
+# different order.
 #
 # Buffering implies to spend a buffering time (buffering chunks) that
-# increases the delay (the time from when audio is captured by the
-# sender and played by the receiver). This time is necessary to hide
-# the network jitter. However, the buffer size (and therefore, the
-# buffering time) is configurable by the receiver.
+# increases the delay (the time from when a sample of audio is
+# captured by the sender and played by the receiver). This time is
+# necessary to hide the network jitter, when it exists. However, the
+# buffer size (and therefore, the buffering time) is configurable by
+# the receiver (it can be as smaller as only 1 chunk).
 #
 # The sorting of the chunks at the receiver implies that we must
-# transit with each chunk a chunk number to sequence them. We will
-# call to this structure "packet".
+# transit, with each chunk of audio, a chunk number to sequence
+# them. We will call to this structure "packet".
 #
 
 from intercom_minimal import Intercom_minimal
-
-import array
 
 try:
     import sounddevice as sd
@@ -52,19 +52,24 @@ if __debug__:
     import time
     from multiprocessing import Process
 
+    # Accumulated percentage of used CPU. 
     CPU_total = 0
+
+    # Number of samples of the CPU usage.
     CPU_samples = 0
+
+    # CPU usage average.
     CPU_average = 0
 
 class Intercom_buffer(Intercom_minimal):
 
     # Intercom_buffer transmits a chunk number of 16 bits with each
-    # chunk of audio. Such number ranges betwen [0, 2**16-1].
-    CHUNK_NUMBERS = 2**16
+    # chunk of audio. Such number ranges betwen [0, 2**15-1] (int16).
+    CHUNK_NUMBERS = 2**15
 
-    # Buffer size in chunks. The receiver will wait for receiving at
-    # least two chunks whose chunk numbers differs at least in
-    # CHUNKS_TO_BUFFER.
+    # Default buffer size in chunks. The receiver will wait for
+    # receiving at least two chunks whose chunk numbers differs at
+    # least in CHUNKS_TO_BUFFER.
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
@@ -75,19 +80,6 @@ class Intercom_buffer(Intercom_minimal):
 
         if __debug__:
             print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
-
-#   +-------+-------+   +-------+
-#   | chunk | chunk |...| chunk |
-#   +-------+-------+   +-------+
-#       0       1   CHUNKS_TO_BUFFER-1
-#
-# An arriving chunk with chunk_number C is stored at the position
-# buffer[C % cells_in_buffer]. This procedure 
-#
-
-        
-
-#        with a list of cells (one cell per chunk) in which the arriving chunk (with number) C is stored in the position C % cells_in_buffer. cells_in_buffer = CHUNKS_TO_BUFFER * 2 and therefore, at most only the half of the 
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
         # it is full (and logically, the buffer is empty if there is
@@ -110,7 +102,7 @@ class Intercom_buffer(Intercom_minimal):
 
         # See:
         # https://docs.python.org/3/library/struct.html#format-characters)
-        self.packet_format = f"!HH{self.samples_per_chunk}h" # Ojo, quitar self cuando sea posible
+        self.packet_format = f"hh{self.samples_per_chunk}h" # Ojo, quitar self cuando sea posible
 
         # self.chunk is an structure with audio and a chunk counter:
         #
@@ -121,14 +113,7 @@ class Intercom_buffer(Intercom_minimal):
         
         chunk_number = 0
         self.empty_chunk = self.generate_zero_chunk()
-        print("-===========->", len(self.empty_chunk))
-        #self.chunk = bytearray(struct.pack(self.packet_format, chunk_number, *(self.empty_chunk.flatten())))
-        self.chunk = np.concatenate(([[0, 0]], self.empty_chunk))
-        print("--------->",len(self.chunk))
-        #self.chunk = self.generate_zero_chunk()
-        print(type(self.empty_chunk), type(self.chunk))
-        #self.socket_buffer = array.array('h', [0] * (2+self.samples_per_chunk*2))
-        #self.payload_structure = struct.Struct(f'h{self.samples_per_chunk}P')
+        self.chunk = np.concatenate(([[0, 0]], self.empty_chunk)).astype(np.int16)
 
         # Running the user pacifier.
         p = Process(target=self.feedback)
@@ -141,62 +126,28 @@ class Intercom_buffer(Intercom_minimal):
 
         # Receives a chunk in self.chunk.
         self.receive()
-        #print("---", len(self.chunk))
         chunk_number = self.chunk[0, 0]
         audio_chunk = self.chunk[1:,:]
-        #chunk_number, unused, audio_chunk = self.chunk
-        #print(len(payload))
-
-        # Gives structure to the payload, using the format provided by
-        # packet_format (see above): chunk_number is an integer and
-        # chunk. See:
-        # https://docs.python.org/3/library/struct.html#struct.unpack
-        #chunk_number, *chunk = struct.unpack(self.packet_format, payload)
-        #chunk_number, chunk = struct.unpack(f"!H{self.samples_per_chunk*2}s", payload)
-        #print(type(chunk))
-        #chunk = payload[:-1]
-        #chunk_number = payload[-1]
-        #chunk = payload
-        #print(len(chunk), chunk_number)
-
-        # Converts the chunk (that at this moment is a bytes object)
-        # into a NumPy array. See:
-        # https://numpy.org/doc/stable/reference/generated/numpy.asarray.html
-        #chunk = np.asarray(chunk)
-        #chunk = np.frombuffer(chunk, self.sample_type)
-
-        # Change the structure of the chunk. See Intercom_minimal.
-        #chunk = chunk.reshape(self.frames_per_chunk, self.number_of_channels)
-
-        # Inserts the chunk in the buffer.
         self._buffer[chunk_number % self.cells_in_buffer] = audio_chunk
-        #self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
-        #return chunk_number
-        
-        # Return the chunk number.
         return chunk_number
         
     # Now, attached to the chunk (as a header) we need to send the
     # recorded chunk number. Thus, the receiver will know where to
     # insert the chunk into the buffer.
     def send(self, data):
-        payload = struct.pack(self.packet_format, self.recorded_chunk_number, self.recorded_chunk_number, *(data.flatten()))
-        #self.payload_structure.pack_into(self.socket_buffer, 0, self.recorded_chunk_number, indata)
-        #payload = np.append(indata, [self.recorded_chunk_number])
-        #print(len(payload))
-        #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
-        #Intercom_minimal.send(self, payload)
-        Intercom_minimal.send(self, payload)
+        self.chunk[0, 0] = self.recorded_chunk_number
+        self.chunk[1:,:] = data[:,:]
+        Intercom_minimal.send(self, self.chunk)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
     def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk #self.generate_zero_chunk()
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
 
-    # Almost identical to the parent's one.
+    # Almost identical to Intercom_minimal.
     def record_send_and_play(self, indata, outdata, frames, time, status):
         # The recording is performed by sounddevice, which call this
         # method for each recorded chunk.
