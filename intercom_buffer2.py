@@ -3,9 +3,9 @@
 # |
 # +- Intercom_buffer
 #
-# Replaces the queue of intercom_minimal by a buffer of chunks that
-# allows to extract the chunks from the buffer in the playing order,
-# even if the chunks have arrived in a different order.
+# Replaces the queue of intercom_minimal by a random access buffer of
+# chunks, that allows to extract the chunks from the buffer in the
+# playing order, even if the chunks have arrived in a different order.
 #
 # Buffering implies to spend a buffering time (buffering chunks) that
 # increases the delay (the time from when audio is captured by the
@@ -13,10 +13,14 @@
 # the network jitter. However, the buffer size (and therefore, the
 # buffering time) is configurable by the receiver.
 #
+# The sorting of the chunks at the receiver implies that we must
+# transit with each chunk a chunk number to sequence them. We will
+# call to this structure a packet.
+#
 
 from intercom_minimal import Intercom_minimal
 
-import array
+#import array
 
 try:
     import sounddevice as sd
@@ -69,6 +73,9 @@ class Intercom_buffer(Intercom_minimal):
         Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
 
+        if __debug__:
+            print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
+
 #   +-------+-------+   +-------+
 #   | chunk | chunk |...| chunk |
 #   +-------+-------+   +-------+
@@ -103,7 +110,7 @@ class Intercom_buffer(Intercom_minimal):
 
         # The payload of the UDP packets is a structure with 2 fields:
         #
-        #  payload {
+        #  packet {
         #    uint16 chunk_number;
         #    chunk; /* See Intercom_minimal */
         #  }
@@ -112,9 +119,9 @@ class Intercom_buffer(Intercom_minimal):
         # https://docs.python.org/3/library/struct.html#format-characters)
         self.packet_format = f"!H{self.samples_per_chunk}h"
 
-        if __debug__:
-            print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
-
+        chunk_number = 0
+        a_chunk = Intercom_minimal.generate_zero_chunk()
+        self.a_packet = struct.pack(chunk_number, a_chunk)
         #self.socket_buffer = array.array('h', [0] * (2+self.samples_per_chunk*2))
         #self.payload_structure = struct.Struct(f'h{self.samples_per_chunk}P')
 

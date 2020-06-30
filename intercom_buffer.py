@@ -121,13 +121,13 @@ class Intercom_buffer(Intercom_minimal):
 
         # Receives a chunk. See Intercom_minimal for the structure of a
         # chunk.
-        payload = self.receive()
+        self.receive_chunk()
 
         # Gives structure to the payload, using the format provided by
         # packet_format (see above): chunk_number is an integer and
         # chunk. See:
         # https://docs.python.org/3/library/struct.html#struct.unpack
-        chunk_number, *chunk = struct.unpack(self.packet_format, payload)
+        chunk_number, *chunk = struct.unpack(self.packet_format, self.a_chunk)
         #chunk_number, chunk = struct.unpack(f"!H{self.samples_per_chunk*2}s", payload)
         #print(type(chunk))
 
@@ -144,15 +144,15 @@ class Intercom_buffer(Intercom_minimal):
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         #self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)  # The structure of the chunk is lost during the transit
         return chunk_number
-
+    
     # Now, attached to the chunk (as a header) we need to send the
     # recorded chunk number. Thus, the receiver will know where to
     # insert the chunk into the buffer.
-    def send(self, indata):
-        message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
+    def send_packet(self, indata):
+        packet = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
-        Intercom_minimal.send(self, message)
+        self.send_chunk(packet)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
@@ -166,7 +166,8 @@ class Intercom_buffer(Intercom_minimal):
     def record_send_and_play(self, indata, outdata, frames, time, status):
         # The recording is performed by sounddevice, which call this
         # method for each recorded chunk.
-        self.send(indata)
+        self.send_packet(indata)
+        print(dir(indata))
         self.play(outdata)
 
     # Runs the intercom and implements the buffer's logic.

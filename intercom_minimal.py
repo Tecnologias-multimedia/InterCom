@@ -163,7 +163,7 @@ class Intercom_minimal:
         # chunk {
         #   [frames_per_chunk][number_of_channels] int16 sample;
         # }
-        self.recv_chunk = self.generate_zero_chunk()
+        self.a_chunk = self.generate_zero_chunk()
 
         print("Intercom_minimal: running ...")
 
@@ -184,10 +184,10 @@ class Intercom_minimal:
         # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom_into).
         # The number of received bytes and the sender of the message
         # are returned. Notice that the data is stored in
-        # self.recv_chunk, that already has a suitable audio chunk
+        # self.a_chunk, that already has a suitable audio chunk
         # structure (the information about the structure in memory of
         # the chunk is lost when travel through the Internet).
-        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.recv_chunk)
+        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.a_chunk)
 
     # The receive_and_buffer() method is running
     # in a infinite loop (see the run() method), and in each iteration
@@ -200,7 +200,7 @@ class Intercom_minimal:
         self.receive_chunk()
 
         # Puts the received chunk on the top of the queue.
-        self.q.put(self.recv_chunk)
+        self.q.put(self.a_chunk)
 
     # Shows CPU usage.
     def feedback(self):
