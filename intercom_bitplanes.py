@@ -5,15 +5,18 @@
 #    |
 #    +- Intercom_bitplanes
 #
-# Transmits the samples of the chunks by bitplanes (16, i.e., CD
-# quality). The bitplanes are transmitted from the most significant
-# one to the least significant, each in a different packet.
+# Transmits the samples of the chunks by bitplanes. The bitplanes are
+# transmitted from the most significant (15) one to the least
+# significant (0), each in a different packet.
+#
+# The idea is to overwrite the methods of Intercom_buffer to send and
+# receive by bit-planes.
 
+from intercom_minimal import Intercom_minimal
+from intercom_buffer import Intercom_buffer
 import sounddevice as sd
 import numpy as np
 import struct
-from intercom import Intercom
-from intercom_buffer import Intercom_buffer
 
 if __debug__:
     import sys
@@ -24,9 +27,9 @@ class Intercom_bitplanes(Intercom_buffer):
 
     def init(self, args):
         Intercom_buffer.init(self, args)
-        self.packet_format = f"!HB{self.frames_per_chunk//8}B"
+        self.packet_format = f"!HB{self.frames_per_chunk//8}B" # Quitar
         self.precision_bits = 16
-        self.precision_type = np.int16
+        self.precision_type = np.int16 # Quitar
         self.number_of_bitplanes_to_send = self.precision_bits * self.number_of_channels
         if __debug__:
             self.sent_messages_counter = Value('i', 0)
@@ -36,7 +39,7 @@ class Intercom_bitplanes(Intercom_buffer):
             #self.total_sent = 0
             #self.total_received = 0
             #self.old_time = time.time()
-        print("intercom_bitplanes: transmitting by bitplanes")
+        print("Intercom_bitplanes: transmitting by bitplanes")
 
     # Now, each packet transports a bitplane of a chunk. Again, this
     # is a blocking method that waits for a bitplane and inserts it

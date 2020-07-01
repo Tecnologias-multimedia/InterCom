@@ -26,29 +26,9 @@
 # 2. Compute (and show) the buffering time.
 
 from intercom_minimal import Intercom_minimal
-
-try:
-    import sounddevice as sd
-except ModuleNotFoundError:
-    import os
-    os.system("pip3 install sounddevice --user")
-    import sounddevice as sd
-
-try:
-    import numpy as np
-except ModuleNotFoundError:
-    print("Installing numpy with pip")
-    import os
-    os.system("pip3 install numpy --user")
-    import numpy as np
-
-try:
-    import psutil
-except ModuleNotFoundError:
-    import os
-    os.system("pip3 install psutil --user")
-    import psutil
-
+import sounddevice as sd
+import numpy as np
+import psutil
 import time
 from multiprocessing import Process
 
@@ -77,8 +57,6 @@ class Intercom_buffer(Intercom_minimal):
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
-
-        # Parse arguments and initialize basic stuff.
         Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
         print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
