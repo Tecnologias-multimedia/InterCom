@@ -9,7 +9,8 @@
 import sounddevice as sd
 import numpy as np
 import struct
-from intercom import Intercom
+from intercom_minimal import Intercom
+import numpy as np
 
 if __debug__:
     import sys

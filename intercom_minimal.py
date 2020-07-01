@@ -8,6 +8,14 @@
 
 import argparse           # https://docs.python.org/3/library/argparse.html
 
+import sounddevice as sd  # https://python-sounddevice.readthedocs.io
+import numpy as np        # https://numpy.org/
+import socket             # https://docs.python.org/3/library/socket.html
+import queue              # https://docs.python.org/3/library/queue.html
+
+if __debug__:
+    import sys
+
 class Intercom:
 
     NUMBER_OF_CHANNELS = 2
@@ -89,13 +97,6 @@ class Intercom:
 
     # Runs intercom. 
     def run(self):
-        import sounddevice as sd  # https://python-sounddevice.readthedocs.io
-        import numpy as np        # https://numpy.org/
-        import socket             # https://docs.python.org/3/library/socket.html
-        import queue              # https://docs.python.org/3/library/queue.html
-
-        if __debug__:
-            import sys
 
         with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
             print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
