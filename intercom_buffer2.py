@@ -24,7 +24,6 @@
 #
 # 1. Implement the treatment of mono signals.
 # 2. Compute (and show) the buffering time.
-import struct
 
 from intercom_minimal import Intercom_minimal
 
@@ -112,9 +111,10 @@ class Intercom_buffer(Intercom_minimal):
         # chunks.
         
         chunk_number = 0
+
+        # Initially, all the cells of the buffer will point to this
+        # empty chunk.
         self.empty_chunk = self.generate_zero_chunk()
-        self.incomming_chunk = np.concatenate(([[0, 0]], self.generate_zero_chunk())).astype(np.int16)
-        self.outgoing_chunk = np.concatenate(([[0, 0]], self.generate_zero_chunk())).astype(np.int16)
 
         # Running the user pacifier.
         p = Process(target=self.feedback)
@@ -124,16 +124,11 @@ class Intercom_buffer(Intercom_minimal):
     # the buffer. As the receive_and_queue() method in
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
-        # Receives a chunk and returns it in self.incomming_chunk.
-        self.receive()
-        chunk_number = self.incomming_chunk[0, 0]
-        audio_chunk = self.incomming_chunk[1:,:]
-        self._buffer[chunk_number % self.cells_in_buffer] = audio_chunk
-        return chunk_number
-    def _receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
-        chunk_number, *chunk = struct.unpack(f"H{self.samples_per_chunk}h", message)
-        self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
+        payload, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
+        tmp = np.frombuffer(payload, dtype=np.int16).reshape(self.frames_per_chunk+1, self.number_of_channels)
+        chunk_number = tmp[0, 0]
+        chunk = tmp[1:,:]
+        self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
 
     # Sends a chunk.
@@ -141,29 +136,21 @@ class Intercom_buffer(Intercom_minimal):
         # Now, attached to the chunk (as a header) we need to send the
         # recorded chunk number. Thus, the receiver will know where to
         # insert the chunk into the buffer.
-        self.outgoing_chunk[0, 0] = self.recorded_chunk_number
-        self.outgoing_chunk[1:,:] = data[:,:]
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
-        super().send(self.outgoing_chunk)
-    def _send(self, indata):
-        message = struct.pack(f"H{self.samples_per_chunk}h", self.recorded_chunk_number, *(indata.flatten()))
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
-        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+        tosend = np.concatenate(([[self.recorded_chunk_number, 0]], data)).astype(np.int16)
+        super().send(tosend)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
     def play(self, outdata):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
 
     # Almost identical to Intercom_minimal. The recording is performed
     # by sounddevice, which call this method for each recorded chunk.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.send(indata)
-        self.play(outdata)
-    def _record_send_and_play(self, indata, outdata, frames, time, status):
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         self.send(indata)
         self.play(outdata)
 
@@ -173,7 +160,7 @@ class Intercom_buffer(Intercom_minimal):
         # Buffer creation.
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
-            self._buffer[i] = self.generate_zero_chunk()
+            self._buffer[i] = self.empty_chunk
 
         # Chunks counters.
         self.recorded_chunk_number = 0
