@@ -37,34 +37,31 @@ except ModuleNotFoundError:
     os.system("pip3 install numpy --user")
     import numpy as np
 
-import struct
+try:
+    import psutil
+except ModuleNotFoundError:
+    import os
+    os.system("pip3 install psutil --user")
+    import psutil
 
-if __debug__:
-    import sys
+import time
+from multiprocessing import Process
 
-    try:
-        import psutil
-    except ModuleNotFoundError:
-        import os
-        os.system("pip3 install psutil --user")
-        import psutil
-    
-    import time
-    from multiprocessing import Process
+# Accumulated percentage of used CPU. 
+CPU_total = 0
 
-    # Accumulated percentage of used CPU. 
-    CPU_total = 0
+# Number of samples of the CPU usage.
+CPU_samples = 0
 
-    # Number of samples of the CPU usage.
-    CPU_samples = 0
-
-    # CPU usage average.
-    CPU_average = 0
+# CPU usage average.
+CPU_average = 0
 
 class Intercom_buffer(Intercom_minimal):
 
     # Intercom_buffer transmits a chunk number of 16 bits with each
-    # chunk of audio. Such number ranges betwen [0, 2**15-1] (int16).
+    # chunk of audio. Such number ranges betwen [-2^15, 2**15-1]
+    # (values that an int16 can take), although only natural (non
+    # negative) values can be used for sequencing chunks.
     CHUNK_NUMBERS = 2**15
 
     # Default buffer size in chunks. The receiver will wait for
@@ -78,37 +75,28 @@ class Intercom_buffer(Intercom_minimal):
         Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
 
-        if __debug__:
-            print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
+        print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
         # it is full (and logically, the buffer is empty if there is
         # no chunks inside). However, in order to accommodate large
-        # jitters, the buffer is built using a list of
-        # 2*CHUNKS_TO_BUFFER empty chunks. Thus, in an ideal
-        # situation, half of the list will contain chunks that has
+        # jitters, the buffer is implemented as an sliding window of
+        # size CHUNKS_TO_BUFFER that moves ciclically over
+        # CHUNKS_TO_BUFFER*2 cells. Thus, in an ideal situation (if
+        # all the chunks have been received in order), half of the
+        # cells of the complete structure will contain chunks that has
         # been received but that has not been played, and the other
-        # half will contain old chunks (that has been played
-        # recently). Notice that the buffering time is the time that
-        # is needed for fill in half of the buffer (not necessarily
-        # starting at cell 0).
-
-        # The buffer is implemented as an sliding window of size
-        # CHUNKS_TO_BUFFER that moves ciclically over
-        # CHUNKS_TO_BUFFER*2 cells. Thus, in an ideal scenario, half
-        # of the cells of the buffer will contain unplayed chunks and
-        # the other half, already played chunks.
+        # half will contain empty chunks (the chunks are zeroed after
+        # they has been played). Notice that the buffering time is the
+        # time that is needed for fill in half of the buffer (not
+        # necessarily starting at cell 0).
         self.cells_in_buffer = self.chunks_to_buffer * 2
-
-        # See:
-        # https://docs.python.org/3/library/struct.html#format-characters)
-        self.packet_format = f"hh{self.samples_per_chunk}h" # Ojo, quitar self cuando sea posible
 
         # self.chunk is an structure with audio and a chunk counter:
         #
         #  chunk {
-        #    uint16 chunk_number;
-        #    [frames_per_chunk][number_of_channels] int16 sample;
+        #    int16 chunk_number, unused;
+        #    int16 [frames_per_chunk][number_of_channels] sample;
         #  }
         
         chunk_number = 0
@@ -123,21 +111,21 @@ class Intercom_buffer(Intercom_minimal):
     # the buffer. As the receive_and_queue() method in
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
-
-        # Receives a chunk in self.chunk.
+        # Receives a chunk and returns it in self.chunk.
         self.receive()
         chunk_number = self.chunk[0, 0]
         audio_chunk = self.chunk[1:,:]
         self._buffer[chunk_number % self.cells_in_buffer] = audio_chunk
         return chunk_number
-        
-    # Now, attached to the chunk (as a header) we need to send the
-    # recorded chunk number. Thus, the receiver will know where to
-    # insert the chunk into the buffer.
+
+    # Sends a chunk.
     def send(self, data):
+        # Now, attached to the chunk (as a header) we need to send the
+        # recorded chunk number. Thus, the receiver will know where to
+        # insert the chunk into the buffer.
         self.chunk[0, 0] = self.recorded_chunk_number
         self.chunk[1:,:] = data[:,:]
-        Intercom_minimal.send(self, self.chunk)
+        super().send(self.chunk)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
@@ -147,10 +135,9 @@ class Intercom_buffer(Intercom_minimal):
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
 
-    # Almost identical to Intercom_minimal.
+    # Almost identical to Intercom_minimal. The recording is performed
+    # by sounddevice, which call this method for each recorded chunk.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        # The recording is performed by sounddevice, which call this
-        # method for each recorded chunk.
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         self.send(indata)
         self.play(outdata)
@@ -158,10 +145,10 @@ class Intercom_buffer(Intercom_minimal):
     # Runs the intercom and implements the buffer's logic.
     def run(self):
         
-        # Buffer construction.
+        # Buffer creation.
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
-            self._buffer[i] = self.empty_chunk #self.generate_zero_chunk()
+            self._buffer[i] = self.empty_chunk
 
         # Chunks counters.
         self.recorded_chunk_number = 0
@@ -178,7 +165,8 @@ class Intercom_buffer(Intercom_minimal):
 
     # Shows CPU usage.
     def print_feedback_message(self):
-        global CPU_total  # Be careful, variables updated only in the subprocess
+        # Be careful, variables updated only in the subprocess.
+        global CPU_total
         global CPU_samples
         global CPU_average
         CPU_usage = psutil.cpu_percent()
@@ -189,7 +177,7 @@ class Intercom_buffer(Intercom_minimal):
 
     # This method runs in a different process to the intercom, and its
     # only task is to print the feedback messages with the CPU load,
-    # waiting for the interrupt of the user (CTRL+C).
+    # waiting for the interrupt signal generated by the user (CTRL+C).
     def feedback(self):
         global CPU_average
         try:

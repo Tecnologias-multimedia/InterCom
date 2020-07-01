@@ -48,23 +48,20 @@ import socket
 # https://docs.python.org/3/library/queue.html
 import queue
 
-# Debug mode modules.
-if __debug__:
+# Process and system monitoring. See:
+# https://pypi.org/project/psutil/
+try:
+    import psutil
+except ModuleNotFoundError:
+    import os
+    os.system("pip3 install psutil --user")
+    import psutil
 
-    # Process and system monitoring. See:
-    # https://pypi.org/project/psutil/
-    try:
-        import psutil
-    except ModuleNotFoundError:
-        import os
-        os.system("pip3 install psutil --user")
-        import psutil
+# Accumulated CPU usage.
+CPU_total = 0
 
-    # Accumulated CPU usage.
-    CPU_total = 0
-
-    # Number of samples of CPU usage (used for computing an average).
-    CPU_samples = 0
+# Number of samples of CPU usage (used for computing an average).
+CPU_samples = 0
 
 class Intercom_minimal:
 
@@ -132,7 +129,7 @@ class Intercom_minimal:
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
         self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
         assert self.bytes_per_chunk <= Intercom_minimal.MAX_PAYLOAD_BYTES, \
-          f"(bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={Intercom_minimal.MAX_PAYLOAD_BYTES})"
+          f"bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={Intercom_minimal.MAX_PAYLOAD_BYTES}"
 
         # Sending and receiving sockets creation and configuration for
         # UDP traffic. See:
@@ -145,15 +142,14 @@ class Intercom_minimal:
         # A queue to store up to 100 chunks.
         self.q = queue.Queue(maxsize=100)
 
-        if __debug__:
-            print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
-            print(f"Intercom_minimal: frames_per_second={self.frames_per_second}")
-            print(f"Intercom_minimal: frames_per_chunk={self.frames_per_chunk}")
-            print(f"Intercom_minimal: samples_per_chunk={self.samples_per_chunk}")
-            print(f"Intercom_minimal: my_port={self.my_port}")
-            print(f"Intercom_minimal: destination_address={self.destination_address}")
-            print(f"Intercom_minimal: destination_port={self.destination_port}")
-            print(f"Intercom_minimal: bytes_per_chunk={self.bytes_per_chunk}")
+        print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
+        print(f"Intercom_minimal: frames_per_second={self.frames_per_second}")
+        print(f"Intercom_minimal: frames_per_chunk={self.frames_per_chunk}")
+        print(f"Intercom_minimal: samples_per_chunk={self.samples_per_chunk}")
+        print(f"Intercom_minimal: my_port={self.my_port}")
+        print(f"Intercom_minimal: destination_address={self.destination_address}")
+        print(f"Intercom_minimal: destination_port={self.destination_port}")
+        print(f"Intercom_minimal: bytes_per_chunk={self.bytes_per_chunk}")
 
         # A received chunk is stored in this statically-allocated
         # memory to avoid the creation of a new object for each
@@ -161,12 +157,9 @@ class Intercom_minimal:
         # to send it to sounddevice, which is:
         #
         # chunk {
-        #   [frames_per_chunk][number_of_channels] int16 sample;
+        #   int16 [frames_per_chunk][number_of_channels] sample;
         # }
         #
-        # Because we are going to use this structure in decendant
-        # classes to store the payload of the received packets, we
-        # will call to it payload.
         self.chunk = self.generate_zero_chunk()
 
         print("Intercom_minimal: running ...")
@@ -193,6 +186,8 @@ class Intercom_minimal:
         # memory of the chunk is lost when travel through the
         # Internet).
         recv_bytes, sender = self.receiving_sock.recvfrom_into(self.chunk)
+        assert recv_bytes == len(self.chunk)*4, \
+            f"recv_bytes={recv_bytes} != len(self.chunk)*4={len(self.chunk)*4}"
 
     # The this method is running in a infinite loop (see the run()
     # method), and in each iteration receives a chunk of audio and
@@ -246,8 +241,7 @@ class Intercom_minimal:
         outdata[:] = chunk
 
         # Feedback message (one per chunk).
-        if __debug__:
-            self.feedback()
+        self.feedback()
 
     # Runs the intercom.
     def run(self):
