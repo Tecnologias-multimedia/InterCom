@@ -160,7 +160,7 @@ class Intercom_minimal:
         #   int16 [frames_per_chunk][number_of_channels] sample;
         # }
         #
-        self.chunk = self.generate_zero_chunk()
+        self.incomming_chunk = self.generate_zero_chunk()
 
         print("Intercom_minimal: running ...")
 
@@ -181,13 +181,13 @@ class Intercom_minimal:
         # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom_into).
         # The number of received bytes and the sender of the message
         # are returned. Notice that the received data is stored in
-        # self.chunk, that in Intercom_minimal has a suitable audio
-        # chunk structure (the information about the structure in
-        # memory of the chunk is lost when travel through the
-        # Internet).
-        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.chunk)
-        assert recv_bytes == len(self.chunk)*4, \
-            f"recv_bytes={recv_bytes} != len(self.chunk)*4={len(self.chunk)*4}"
+        # self.incomming_chunk, that in Intercom_minimal has a
+        # suitable audio chunk structure (the information about the
+        # structure in memory of the chunk is lost when travel through
+        # the Internet).
+        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.incomming_chunk)
+        assert recv_bytes == len(self.incomming_chunk)*4, \
+            f"recv_bytes={recv_bytes} != len(self.incomming_chunk)*4={len(self.incomming_chunk)*4}"
 
     # The this method is running in a infinite loop (see the run()
     # method), and in each iteration receives a chunk of audio and
@@ -195,11 +195,12 @@ class Intercom_minimal:
     # recvfrom*() are blocking methods.
     def receive_and_queue(self):
         
-        # Receives a chunk from the network, returned in self.chunk.
+        # Receives a chunk from the network, returned in
+        # self.incomming_chunk.
         self.receive()
 
         # Puts the received chunk on the top of the queue.
-        self.q.put(self.chunk)
+        self.q.put(self.incomming_chunk)
 
     # Shows CPU usage.
     def feedback(self):
