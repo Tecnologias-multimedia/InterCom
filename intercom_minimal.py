@@ -1,7 +1,6 @@
 #
 # Intercom_minimal.py
->>>>>>> master
-w#
+#
 # A very simple intercom(municator) that sends chunked raw audio data
 # (audio blocks, which we simply call "chunks") between two (or more,
 # depending on if the destination address is an IP multicast one)
