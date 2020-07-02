@@ -110,7 +110,7 @@ class Intercom_DFC(Intercom_binaural):
         chunk = magnitudes + magnitudes*signs*2
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
-        self.play(outdata)
+        self.play_chunk(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
         #print(*self.received_bitplanes_per_chunk)
 
