@@ -141,7 +141,7 @@ class Intercom_buffer(Intercom_minimal):
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         DAC[:] = chunk
-
+        
     # Almost identical to the method record_send_and_play() of
     # Intercom_minimal, except that the recorded_chunk_number is
     # computed (remember that sounddevice calls this method for each
