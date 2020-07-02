@@ -1,5 +1,5 @@
 #
-# intercom_minimal2.py
+# Intercom_minimal.py
 #
 # A very simple intercom(municator) that sends chunked raw audio data
 # (audio blocks, which we simply call "chunks") between two (or more,
@@ -21,7 +21,6 @@
 # Handle command-line arguments. See:
 # https://docs.python.org/3/library/argparse.html.
 #
-
 import argparse
 
 # Handle the sound card. See:
