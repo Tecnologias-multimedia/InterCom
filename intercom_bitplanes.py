@@ -68,12 +68,12 @@ class Intercom_bitplanes(Intercom_buffer):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
 
     def send_message(self, message):
-        super().send_message(message)
+        Intercom.send_message(self, message)
         self.sent_messages_counter.value += 1
         self.sent_bytes_counter.value += len(message)
 
     def receive_message(self):
-        message, source_address = super().receive_message()
+        message, source_address = Intercom.receive_message(self)
         self.received_messages_counter.value += 1
         self.received_bytes_counter.value += len(message)
         return message, source_address
