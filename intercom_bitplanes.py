@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
@@ -43,7 +43,7 @@ class Intercom_bitplanes(Intercom_buffer):
     # into a chunk. Both data (the bitplane number and the chunk
     # number) form the header. The bitplanes are packed using bytes.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        message = self.receive() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         received_chunk_number, received_bitplane_number, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
@@ -68,15 +68,15 @@ class Intercom_bitplanes(Intercom_buffer):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
 
     def send_message(self, message):
-        Intercom_minimal.send_message(self, message)
+        Intercom_minimal.send(self, message)
         self.sent_messages_counter.value += 1
         self.sent_bytes_counter.value += len(message)
 
-    def receive_message(self):
-        message, source_address = Intercom_minimal.receive_message(self)
+    def receive(self):
+        message = Intercom_minimal.receive(self)
         self.received_messages_counter.value += 1
         self.received_bytes_counter.value += len(message)
-        return message, source_address
+        return message
 
     def feedback(self):
         old_time = time.time()

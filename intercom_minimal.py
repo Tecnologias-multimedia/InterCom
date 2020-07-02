@@ -169,19 +169,30 @@ class Intercom_minimal:
         print("Intercom_minimal: running ...")
 
     # The audio driver never stops recording and playing. Therefore,
-    # if the queue of chunks is empty, then zero chunks are generated
-    # in order to produce a silence at the receiver.
+    # if the queue were empty, then 0-chunks will be generated
+    # (0-chunks generate silence when they are played). A 0-chunk is
+    # also used to define the structure of the incomming chunks.
     def generate_zero_chunk(self):
-        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
-        #cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int32)
-        #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.sample_type={}".format(self.frames_per_chunk, self.number_of_channels, self.sample_type))
-        return cell
+        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
-    def send_message(self, message):
-        self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
+    # Send a piece of data (a complete chunk in the case of
+    # Intercom_minimal). The destination is fixed.
+    def send(self, data):
+        self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
 
-    def receive_message(self):
-        return self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
+    # Receive a piece of data (a complete chunk in the case of
+    # Intercom_minimal). The sender is ignored.
+    def receive(self):
+        # [Receive an UDP
+        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom).
+        # "data" is a new object for each recvfrom() call, containing
+        # the payload of the packet. Notice that "data" is a [bytes
+        # object](https://docs.python.org/3/library/stdtypes.html#bytes),
+        # without any particular structure (it is simply an
+        # [inmutable](https://medium.com/@meghamohan/mutable-and-immutable-side-of-python-c2145cf72747)
+        # array of bytes). The sender is ignored.
+        data, sender = self.receiving_sock.recvfrom(self.MAX_PAYLOAD_BYTES)
+        return data
 
     # The audio driver runs two different threads, and this is one of
     # them. The receive_and_buffer() method is running in a infinite
@@ -189,7 +200,7 @@ class Intercom_minimal:
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
+        message = self.receive() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 
@@ -200,7 +211,7 @@ class Intercom_minimal:
     # (stored in "outdata"). "frames" is the number of frames per
     # chunk. "time" and "status" are ignored.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        self.send_message(indata)
+        self.send(indata)
         #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
         try:
             chunk = self.q.get_nowait()

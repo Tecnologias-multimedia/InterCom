@@ -51,7 +51,7 @@ class Intercom_DFC(Intercom_binaural):
     # is the number of received bitplanes of the played chunk by the
     # intercolutor.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message()
+        message = self.receive()
         received_chunk_number, received_bitplane_number, self.number_of_received_bitplanes, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
