@@ -100,7 +100,7 @@ class Intercom_bitplanes(Intercom_buffer):
         self.received_bytes_counter.value += len(message)
         return message
 
-    def print_feedback_message(self, old_time, total_sent, total_received):
+    def print_feedback_message(self):
         # Be careful, variables updated only in the subprocess.
         global CPU_total
         global CPU_samples
@@ -110,22 +110,22 @@ class Intercom_bitplanes(Intercom_buffer):
         CPU_samples += 1
         CPU_average = CPU_total/CPU_samples
         #print(f"{int(CPU_usage)}/{int(CPU_average)}", flush=True, end=' ')
-        elapsed_time = time.time() - old_time
-        old_time = time.time()
+        elapsed_time = time.time() - self.old_time
+        self.old_time = time.time()
         sent = int(self.sent_bytes_counter.value*8/1000/elapsed_time)
         received = int(self.received_bytes_counter.value*8/1000/elapsed_time)
-        total_sent += sent
-        total_received += received
-        print(f"{sent:10d}{received:10d}{total_sent:10d}{total_received:10d}{self.sent_messages_counter.value:10d}{self.received_messages_counter.value:10d}{int(CPU_usage):5d}{int(CPU_average):5d}")
+        self.total_sent += sent
+        self.total_received += received
+        print(f"{sent:10d}{received:10d}{self.total_sent:10d}{self.total_received:10d}{self.sent_messages_counter.value:10d}{self.received_messages_counter.value:10d}{int(CPU_usage):5d}{int(CPU_average):5d}")
         self.sent_bytes_counter.value = 0
         self.received_bytes_counter.value = 0
         self.sent_messages_counter.value = 0
         self.received_messages_counter.value = 0
         
     def feedback(self):
-        old_time = time.time()
-        total_sent = 0
-        total_received = 0
+        self.old_time = time.time()
+        self.total_sent = 0
+        self.total_received = 0
         print();
         print(f"{'':>10s}{'':>10s}{'total':>10s}{'total':>10s}{'':>10s}{'':>10s}{'':>5s}{'':>5s}");
         print(f"{'sent':>10s}{'received':>10s}{'sent':>10s}{'received':>10s}{'sent':>10s}{'received':>10s}{'':>3s}{'Average':>5s}");
@@ -133,7 +133,7 @@ class Intercom_bitplanes(Intercom_buffer):
         print(f"{'='*70}")
         try:
             while True:
-                self.print_feedback_message(old_time, total_sent, total_received)
+                self.print_feedback_message()
                 time.sleep(1)
         except KeyboardInterrupt:
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
