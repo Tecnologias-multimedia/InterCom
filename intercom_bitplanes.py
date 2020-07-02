@@ -63,11 +63,11 @@ class Intercom_bitplanes(Intercom_buffer):
         #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     # Sends the last recorded chunk (indata).
-    def send(self, indata):
+    def send_chunk(self, indata):
         last_bitplane_to_send = self.number_of_bitplanes*self.number_of_channels - self.number_of_bitplanes_to_send
         for bitplane_number in range(self.number_of_bitplanes*2-1, last_bitplane_to_send, -1):
             self.send_bitplane(indata, bitplane_number)
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
+        #self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
     def send_message(self, message):
         Intercom_minimal.send(self, message)

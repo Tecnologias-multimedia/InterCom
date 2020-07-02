@@ -133,7 +133,7 @@ class Intercom_DWT(Intercom_empty):
         chunk[:,0] = self.iDWT(chunk[:,0])
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
-        self.play(outdata)
+        self.play_chunk(outdata)
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
 
     def record_send_and_play(self, indata, outdata, frames, time, status):
@@ -151,7 +151,7 @@ class Intercom_DWT(Intercom_empty):
         chunk[:,0] = self.iDWT(chunk[:,0])
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = chunk
         #print(chunk)
-        self.play(outdata)
+        self.play_chunk(outdata)
         if __debug__:
             self._number_of_received_bitplanes.value += self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer]
         self.received_bitplanes_per_chunk[self.played_chunk_number % self.cells_in_buffer] = 0
