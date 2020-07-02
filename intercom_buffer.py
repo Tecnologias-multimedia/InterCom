@@ -87,6 +87,7 @@ class Intercom_buffer(Intercom_minimal):
         #
         # self.chunk is used for giving format to the incomming
         # chunks.
+        #self.chunk_buffer = np.concatenate(([[0, 0]], self.generate_zero_chunk())).astype(np.int16)
         
         chunk_number = 0
 
@@ -102,20 +103,35 @@ class Intercom_buffer(Intercom_minimal):
     # the buffer. As the receive_and_queue() method in
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
-        payload, sender = self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
-        tmp = np.frombuffer(payload, dtype=np.int16).reshape(self.frames_per_chunk+1, self.number_of_channels)
+        message = self.receive()
+        tmp = np.frombuffer(message, dtype=np.int16).reshape(self.frames_per_chunk+1, self.number_of_channels)
         chunk_number = tmp[0, 0]
         chunk = tmp[1:,:]
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
+    def _receive_and_buffer(self): # This methos should be a bit
+                                   # faster than the previous one,
+                                   # although it does not work
+                                   # properly :-/ (probably,
+                                   # "self.chunk_buffer" is
+                                   # overwritten by the OS before we
+                                   # play the chunks and notice that
+                                   # the buffer does not store the
+                                   # chunks of audio, but the pointers
+                                   # to the chunks of audio).
+        recv_bytes, sender = self.receiving_sock.recvfrom_into(self.chunk_buffer)
+        chunk_number = self.chunk_buffer[0, 0]
+        chunk = self.chunk_buffer[1:,:]
+        self._buffer[chunk_number % self.cells_in_buffer] = chunk
+        return chunk_number
 
     # Sends a chunk.
-    def send(self, data):
+    def send(self, chunk):
         # Now, attached to the chunk (as a header) we need to send the
         # recorded chunk number. Thus, the receiver will know where to
         # insert the chunk into the buffer.
-        tosend = np.concatenate(([[self.recorded_chunk_number, 0]], data)).astype(np.int16)
-        super().send(tosend)
+        chunk = np.concatenate(([[self.recorded_chunk_number, 0]], chunk)).astype(np.int16)
+        super().send(chunk)
 
     # Gets the next available chunk from the buffer and send it to the
     # sound device. The played chunks are zeroed in the buffer.
@@ -125,8 +141,10 @@ class Intercom_buffer(Intercom_minimal):
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         outdata[:] = chunk
 
-    # Almost identical to Intercom_minimal. The recording is performed
-    # by sounddevice, which call this method for each recorded chunk.
+    # Almost identical to the method record_send_and_play() of
+    # Intercom_minimal, except that the recorded_chunk_number is
+    # computed (remember that sounddevice calls this method for each
+    # recorded chunk).
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         self.send(indata)
