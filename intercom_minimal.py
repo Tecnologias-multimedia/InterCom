@@ -1,5 +1,5 @@
 #
-# Intercom_minimal..py
+# Intercom_minimal.py
 #
 # A very simple intercom(municator) that sends chunked raw audio data
 # (audio blocks, which we simply call "chunks") between two (or more,
@@ -98,43 +98,83 @@ class Intercom_minimal:
     # [Port](https://en.wikipedia.org/wiki/Port_(computer_networking))
     # that my machine will use to listen to the incomming packets.
     MY_PORT = 4444
+
+    # Port that my interlocutor's machine will use to listen to the
+    # incomming packets.
     DESTINATION_PORT = 4444
+
+    # [Hostname](https://en.wikipedia.org/wiki/Hostname) or [IP
+    # address](https://en.wikipedia.org/wiki/IP_address) of my
+    # interlocutor's
+    # [host](https://en.wikipedia.org/wiki/Host_(network)).
     DESTINATION_ADDRESS = "localhost"
 
     def init(self, args):
+        
+        # Gathers the information provided by the args object, and
+        # initializes other structures, such as the socket and the
+        # queue.
+
+        # Command-line parameters. Notice that args is only an
+        # argument for init(), not for the rest of methods.
         self.number_of_channels = args.number_of_channels
         self.frames_per_second = args.frames_per_second
         self.frames_per_chunk = args.frames_per_chunk
         self.my_port = args.my_port
         self.destination_address = args.destination_address 
         self.destination_port = args.destination_port
-        self.bytes_per_chunk = self.frames_per_chunk * self.number_of_channels * np.dtype(np.int16).itemsize
+
+        # Data type used for NumPy arrays, which defines the number of
+        # bits per sample. See:
+        # https://numpy.org/devdocs/user/basics.types.html
+        self.sample_type = np.int16
+
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
+        self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
+        assert self.bytes_per_chunk <= Intercom_minimal.MAX_PAYLOAD_BYTES, \
+          f"bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={Intercom_minimal.MAX_PAYLOAD_BYTES}"
+
+        # Sending and receiving sockets creation and configuration for
+        # UDP traffic. See:
+        # https://wiki.python.org/moin/UdpCommunication
         self.sending_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.receiving_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", self.my_port)
         self.receiving_sock.bind(self.listening_endpoint)
-        self.q = queue.Queue(maxsize=100000)
-        self.precision_type = np.int16
 
-        if __debug__:
-            print(f"intercom: number_of_channels={self.number_of_channels}")
-            print(f"intercom: frames_per_second={self.frames_per_second}")
-            print(f"intercom: frames_per_chunk={self.frames_per_chunk}")
-            print(f"intercom: samples_per_chunk={self.samples_per_chunk}")
-            print(f"intercom: my_port={self.my_port}")
-            print(f"intercom: destination_address={self.destination_address}")
-            print(f"intercom: destination_port={self.destination_port}")
-            print(f"intercom: bytes_per_chunk={self.bytes_per_chunk}")
-        print("intercom: intercom-unicating")
+        # A queue to store up to 100 chunks.
+        self.q = queue.Queue(maxsize=100)
+
+        print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
+        print(f"Intercom_minimal: frames_per_second={self.frames_per_second}")
+        print(f"Intercom_minimal: frames_per_chunk={self.frames_per_chunk}")
+        print(f"Intercom_minimal: samples_per_chunk={self.samples_per_chunk}")
+        print(f"Intercom_minimal: my_port={self.my_port}")
+        print(f"Intercom_minimal: destination_address={self.destination_address}")
+        print(f"Intercom_minimal: destination_port={self.destination_port}")
+        print(f"Intercom_minimal: bytes_per_chunk={self.bytes_per_chunk}")
+
+        # A received chunk is stored in this statically-allocated
+        # memory to avoid the creation of a new object for each
+        # reception. This empty chunk has also the structure necessary
+        # to send it to sounddevice, which is:
+        #
+        # chunk {
+        #   int16 [frames_per_chunk][number_of_channels] sample;
+        # }
+        #
+        self.zero_chunk = self.generate_zero_chunk()
+        payload_structure = f"{self.frames_per_chunk * self.number_of_channels}h"
+
+        print("Intercom_minimal: running ...")
 
     # The audio driver never stops recording and playing. Therefore,
     # if the queue of chunks is empty, then zero chunks are generated
     # in order to produce a silence at the receiver.
     def generate_zero_chunk(self):
-        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.precision_type)
+        cell = np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
         #cell = np.zeros((self.frames_per_chunk, self.number_of_channels), np.int32)
-        #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.precision_type={}".format(self.frames_per_chunk, self.number_of_channels, self.precision_type))
+        #print("intercom: self.frames_per_chunk={} self.number_of_channels={} self.sample_type={}".format(self.frames_per_chunk, self.number_of_channels, self.sample_type))
         return cell
 
     def send_message(self, message):

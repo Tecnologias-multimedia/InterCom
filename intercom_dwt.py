@@ -83,7 +83,7 @@ class Intercom_DWT(Intercom_empty):
     def init(self, args):
         Intercom_empty.init(self, args)
         self.precision_bits = 32
-        self.precision_type = np.int32
+        self.sample_type = np.int32
         self.sign_mask = (1<<(self.precision_bits-1))
         self.precision_bits_1 = self.precision_bits-1
         self.magnitude_mask = ((1<<(self.precision_bits_1))-1)
@@ -112,12 +112,12 @@ class Intercom_DWT(Intercom_empty):
     def DWT(self, chunk):
         #return chunk
         coeffs_in_subbands = wt.wavedec(chunk, wavelet=self.wavelet, level=self.levels, mode=self.padding)
-        return np.around(wt.coeffs_to_array(coeffs_in_subbands)[0]).astype(self.precision_type)
+        return np.around(wt.coeffs_to_array(coeffs_in_subbands)[0]).astype(self.sample_type)
 
     def iDWT(self, coeffs_in_array):
         #return coeffs_in_array
         coeffs_in_subbands = wt.array_to_coeffs(coeffs_in_array, self.slices, output_format="wavedec")
-        return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.precision_type)
+        return np.around(wt.waverec(coeffs_in_subbands, wavelet=self.wavelet, mode=self.padding)).astype(self.sample_type)
 
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
         indata[:,1] -= indata[:,0]
