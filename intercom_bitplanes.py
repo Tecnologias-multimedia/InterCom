@@ -47,7 +47,6 @@ class Intercom_bitplanes(Intercom_buffer):
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
         bitplane = bitplane.astype(self.sample_type)
-        print(bitplane)
         self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number % self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
         return received_chunk_number
 
@@ -55,6 +54,7 @@ class Intercom_bitplanes(Intercom_buffer):
     def send_bitplane(self, chunk, bitplane_number):
         bitplane = (chunk[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
         bitplane = bitplane.astype(np.uint8)
+        print(bitplane)
         bitplane = np.packbits(bitplane)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
         Intercom_minimal.send(self, message)
