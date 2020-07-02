@@ -36,7 +36,7 @@ class Intercom_buffer(Intercom_minimal):
     # Waits for a new chunk and insert it in the right position of the
     # buffer.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
         return chunk_number

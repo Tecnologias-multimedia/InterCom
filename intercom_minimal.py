@@ -68,10 +68,35 @@ import sys # Quitar
 
 class Intercom_minimal:
 
+    # Default audio configuration. See:
+    # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
+    
+    # 1 = mono, 2 = stereo.
     NUMBER_OF_CHANNELS = 2
+
+    # Sampling frequency (44100 Hz -> CD quality). A frame is a
+    # structure:
+    #
+    # frame {
+    #   [number_of_channels] int16 sample;
+    # }
     FRAMES_PER_SECOND = 44100
+
+    # Number of frames per chunk of audio interchanged with the sound
+    # card.
     FRAMES_PER_CHUNK = 1024
-    MAX_MESSAGE_BYTES = 32768
+
+    # Default network configuration. See: 
+
+    # Maximum size of the
+    # [payload](https://en.wikipedia.org/wiki/User_Datagram_Protocol)
+    # of a transmitted packet. This parameter is used by the OS to
+    # allocate memory for incomming packets. Notice that this value
+    # limites the maximum length (in bytes) of a chunk.
+    MAX_PAYLOAD_BYTES = 32768
+
+    # [Port](https://en.wikipedia.org/wiki/Port_(computer_networking))
+    # that my machine will use to listen to the incomming packets.
     MY_PORT = 4444
     DESTINATION_PORT = 4444
     DESTINATION_ADDRESS = "localhost"
@@ -116,7 +141,7 @@ class Intercom_minimal:
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     def receive_message(self):
-        return self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        return self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
 
     # The audio driver runs two different threads, and this is one of
     # them. The receive_and_buffer() method is running in a infinite
@@ -124,7 +149,7 @@ class Intercom_minimal:
     # chunk of audio and insert it in the tail of the queue of
     # chunks. Notice that recvfrom() is a blocking method.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
+        message, source_address = self.receive_message() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
         chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         self.q.put(chunk)
 
