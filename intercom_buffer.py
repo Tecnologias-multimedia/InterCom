@@ -119,9 +119,9 @@ class Intercom_buffer(Intercom_minimal):
     # Now, attached to the chunk (as a header) we need to send the
     # recorded chunk number. Thus, the receiver would know where to
     # inser the chunk into the buffer.
-    def send(self, indata):
+    def send_chunk(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
+        #self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     # Gets the next available chunk from the buffer and send it to the
@@ -136,17 +136,19 @@ class Intercom_buffer(Intercom_minimal):
 
     # Almost identical to the parent's one.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        # The recording is performed by sounddevice, which call this
-        # method for each recorded chunk.
-        self.send(indata)
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
+        self.send_chunk(indata)
         self.play(outdata)
 
     # Runs the intercom and implements the buffer's logic.
     def run(self):
-        print("intercom_buffer: ¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
+        
+        # Buffer creation.
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
-            self._buffer[i] = self.generate_zero_chunk()
+            self._buffer[i] = self.empty_chunk
+
+        # Chunks counters.
         self.recorded_chunk_number = 0
         self.played_chunk_number = 0
 

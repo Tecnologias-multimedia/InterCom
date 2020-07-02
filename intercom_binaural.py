@@ -22,8 +22,9 @@ class Intercom_binaural(Intercom_bitplanes):
 
     # Channel 1 is a residue: channel1 -= channel0
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         indata[:,1] -= indata[:,0]
-        self.send(indata)
+        self.send_chunk(indata)
         self._buffer[self.played_chunk_number % self.cells_in_buffer][:,1] += self._buffer[self.played_chunk_number % self.cells_in_buffer][:,0]
         self.play(outdata)
 
