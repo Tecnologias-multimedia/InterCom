@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
@@ -9,6 +9,7 @@
 #
 # Removes binaural redundancy. The channel 1 is substracted to the channel 0.
 #
+
 from intercom_bitplanes import Intercom_bitplanes
 
 class Intercom_binaural(Intercom_bitplanes):
@@ -17,7 +18,7 @@ class Intercom_binaural(Intercom_bitplanes):
         Intercom_bitplanes.init(self, args)
         if self.number_of_channels == 2:
             self.record_send_and_play = self.record_send_and_play_stereo
-        print("intercom_binaural: removing binaural redundancy")
+        print("Intercom_binaural: removing binaural redundancy")
 
     # Channel 1 is a residue: channel1 -= channel0
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):

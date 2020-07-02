@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
@@ -20,7 +20,7 @@
 
 import struct
 import numpy as np
-from intercom import Intercom
+from intercom_minimal import Intercom_minimal
 from intercom_binaural import Intercom_binaural
 
 if __debug__:

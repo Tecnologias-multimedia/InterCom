@@ -9,7 +9,7 @@
 import sounddevice as sd
 import numpy as np
 import struct
-from intercom_minimal import Intercom
+from intercom_minimal import Intercom_minimal
 import numpy as np
 
 if __debug__:
@@ -17,13 +17,13 @@ if __debug__:
     import time
     from multiprocessing import Process
 
-class Intercom_buffer(Intercom):
+class Intercom_buffer(Intercom_minimal):
 
     MAX_CHUNK_NUMBER = 65536
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
-        Intercom.init(self, args)
+        Intercom_minimal.init(self, args)
         self.chunks_to_buffer = args.chunks_to_buffer
         self.cells_in_buffer = self.chunks_to_buffer * 2
         #self._buffer = [self.generate_zero_chunk()] * self.cells_in_buffer
@@ -36,7 +36,7 @@ class Intercom_buffer(Intercom):
     # Waits for a new chunk and insert it in the right position of the
     # buffer.
     def receive_and_buffer(self):
-        message, source_address = self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        message, source_address = self.receiving_sock.recvfrom(Intercom_minimal.MAX_MESSAGE_BYTES)
         chunk_number, *chunk = struct.unpack(self.packet_format, message)
         self._buffer[chunk_number % self.cells_in_buffer] = np.asarray(chunk).reshape(self.frames_per_chunk, self.number_of_channels)
         return chunk_number
@@ -88,7 +88,7 @@ class Intercom_buffer(Intercom):
             time.sleep(1)
 
     def add_args(self):
-        parser = Intercom.add_args(self)
+        parser = Intercom_minimal.add_args(self)
         parser.add_argument("-cb", "--chunks_to_buffer",
                             help="Number of chunks to buffer",
                             type=int, default=Intercom_buffer.CHUNKS_TO_BUFFER)

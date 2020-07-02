@@ -12,7 +12,7 @@
 import sounddevice as sd
 import numpy as np
 import struct
-from intercom_minimal import Intercom
+from intercom_minimal import Intercom_minimal
 from intercom_buffer import Intercom_buffer
 
 if __debug__:
@@ -68,12 +68,12 @@ class Intercom_bitplanes(Intercom_buffer):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
 
     def send_message(self, message):
-        Intercom.send_message(self, message)
+        Intercom_minimal.send_message(self, message)
         self.sent_messages_counter.value += 1
         self.sent_bytes_counter.value += len(message)
 
     def receive_message(self):
-        message, source_address = Intercom.receive_message(self)
+        message, source_address = Intercom_minimal.receive_message(self)
         self.received_messages_counter.value += 1
         self.received_bytes_counter.value += len(message)
         return message, source_address

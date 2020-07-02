@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
