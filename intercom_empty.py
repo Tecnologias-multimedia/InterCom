@@ -70,7 +70,7 @@ class Intercom_empty(Intercom_DFC):
         #print("intercom_empty: ", self.max_number_of_bitplanes_to_send)
         for bitplane_number in range(self.max_number_of_bitplanes_to_send-1, last_BPTS, -1):
             self.send_bitplane(indata, bitplane_number)
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
     # Volmeter of the received (played) audio.
     #def feedback(self):

@@ -1,25 +1,61 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #
-# Adds a (ramdom-access) buffer, which can be used to reorder the
-# chunks if they are not transmitted in order by the network.
+# Replaces the queue of intercom_minimal by a random access buffer of
+# chunks, that allows to extract the chunks from the buffer in the
+# correct (playing) order, even if the chunks have arrived in a
+# different order.
+#
+# Buffering implies to spend a buffering time (buffering chunks) that
+# increases the delay (the time from when a sample of audio is
+# captured by the sender and played by the receiver). This time is
+# necessary to hide the network jitter, when it exists. However, the
+# buffer size (and therefore, the buffering time) is configurable by
+# the receiver (it can be as smaller as only 1 chunk).
+#
+# The sorting of the chunks at the receiver implies that we must
+# transit, with each chunk of audio, a chunk number to sequence
+# them. We will call to this structure "packet".
+#
 
+# To-do:
+#
+# 1. Implement the treatment of mono signals.
+# 2. Compute (and show) the buffering time.
+
+from intercom_minimal import Intercom_minimal
 import sounddevice as sd
 import numpy as np
+import psutil
+import time
+from multiprocessing import Process
 import struct
-from intercom_minimal import Intercom_minimal
-import numpy as np
+import sys
 
-if __debug__:
-    import sys
-    import time
-    from multiprocessing import Process
+# Accumulated percentage of used CPU. 
+CPU_total = 0
+
+# Number of samples of the CPU usage.
+CPU_samples = 0
+
+# CPU usage average.
+CPU_average = 0
 
 class Intercom_buffer(Intercom_minimal):
 
-    MAX_CHUNK_NUMBER = 65536
+    # Intercom_buffer transmits chunk number (a signed integer of 16
+    # bits (int16) with each chunk of audio. Such number ranges betwen
+    # [-2^15, 2**15-1] (values that an int16 can take), although only
+    # natural (non negative) values have been considered for
+    # sequencing chunks. Therefore, are only 2**15 different chunk
+    # numbers are possible.
+    CHUNK_NUMBERS = 2**15
+
+    # Default buffer size in chunks. The receiver will wait for
+    # receiving at least two chunks whose chunk numbers differs at
+    # least in CHUNKS_TO_BUFFER.
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
@@ -46,7 +82,7 @@ class Intercom_buffer(Intercom_minimal):
     # inser the chunk into the buffer.
     def send(self, indata):
         message = struct.pack(self.packet_format, self.recorded_chunk_number, *(indata.flatten()))
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
         self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     # Gets the next available chunk from the buffer and send it to the

@@ -64,8 +64,6 @@ CPU_total = 0
 # Number of samples of CPU usage (used for computing an average).
 CPU_samples = 0
 
-import sys # Quitar
-
 class Intercom_minimal:
 
     # Default audio configuration. See:
@@ -194,40 +192,76 @@ class Intercom_minimal:
         data, sender = self.receiving_sock.recvfrom(self.MAX_PAYLOAD_BYTES)
         return data
 
-    # The audio driver runs two different threads, and this is one of
-    # them. The receive_and_buffer() method is running in a infinite
-    # loop (see the run() method), and in each iteration receives a
-    # chunk of audio and insert it in the tail of the queue of
-    # chunks. Notice that recvfrom() is a blocking method.
-    def receive_and_buffer(self):
-        message = self.receive() #self.receiving_sock.recvfrom(Intercom_minimal.MAX_PAYLOAD_BYTES)
-        chunk = np.frombuffer(message, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
+    # The this method is running in an infinite loop (see the run()
+    # method), and in each iteration receives a chunk of audio and
+    # insert it in the tail of the queue of chunks. Notice that
+    # recvfrom*() are blocking methods.
+    def receive_and_queue(self):
+        
+        # Receives a chunk from the network. Chunk is a different
+        # object after each call.
+        chunk = self.receive()
+
+        # Gives NumPy structure to the chunk.
+        chunk = np.frombuffer(chunk, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
+        
+        # Puts the received chunk on the top of the queue. Notice that
+        # this is a pointers copy ([shallow
+        # copy](https://docs.python.org/3.8/library/copy.html)), not a
+        # contents copy (deep copy).
         self.q.put(chunk)
 
-    # This is the second method that the audio driver runs in a
-    # thread. The record_send_and_play() method is called each time a
-    # new chunk of audio is available, so, it records audio (returned
-    # in "indata"). This method also allows to play chunks of audio
-    # (stored in "outdata"). "frames" is the number of frames per
-    # chunk. "time" and "status" are ignored.
+    # Shows CPU usage.
+    def feedback(self):
+        global CPU_total
+        global CPU_samples
+        CPU_usage = psutil.cpu_percent() # User (not intercom) time
+        CPU_total += CPU_usage
+        CPU_samples += 1
+        print(f"{int(CPU_usage)}", flush=True, end=' ')
+
+    # The audio driver provided by sounddevice runs in a
+    # [thread](https://en.wikipedia.org/wiki/Thread_(computing))
+    # different from the main one. Thus, sounddevice calls the
+    # callback function (this function) each time a new chunk of audio
+    # is available from the
+    # [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter). The
+    # new chunk is returned in "indata". At the same time, this method
+    # allows to send audio chunks stored in "outdata" to the
+    # [DAC](https://en.wikipedia.org/wiki/Digital-to-analog_converter). Notice
+    # that if the soundcard of the sender and the receiver have been
+    # configured with the same parameters (sampling frequency and
+    # number of frames per chunk), the cadence of input and output
+    # chunks is exactly the same. This condition is a requirement for
+    # intercom. See:
+    # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
+    # for a deeper description of the callback function.
     def record_send_and_play(self, indata, outdata, frames, time, status):
+        # Send the chunk.
         self.send(indata)
-        #self.sending_sock.sendto(indata, (self.destination_address, self.destination_port))
+
         try:
             chunk = self.q.get_nowait()
         except queue.Empty:
-            chunk = self.generate_zero_chunk()
+            chunk = self.zero_chunk # Shallow copy
+
+        # Copy the data of chunk to outdata using slicing. Notice that
+        # "outdata = chunk" only would copy pointers to objects (.
         outdata[:] = chunk
-        if __debug__:
-            sys.stderr.write("."); sys.stderr.flush()
 
-    # Runs Intercom_minimal. 
+        # Feedback message (one per chunk).
+        self.feedback()
+
+    # Runs the intercom.
     def run(self):
-
-        with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=np.int16, channels=self.number_of_channels, callback=self.record_send_and_play):
-            print("¯\_(ツ)_/¯ Press <CTRL> + <c> to quit ¯\_(ツ)_/¯")
+        with sd.Stream(samplerate=self.frames_per_second,
+                       blocksize=self.frames_per_chunk,
+                       dtype=np.int16,
+                       channels=self.number_of_channels,
+                       callback=self.record_send_and_play):
+            print("Intercom_minimal: press <CTRL> + <c> to quit")
             while True:
-                self.receive_and_buffer()
+                self.receive_and_queue()
 
     # Define the command-line arguments.
     def add_args(self):

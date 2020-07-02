@@ -91,7 +91,7 @@ class Intercom_DFC(Intercom_binaural):
         self.send_bitplane(indata, self.max_number_of_bitplanes_to_send-2)
         for bitplane_number in range(self.max_number_of_bitplanes_to_send-3, last_BPTS, -1):
             self.send_bitplane(indata, bitplane_number)
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
     # The new stuff represents the samples using the sign-magnitude
     # representation instead of the two's complement. This helps to

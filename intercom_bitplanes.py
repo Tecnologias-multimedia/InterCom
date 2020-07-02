@@ -65,7 +65,7 @@ class Intercom_bitplanes(Intercom_buffer):
         last_bitplane_to_send = self.precision_bits*self.number_of_channels - self.number_of_bitplanes_to_send
         for bitplane_number in range(self.precision_bits*2-1, last_bitplane_to_send, -1):
             self.send_bitplane(indata, bitplane_number)
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
     def send_message(self, message):
         Intercom_minimal.send(self, message)
