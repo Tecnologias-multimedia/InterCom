@@ -18,7 +18,7 @@ class Intercom_binaural(Intercom_bitplanes):
         Intercom_bitplanes.init(self, args)
         if self.number_of_channels == 2:
             self.record_send_and_play = self.record_send_and_play_stereo
-        print("Intercom_binaural: removing binaural redundancy")
+        print("Intercom_binaural: removing binaural redundancy ...")
 
     # Channel 1 is a residue: channel1 -= channel0
     def record_send_and_play_stereo(self, indata, outdata, frames, time, status):
@@ -33,4 +33,7 @@ if __name__ == "__main__":
     parser = intercom.add_args()
     args = parser.parse_args()
     intercom.init(args)
-    intercom.run()
+    try:
+        intercom.run()
+    except KeyboardInterrupt:
+        print("Intercom_buffer: goodbye ¯\_(ツ)_/¯")

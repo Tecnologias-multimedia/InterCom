@@ -138,7 +138,8 @@ class Intercom_buffer(Intercom_minimal):
     # played chunks are zeroed in the buffer.
     def play_chunk(self, DAC):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
+        self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.generate_zero_chunk()
+        # self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         DAC[:] = chunk
         
