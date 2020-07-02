@@ -31,6 +31,9 @@ if __debug__:
 class Intercom_DFC(Intercom_binaural):
 
     def init(self, args):
+        if __debug__:
+            self._number_of_sent_bitplanes = Value('i')
+            self._number_of_received_bitplanes = Value('i')
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
@@ -42,9 +45,6 @@ class Intercom_DFC(Intercom_binaural):
         #self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
         self.number_of_received_bitplanes = self.max_number_of_bitplanes_to_send 
         #self.precision_type = np.uint16
-        if __debug__:
-            self._number_of_sent_bitplanes = Value('i')
-            self._number_of_received_bitplanes = Value('i')
         print("intercom_dfc: controlling the data-flow")
 
     # Receives chunks, and now, in the header of each chunk, there
