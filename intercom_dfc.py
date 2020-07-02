@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
@@ -22,7 +22,7 @@
 
 import struct
 import numpy as np
-from intercom import Intercom
+from intercom_minimal import Intercom_minimal
 from intercom_binaural import Intercom_binaural
 
 if __debug__:
@@ -33,6 +33,9 @@ if __debug__:
 class Intercom_DFC(Intercom_binaural):
 
     def init(self, args):
+        if __debug__:
+            self._number_of_sent_bitplanes = Value('i')
+            self._number_of_received_bitplanes = Value('i')
         Intercom_binaural.init(self, args)
         self.packet_format = f"!HBB{self.frames_per_chunk//8}B"
         self.received_bitplanes_per_chunk = [0]*self.cells_in_buffer
@@ -44,16 +47,13 @@ class Intercom_DFC(Intercom_binaural):
         #self.NORB = self.max_NOBPTS  # Number Of Received Bitplanes
         self.number_of_received_bitplanes = self.max_number_of_bitplanes_to_send 
         #self.precision_type = np.uint16
-        if __debug__:
-            self._number_of_sent_bitplanes = Value('i')
-            self._number_of_received_bitplanes = Value('i')
         print("intercom_dfc: controlling the data-flow")
 
     # Receives chunks, and now, in the header of each chunk, there
     # is the number of received bitplanes of the played chunk by the
     # intercolutor.
     def receive_and_buffer(self):
-        message, source_address = self.receive_message()
+        message = self.receive()
         received_chunk_number, received_bitplane_number, self.number_of_received_bitplanes, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
@@ -93,7 +93,7 @@ class Intercom_DFC(Intercom_binaural):
         self.send_bitplane(indata, self.max_number_of_bitplanes_to_send-2)
         for bitplane_number in range(self.max_number_of_bitplanes_to_send-3, last_BPTS, -1):
             self.send_bitplane(indata, bitplane_number)
-        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.MAX_CHUNK_NUMBER
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
     # The new stuff represents the samples using the sign-magnitude
     # representation instead of the two's complement. This helps to

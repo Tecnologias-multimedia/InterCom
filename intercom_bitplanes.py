@@ -1,5 +1,5 @@
 #
-# Intercom
+# Intercom_minimal
 # |
 # +- Intercom_buffer
 #    |
@@ -25,8 +25,8 @@ class Intercom_bitplanes(Intercom_buffer):
         # The feedback to the user is shown by the feedback() method,
         # in a different process. To share data between the both
         # processes we will use the Value class of multiprocessing.
-        self.sent_bitplanes_counter = Value('i', 0)
-        self.received_bitplanes_counter = Value('i', 0)
+        self.sent_messages_counter = Value('i', 0)
+        self.received_messages_counter = Value('i', 0)
         self.sent_bytes_counter = Value('i', 0)
         self.received_bytes_counter = Value('i', 0)
 
@@ -42,7 +42,7 @@ class Intercom_bitplanes(Intercom_buffer):
     # chunk). Again, this is a blocking method that waits for a
     # bitplane and inserts it in a chunk stored in the buffer.
     def receive_and_buffer(self):
-        message = self.receive_message() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
+        message = self.receive() #self.receiving_sock.recvfrom(Intercom.MAX_MESSAGE_BYTES)
         received_chunk_number, received_bitplane_number, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
@@ -62,17 +62,23 @@ class Intercom_bitplanes(Intercom_buffer):
         self.sent_bytes_counter.value += len(message)
         #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
-    # Sends the last recorded chunk (chunk).
-    def send_chunk(self, chunk):
+    # Sends the last recorded chunk (indata).
+    def send(self, indata):
         last_bitplane_to_send = self.number_of_bitplanes*self.number_of_channels - self.number_of_bitplanes_to_send
         for bitplane_number in range(self.number_of_bitplanes*2-1, last_bitplane_to_send, -1):
-            self.send_bitplane(chunk, bitplane_number)
+            self.send_bitplane(indata, bitplane_number)
+        self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
 
-    def receive_message(self):
-        bitplane = Intercom_minimal.receive(self)
-        self.received_bitplanes_counter.value += 1
-        self.received_bytes_counter.value += len(bitplane)
-        return bitplane
+    def send_message(self, message):
+        Intercom_minimal.send(self, message)
+        self.sent_messages_counter.value += 1
+        self.sent_bytes_counter.value += len(message)
+
+    def receive(self):
+        message = Intercom_minimal.receive(self)
+        self.received_messages_counter.value += 1
+        self.received_bytes_counter.value += len(message)
+        return message
 
     def feedback(self):
         old_time = time.time()
