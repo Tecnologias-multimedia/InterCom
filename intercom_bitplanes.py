@@ -54,12 +54,9 @@ class Intercom_bitplanes(Intercom_buffer):
     def send_bitplane(self, chunk, bitplane_number):
         bitplane = (chunk[:, bitplane_number%self.number_of_channels] >> bitplane_number//self.number_of_channels) & 1
         bitplane = bitplane.astype(np.uint8)
-        print(bitplane)
         bitplane = np.packbits(bitplane)
         message = struct.pack(self.packet_format, self.recorded_chunk_number, bitplane_number, *bitplane)
-        Intercom_minimal.send(self, message)
-        self.sent_bitplanes_counter.value += 1
-        self.sent_bytes_counter.value += len(message)
+        self.send_message(message)
         #self.sending_sock.sendto(message, (self.destination_address, self.destination_port))
 
     # Sends the last recorded chunk (indata).
@@ -87,7 +84,7 @@ class Intercom_bitplanes(Intercom_buffer):
         sys.stderr.write("\n");
         sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("", "", "total", "total", "", ""));
         sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("sent", "received", "sent", "received", "sent", "received"));
-        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("kbps", "kbps", "kbps", "kbps", "bitplanes", "bitplanes"))
+        sys.stderr.write("{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}{:>10s}\n".format("kbps", "kbps", "kbps", "kbps", "messages", "messages"))
         sys.stderr.write("{}\n".format("="*60))
         sys.stderr.flush()
         while True:
@@ -97,11 +94,11 @@ class Intercom_bitplanes(Intercom_buffer):
             received = int(self.received_bytes_counter.value*8/1000/elapsed_time)
             total_sent += sent
             total_received += received
-            sys.stderr.write(f"{sent:10d}{received:10d}{total_sent:10d}{total_received:10d}{self.sent_bitplanes_counter.value:10d}{self.received_bitplanes_counter.value:10d}\n")
+            sys.stderr.write(f"{sent:10d}{received:10d}{total_sent:10d}{total_received:10d}{self.sent_messages_counter.value:10d}{self.received_messages_counter.value:10d}\n")
             self.sent_bytes_counter.value = 0
             self.received_bytes_counter.value = 0
-            self.sent_bitplanes_counter.value = 0
-            self.received_bitplanes_counter.value = 0
+            self.sent_messages_counter.value = 0
+            self.received_messages_counter.value = 0
             time.sleep(1)
 
 if __name__ == "__main__":
