@@ -55,7 +55,7 @@ class Intercom_DFC(Intercom_binaural):
         received_chunk_number, received_bitplane_number, self.number_of_received_bitplanes, *bitplane = struct.unpack(self.packet_format, message)
         bitplane = np.asarray(bitplane, dtype=np.uint8)
         bitplane = np.unpackbits(bitplane)
-        bitplane = bitplane.astype(self.precision_type)
+        bitplane = bitplane.astype(self.sample_type)
         self._buffer[received_chunk_number % self.cells_in_buffer][:, received_bitplane_number%self.number_of_channels] |= (bitplane << received_bitplane_number//self.number_of_channels)
         self.received_bitplanes_per_chunk[received_chunk_number % self.cells_in_buffer] += 1
         #sys.stderr.write(".")

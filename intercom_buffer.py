@@ -79,13 +79,6 @@ class Intercom_buffer(Intercom_minimal):
         self.cells_in_buffer = self.chunks_to_buffer * 2
         print(f"Intercom_buffer: cells_in_buffer={self.cells_in_buffer}")
 
-        #self._buffer = [self.generate_zero_chunk()] * self.cells_in_buffer
-        self.packet_format = f"!H{self.samples_per_chunk}h"
-        self.precision_type = np.int16
-        if __debug__:
-            print(f"intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
-        print("intercom_buffer: buffering")
-
         # Now, a chunk is an structure with audio and a chunk
         # counter:
         #
