@@ -99,6 +99,14 @@ class Intercom_buffer(Intercom_minimal):
         p = Process(target=self.feedback)
         p.start()
 
+    # Sends a chunk.
+    def send_chunk(self, chunk):
+        # Now, attached to the chunk (as a header) we need to send the
+        # recorded chunk number. Thus, the receiver will know where to
+        # insert the chunk into the buffer.
+        chunk = np.concatenate(([[self.recorded_chunk_number, 0]], chunk)).astype(np.int16)
+        super().send(chunk)
+
     # Waits for a new chunk and insert it into the right position of
     # the buffer. As the receive_and_queue() method in
     # Intercom_minimal, this method is called from an infinite loop.
@@ -125,21 +133,14 @@ class Intercom_buffer(Intercom_minimal):
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
 
-    # Sends a chunk.
-    def send(self, chunk):
-        # Now, attached to the chunk (as a header) we need to send the
-        # recorded chunk number. Thus, the receiver will know where to
-        # insert the chunk into the buffer.
-        chunk = np.concatenate(([[self.recorded_chunk_number, 0]], chunk)).astype(np.int16)
-        super().send(chunk)
-
     # Gets the next available chunk from the buffer and send it to the
-    # sound device. The played chunks are zeroed in the buffer.
-    def play(self, outdata):
+    # Digital Analog Converter (DAC) of the sound device. Then, the
+    # played chunks are zeroed in the buffer.
+    def play_chunk(self, DAC):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
         self._buffer[self.played_chunk_number % self.cells_in_buffer] = self.empty_chunk
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
-        outdata[:] = chunk
+        DAC[:] = chunk
 
     # Almost identical to the method record_send_and_play() of
     # Intercom_minimal, except that the recorded_chunk_number is
@@ -147,8 +148,8 @@ class Intercom_buffer(Intercom_minimal):
     # recorded chunk).
     def record_send_and_play(self, indata, outdata, frames, time, status):
         self.recorded_chunk_number = (self.recorded_chunk_number + 1) % self.CHUNK_NUMBERS
-        self.send(indata)
-        self.play(outdata)
+        self.send_chunk(indata)
+        self.play_chunk(outdata)
 
     # Runs the intercom and implements the buffer's logic.
     def run(self):
