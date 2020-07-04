@@ -10,7 +10,7 @@
 # the playback (the chunks of audio can be transmitted with a
 # [jitter](https://en.wikipedia.org/wiki/Jitter) different to the
 # playing chunk cadence, producing "glitches" during the playback of
-# the audio). The number of queued chunks uncontrolled, but small
+# the audio). The number of queued chunks is uncontrolled, but small
 # (normally 1). Therefore, the delay produced by the queue is very
 # small (a chunk time).
 #
