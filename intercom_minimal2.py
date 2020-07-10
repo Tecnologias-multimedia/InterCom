@@ -1,5 +1,5 @@
 #
-# intercom_minimal2.py
+# Intercom_minimal.py
 #
 # A very simple intercom(municator) that sends chunked raw audio data
 # (audio blocks, which we simply call "chunks") between two (or more,
@@ -10,7 +10,7 @@
 # the playback (the chunks of audio can be transmitted with a
 # [jitter](https://en.wikipedia.org/wiki/Jitter) different to the
 # playing chunk cadence, producing "glitches" during the playback of
-# the audio). The number of queued chunks uncontrolled, but small
+# the audio). The number of queued chunks is uncontrolled, but small
 # (normally 1). Therefore, the delay produced by the queue is very
 # small (a chunk time).
 #
@@ -21,7 +21,6 @@
 # Handle command-line arguments. See:
 # https://docs.python.org/3/library/argparse.html.
 #
-
 import argparse
 
 # Handle the sound card. See:
@@ -58,6 +57,8 @@ except ModuleNotFoundError:
     import os
     os.system("pip3 install psutil --user")
     import psutil
+
+from multiprocessing import Process
 
 # Accumulated CPU usage.
 CPU_total = 0
@@ -212,6 +213,11 @@ class Intercom_minimal:
         # contents copy (deep copy).
         self.q.put(chunk)
 
+        #import time
+        #time.sleep(0.1)
+        for i in range(10000000):
+            pass
+
     # Shows CPU usage.
     def feedback(self):
         global CPU_total
@@ -253,6 +259,10 @@ class Intercom_minimal:
         # Feedback message (one per chunk).
         self.feedback()
 
+    def forever(self):
+        while True:
+            self.receive_and_queue()
+
     # Runs the intercom.
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second,
@@ -261,9 +271,12 @@ class Intercom_minimal:
                        channels=self.number_of_channels,
                        callback=self.record_send_and_play):
             print("Intercom_minimal: press <CTRL> + <c> to quit")
-            while True:
-                self.receive_and_queue()
-
+            p = Process(target=self.forever)
+            p.start()
+            #self.forever()
+            #while True:
+            #    self.receive_and_queue()
+            
     # Define the command-line arguments.
     def add_args(self):
         parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
