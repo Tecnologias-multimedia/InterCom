@@ -107,5 +107,5 @@ to be drawn
 ### Use
 
 ```
-to be describe
+to be described
 ```
