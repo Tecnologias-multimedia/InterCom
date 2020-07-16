@@ -1,53 +1,111 @@
-# Welcome to the RTAI-PS Project
+# Welcome to the RTIC Project
 
-RTAI-PS (Real Time Audio Intercom - Peer Side) is a low-latency
-full-duplex intercommunicator designed for the transmission of audio
-in real-time between networked users. See the [RTAI Project] for more
-global information.
+RTIC (Real Time InterCom) is a low-latency full-duplex intercommunicator designed for the transmission of audio (and in the future, video) between networked users.
 
-## Use
-'''
-   python3 
+# (Current and Future) modules
 
-A low-latency full-duplex intercom. Two or more intercom users will be
-able (the project is still unfinished) to communicate (audio and
-video) in real-time (with a minimal latency) using a _room_ defined in
-a public server. All communications are Peer-to-Peer (P2P).
+RTIC consist of three modules:
 
-<!-- ## Platform
+1. The **Sender**, which captures, process and send the media (audio y vídeo) to an Internet end-point.
+2. The **Receiver**, that receives the media, process and plays it.
+3. The **Mixer**, that receives a collection of streams, mix them, and sends the mixed media to a collection of end-points.
 
-The software is written in Python 3, and therefore, you should be able
-to run it in any machine where a Python 3 interpreter is available.
+# Configurations
 
-## Intercom without data-flow control.
+## 1. Half-duplex one-to-one
 
 ```
-Task 1. Receiver
-
-1. Forever:
-1.1. Receive a packet.
-1.2. Decompress the packet, generating a quality layer.
-1.3. Store the layer in a buffer.
-
-Task 2. Player
-
-1. Get the first chunk from the buffer.
-2. Forever:
-2.1. Play the chunk.
-2.2. Get the next chunk from the buffer.
-
-Task 3. SamplerAndSender
-
-1. Forever:
-1.1. Sample a chunk.
-1.2. Generate the sequence of compressed packets, one for each quality layer.
-1.3. Send the sequence of packets.
+  Host A           Host B
++--------+      +----------+
+| Sender |----->| Receiver |
++--------+      +----------+
+"captures"        "plays"
 ```
--->
 
-## Resources
+### Use
 
-* [PyWavelet](https://pywavelets.readthedocs.io).
-* [Public chat room for intercom at Gitter](https://gitter.im/Tecnologias-multimedia/intercom).
-* [Public chat room for Tecnologías Multimedia at Gitter](https://gitter.im/Tecnologias-multimedia/community).
-<!-- * [Slack channel](https://tec-multimedia-ual.slack.com/messages/intercom_2018/). -->
+#### 1. Host A == Host B (Wire mode)
+
+```
+terminal 1> python3 sender.py 
+terminal 2> python3 receiver.py
+```
+#### 2. Host A != Host B
+
+```
+host A> python3 sender.py
+host B> python3 receiver.py
+```
+
+## 2. Full-duplex one-to-one
+
+```
+   Host A         Host B
+ +--------+    +----------+
+ | Sender |--->| Receiver |
+ +--------+    +----------+
+"captures"        "plays"
++----------+    +--------+
+| Receiver |<---| Sender |
++----------+    +--------+
+  "plays"       "captures"  
+```
+
+### Use
+
+```
+to describe
+```
+
+## 3. Half-duplex one-to-many (radio/TV mode)
+
+```
+  Host A          Host B          Host C
++--------+      +-------+      +----------+
+| Sender |----->| Mixer |----->| Receiver |
++--------+      +-------+-+    +----------+
+"captures"     "averages" |      "plays"
+                          |       Host D
+                          |    +----------+
+                          +---->| Receiver |
+                               +----------+
+                                 "plays"  
+```
+
+### Use
+
+```
+to describe
+```
+
+## 4. Half-duplex many-to-many (multisource radio/TV mode)
+
+```
+  Host A          Host B          Host C
++--------+      +-------+      +----------+
+| Sender |----->| Mixer |----->| Receiver |
++--------+  +-->+-------+-+    +----------+
+"captures"  |  "averages" |      "plays"
+  Host E    |             |       Host D
++--------+  |             |    +----------+
+| Sender |--+             +---->| Receiver |
++--------+                     +----------+
+"captures"                       "plays"  
+```
+### Use
+
+```
+to describe
+```
+
+## 5. Full-duplex many-to-many (conference mode):
+
+```
+to be drawn
+```
+
+### Use
+
+```
+to describe
+```
