@@ -54,7 +54,7 @@ host B> python3 receiver.py
 ### Use
 
 ```
-to describe
+to be described
 ```
 
 ## 3. Half-duplex one-to-many (radio/TV mode)
@@ -75,7 +75,7 @@ to describe
 ### Use
 
 ```
-to describe
+to be described
 ```
 
 ## 4. Half-duplex many-to-many (multisource radio/TV mode)
@@ -95,7 +95,7 @@ to describe
 ### Use
 
 ```
-to describe
+to be described
 ```
 
 ## 5. Full-duplex many-to-many (conference mode):
@@ -107,5 +107,5 @@ to be drawn
 ### Use
 
 ```
-to describe
+to be describe
 ```
