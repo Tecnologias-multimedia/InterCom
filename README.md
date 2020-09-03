@@ -1,14 +1,33 @@
 # Welcome to the RTIC Project
 
-RTIC (Real Time InterCom) is a low-latency full-duplex intercommunicator designed for the transmission of audio (and in the future, video) between networked users.
+RTIC (Real Time InterCom) is a low-latency full-duplex intercommunicator designed for the transmission of audio (and in the future, video) between networked users. RTIC runs two parallel tasks:
+
+1. The **Sender**, which captures, process and send the media (audio and vídeo) to an Internet end-point.
+2. The **Receiver**, that receives the media, de-process and plays it.
+
+The local Receiver share with the local Sender the amount of data that the remote Receiver task has received from the local sender. A picture helps:
+
+```
+   Host A            Host B
++----------+      +----------+
+|  Sender  |----->| Receiver |
+|----------|      |----------|
+| Receiver |<----+|  Sender  |
++----------+      +----------+
+instance of        instance of
+    RTic               RToc
+```
+
 
 # (Current and Future) modules
 
 RTIC consist of three modules:
 
-1. The **Sender**, which captures, process and send the media (audio y vídeo) to an Internet end-point.
-2. The **Receiver**, that receives the media, process and plays it.
+1. The **Sender**, which captures, process and send the media (audio and vídeo) to an Internet end-point.
+2. The **Receiver**, that receives the media, de-process and plays it.
 3. The **Mixer**, that receives a collection of streams, mix them, and sends the mixed media to a collection of end-points.
+
+Sender receives from the (local) Receiver
 
 # Configurations
 
