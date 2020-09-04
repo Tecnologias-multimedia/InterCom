@@ -1,9 +1,21 @@
-# Welcome to the RTIC Project
+# Welcome!
 
-RTIC (Real Time InterCom) is a low-latency full-duplex intercommunicator designed for the transmission of audio (and in the future, video) between networked users. RTIC runs two parallel tasks:
+InterCom is a low-latency full-duplex intercom(municator) designed for the transmission of media (audio and video) between networked users. 
 
-1. The **Sender**, which captures, process and send the media (audio and vídeo) to an Internet end-point.
-2. The **Receiver**, that receives the media, de-process and plays it.
+## Implementation
+
+InterCom is written in Python and uses [`python-soundevice`](https://python-sounddevice.readthedocs.io/) package. InterCom runs two parallel tasks:
+
+1. **CES (Capture Encode and Send)**, which samples, process and sends the media towards an Internet end-point.
+2. **RDP (Receive Decode and Play)**, that receives the media, decodes and plays it.
+
+The **C_task (Capture (sub)task)** is a blocking operation, that waits for getting a chunk of audio
+
+, **S (Send)**, **R (Receive)** and **P (Play)** (sub)tasks are IO-bound operations. The **E (Encode)** and **D (Decode)** (sub)tasks are CPU-bound.
+
+CES
+
+InterCom performs data-flow control
 
 The local Receiver share with the local Sender the amount of data that the remote Receiver task has received from the local sender. A picture helps:
 
