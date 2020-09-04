@@ -1,5 +1,7 @@
 import argparse
 import logging
+import threading
+import sounddevice as sd
 
 def int_or_str(text):
     """Helper function for argument parsing."""
@@ -21,25 +23,16 @@ parser.add_argument('-b', '--blocksize', type=int, help='block size')
 parser.add_argument('-l', '--latency', type=float, help='latency in seconds')
 args = parser.parse_args()
 
-try:
-    import sounddevice as sd
-    import numpy  # Make sure NumPy is loaded before it is used in the callback
-    assert numpy  # avoid "imported but unused" message (W0611)
+sd.default.samplerate = samplerate=args.samplerate
+sd.default.channels = args.channels
 
-    def callback(indata, outdata, frames, time, status):
-        if status:
-            print(status)
-        outdata[:] = indata
+def play(buf):
+    sd.play(buf)
 
-    with sd.Stream(device=(args.input_device, args.output_device),
-                   samplerate=args.samplerate, blocksize=args.blocksize,
-                   dtype=args.dtype, latency=args.latency,
-                   channels=args.channels, callback=callback):
-        print('#' * 80)
-        print('press Return to quit')
-        print('#' * 80)
-        input()
-except KeyboardInterrupt:
-    parser.exit('\nInterrupted by user')
-except Exception as e:
-    parser.exit(type(e).__name__ + ': ' + str(e))
+def record():
+    buf = sd.rec(blocksize=args.blocksize)
+    return buf
+
+for i in range(1000):
+    chunk = sd.Stream.read(sd, frames=1024)
+    sd.Stream.write(chunk)
