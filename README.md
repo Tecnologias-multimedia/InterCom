@@ -32,7 +32,7 @@ CES (Steps 1, 2 and 3) and RDP (Steps 4, 5, and 6) are run in two different proc
 |   RDP   |<-----|   CES   |
 +---------+      +---------+
 ```
-Each user runs a instance of InterCom.
+Each host runs a instance of InterCom.
 
 ### 2. Many-to-many intercommunication
 
@@ -61,4 +61,4 @@ Each user runs a instance of InterCom.
             +---------+
                Host C          
 ```
-Each user runs two instances of InterCom.
+Each host runs two instances of InterCom.
