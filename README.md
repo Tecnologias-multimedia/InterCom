@@ -20,7 +20,7 @@ The Steps 2 and 4 are CPU bound (the rest are IO bound). For this reason, Interc
 
 CES (Steps 1, 2 and 3) and RDP (Steps 4, 5, and 6) are run in two different processes, which share information about the data-flow control that CES must perform. A further multiprocessing decomposition could be performed in E (Encode) and D (Decode) steps.
 
-## Configturations
+## Configurations
 
 ### 1. One-to-one intercommunication
 
