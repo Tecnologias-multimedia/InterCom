@@ -1,3 +1,5 @@
+# The same as wire3.py, but using NumPy arrays.
+
 import sounddevice as sd
 import numpy as np
 

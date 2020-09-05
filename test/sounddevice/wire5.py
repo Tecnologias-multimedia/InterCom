@@ -1,3 +1,5 @@
+# Introducing CPU load in the pipeline. Result, latency and lost of chunks.
+
 import sounddevice as sd
 import numpy as np
 
