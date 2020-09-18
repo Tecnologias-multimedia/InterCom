@@ -1,17 +1,12 @@
-# Introducing CPU load in the pipeline. Result, latency and lost of chunks.
+# The same as wire3.py, but using NumPy arrays.
 
 import sounddevice as sd
 import numpy as np
 
-CHUNK_SIZE = 1024
-
 stream = sd.Stream(samplerate=44100, channels=2, dtype='int16')
 stream.start()
 while True:
-    chunk, overflowed = stream.read(CHUNK_SIZE)
+    chunk, overflowed = stream.read(stream.read_available)
     if overflowed:
         print("Overflow")
-    x = 0
-    for i in range(1000000):
-        x += 1
     stream.write(chunk)

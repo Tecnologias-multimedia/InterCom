@@ -1,14 +1,12 @@
-# The same as wire3.py, but using NumPy arrays.
+# Basic wire using blocking I/O. Python buffers are used.
 
 import sounddevice as sd
-import numpy as np
 
-CHUNK_SIZE = 1024
-
-stream = sd.Stream(samplerate=44100, channels=2, dtype='int16')
+stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
 stream.start()
+
 while True:
-    chunk, overflowed = stream.read(CHUNK_SIZE)
+    chunk, overflowed = stream.read(stream.read_available)
     if overflowed:
         print("Overflow")
     stream.write(chunk)

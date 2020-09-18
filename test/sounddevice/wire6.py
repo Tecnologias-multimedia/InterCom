@@ -1,25 +1,15 @@
-# Moving the computation to a process: result, a core loadad, but the
-# other process working without any special issue.
+# Introducing CPU load in the pipeline. Result, latency and lost of chunks.
 
-import multiprocessing
 import sounddevice as sd
 import numpy as np
-
-def computation():
-    while True:
-        x = 0
-        for i in range(1000000):
-            x += 1
-
-p = multiprocessing.Process(target=computation)
-p.start()
-
-CHUNK_SIZE = 1024
 
 stream = sd.Stream(samplerate=44100, channels=2, dtype='int16')
 stream.start()
 while True:
-    chunk, overflowed = stream.read(CHUNK_SIZE)
+    chunk, overflowed = stream.read(stream.read_available)
     if overflowed:
         print("Overflow")
+    x = 0
+    for i in range(1000000):
+        x += 1
     stream.write(chunk)
