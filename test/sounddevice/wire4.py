@@ -1,4 +1,4 @@
-# Basic wire using blocking I/O. Python buffers are used.
+# Basic ADC/DAC-wiring using non-blocking I/O. Python buffers are used.
 
 import sounddevice as sd
 
