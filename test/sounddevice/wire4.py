@@ -9,7 +9,6 @@ stream = sd.Stream(samplerate=44100, channels=2, dtype='int16')
 stream.start()
 while True:
     chunk, overflowed = stream.read(CHUNK_SIZE)
-    print(len(chunk), end=' ', flush=True)
     if overflowed:
         print("Overflow")
     stream.write(chunk)
