@@ -38,7 +38,7 @@ parser.add_argument(
     '-n', '--downsample', type=int, default=10, metavar='N',
     help='display every Nth sample (default: %(default)s)')
 parser.add_argument(
-    'channels', type=int, default=[1], nargs='*', metavar='CHANNEL',
+    'channels', type=int, default=[1,2], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
 args = parser.parse_args()
 if any(c < 1 for c in args.channels):
@@ -49,7 +49,6 @@ q = queue.Queue()
 
 def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
-    sys.stderr.write(f"{len(indata)} "); sys.stderr.flush()
     if status:
         print(status, file=sys.stderr)
     # Fancy indexing with mapping creates a (necessary!) copy:
@@ -73,9 +72,9 @@ def update_plot(frame):
         plotdata = np.roll(plotdata, -shift, axis=0)
         plotdata[-shift:, :] = data
     for column, line in enumerate(lines):
+        #line.set_ydata(plotdata[:, column]/(column+1))
         line.set_ydata(plotdata[:, column])
     return lines
-
 
 try:
     from matplotlib.animation import FuncAnimation
