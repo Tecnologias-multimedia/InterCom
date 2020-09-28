@@ -4,7 +4,7 @@ Inter Com is a low-latency full-duplex intercom(municator) designed for the tran
 
 ## Implementation
 
-InterCom is written in Python and uses the [`python-soundevice`](https://python-sounddevice.readthedocs.io/) package. InterCom implements the following steps:
+Inter Com is written in Python and uses the [`python-soundevice`](https://python-sounddevice.readthedocs.io/) package. InterCom implements the following steps:
 
 1. Read raw data from the audio [ADC](https://en.wikipedia.org/wiki/Analog-to-digital_converter).
 2. Encode the raw data.
