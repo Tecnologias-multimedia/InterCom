@@ -29,9 +29,9 @@ parser.add_argument(
     '-i', '--interval', type=float, default=30,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, default=512, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=1024, help='block size (in samples)')
 parser.add_argument(
-    '-r', '--samplerate', type=float, help='sampling rate of audio device')
+    '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
     '-n', '--downsample', type=int, default=1, metavar='N',
     help='display every Nth sample (default: %(default)s)')
@@ -55,6 +55,7 @@ def audio_callback(indata, frames, time, status):
     coeffs = pywt.wavedec(flat, "db5", mode='per')
     coeffs_, slices = pywt.coeffs_to_array(coeffs)
     coeffs_ = coeffs_[:l].reshape((l,1))
+    coeffs_ = 20*np.log10(coeffs_+1)
     #coeffs_ = coeffs_.flatten()[:shift]
     #print(type(indata), type(coeffs_))
     #print(indata[10][0], coeffs_[10], mapping)
@@ -101,8 +102,8 @@ try:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = device_info['default_samplerate']
 
-    length = int(args.window * args.samplerate / (1000 * args.downsample))
-    plotdata = np.zeros((length, len(args.channels)))
+    #length = int(args.window * args.samplerate / (1000 * args.downsample))
+    plotdata = np.zeros((args.blocksize, len(args.channels)))
 
     fig, ax = plt.subplots()
     lines = ax.plot(plotdata)
@@ -117,7 +118,7 @@ try:
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
-        device=args.device, channels=max(args.channels),
+        device=args.device, channels=max(args.channels), blocksize=args.blocksize,
         samplerate=args.samplerate, callback=audio_callback)
     ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
     with stream:
