@@ -15,11 +15,11 @@ number_of_samples = 512
 levels = 4
 
 # Wavelet used
-#wavelet = 'haar'
+wavelet = 'haar'
 #wavelet = 'bior1.3'
 #wavelet = 'bior1.5'
 #wavelet = 'bior3.3'
-wavelet = 'bior3.5'
+#wavelet = 'bior3.5'
 #wavelet = 'rbio1.3'
 #wavelet = 'rbio3.5'
 #wavelet = "db5"
