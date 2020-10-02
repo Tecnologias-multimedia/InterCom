@@ -119,12 +119,12 @@ try:
     lines = ax.plot(plotdata)
     if len(args.channels) > 1:
         ax.legend(['channel {}'.format(c) for c in args.channels],
-                  loc='lower left', ncol=len(args.channels))
+                  loc='upper right', ncol=len(args.channels))
     ax.axis((0, len(plotdata), 0, 1))
     ax.set_yticks([0])
     ax.yaxis.grid(True)
     ax.tick_params(bottom=False, top=False, labelbottom=False,
-                   right=False, left=False, labelleft=False)
+                   right=False, left=False)
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
