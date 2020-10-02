@@ -43,6 +43,8 @@ def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     if status:
         print(status, file=sys.stderr)
+    indata[:, 0] *= hamming
+    indata[:, 1] *= hamming
     coeffs = []
     for c in range(len(args.channels)):
         coeffs.append(np.fft.rfft(indata[:, c]))
@@ -101,8 +103,10 @@ try:
     import matplotlib.pyplot as plt
     import numpy as np
     import sounddevice as sd
-    import pywt
+    import spectrum
 
+    hamming = spectrum.window.Window(args.blocksize, "hamming").data
+    
     if args.list_devices:
         print(sd.query_devices())
         parser.exit(0)
