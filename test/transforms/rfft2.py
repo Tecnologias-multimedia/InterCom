@@ -26,7 +26,7 @@ parser.add_argument(
     '-i', '--interval', type=float, default=0,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, default=512, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=1024, help='block size (in samples)')
 parser.add_argument(
     '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
@@ -44,12 +44,16 @@ def audio_callback(indata, frames, time, status):
     if status:
         print(status, file=sys.stderr)
     coeffs = []
-    for c in range(len(args.channels)):
+    for c in range(2):
         coeffs.append(np.fft.rfft(indata[:, c]))
     spectrum = []
-    for c in range(len(args.channels)):
+    for c in range(2):
         spectrum.append(np.sqrt(coeffs[c].real*coeffs[c].real + coeffs[c].imag*coeffs[c].imag))
-    spectrum = np.array(spectrum).reshape(args.blocksize+1, len(args.channels))
+    #spectrum.append(np.sqrt(coeffs[0].real*coeffs[0].real + coeffs[0].imag*coeffs[0].imag))
+    #spectrum.append(2*np.sqrt(coeffs[1].real*coeffs[1].real + coeffs[1].imag*coeffs[1].imag))
+    #spectrum = np.array(spectrum).reshape(args.blocksize+1, len(args.channels))
+    #spectrum = np.array(spectrum).reshape(args.blocksize+1, 2)
+    spectrum_ = np.stack([spectrum[0], spectrum[1]])
     #print(coeffs.shape)
     #spectrum = abs(coeffs)
     #coeffs_, slices = pywt.coeffs_to_array(coeffs)
@@ -63,7 +67,7 @@ def audio_callback(indata, frames, time, status):
 
     # Fancy indexing with mapping creates a (necessary!) copy:
     #q.put(indata[::args.downsample, mapping])
-    q.put(spectrum)
+    q.put(spectrum_)
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -78,9 +82,16 @@ def update_plot(frame):
             data = q.get_nowait()
         except queue.Empty:
             break
-        shift = len(data)
+        shift = len(data[0])
         #plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata = data.reshape((shift, len(args.channels)))
+        #plotdata = data.reshape((shift, len(args.channels)))
+        #plotdata = data.reshape((shift, 2))
+        #print("--------->", data.shape)
+        #plotdata = data.reshape((len(args.channels), shift))
+        plotdata = np.empty((shift*len(args.channels), ))
+        plotdata[0::2] = data[0, :]
+        plotdata[1::2] = data[1, :]
+        plotdata = plotdata.reshape((shift, len(args.channels)))
     for column, line in enumerate(lines):
         line.set_ydata(plotdata[:, column])
     return lines
@@ -98,10 +109,11 @@ try:
     if args.samplerate is None:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = device_info['default_samplerate']
-
+        
     #length = int(args.window * args.samplerate / (1000 * args.downsample))
-    length = 1024
-    plotdata = np.zeros((length//2+1, len(args.channels)))
+    #length = 1024
+    #plotdata = np.zeros((length//2+1, len(args.channels)))
+    plotdata = np.zeros((args.blocksize//2+1, len(args.channels)))
 
     fig, ax = plt.subplots()
     lines = ax.plot(plotdata)
@@ -116,7 +128,7 @@ try:
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
-        device=args.device, channels=max(args.channels), blocksize=length,
+        device=args.device, channels=max(args.channels), blocksize=args.blocksize,
         samplerate=args.samplerate, callback=audio_callback)
     ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
     with stream:
