@@ -23,18 +23,12 @@ parser.add_argument(
     '-d', '--device', type=int_or_str,
     help='input device (numeric ID or substring)')
 parser.add_argument(
-    '-w', '--window', type=float, default=512/44100*1000, metavar='DURATION',
-    help='visible time slot (default: %(default)s ms)')
-parser.add_argument(
-    '-i', '--interval', type=float, default=30,
+    '-i', '--interval', type=float, default=0,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
     '-b', '--blocksize', type=int, default=1024, help='block size (in samples)')
 parser.add_argument(
     '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
-parser.add_argument(
-    '-n', '--downsample', type=int, default=1, metavar='N',
-    help='display every Nth sample (default: %(default)s)')
 parser.add_argument(
     'channels', type=int, default=[1], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
@@ -43,7 +37,6 @@ if any(c < 1 for c in args.channels):
     parser.error('argument CHANNEL: must be >= 1')
 mapping = [c - 1 for c in args.channels]  # Channel numbers start with 1
 q = queue.Queue()
-
 
 def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
@@ -56,17 +49,7 @@ def audio_callback(indata, frames, time, status):
     coeffs_, slices = pywt.coeffs_to_array(coeffs)
     coeffs_ = coeffs_[:l].reshape((l,1))
     coeffs_ = 20*np.log10(coeffs_+1)
-    #coeffs_ = coeffs_.flatten()[:shift]
-    #print(type(indata), type(coeffs_))
-    #print(indata[10][0], coeffs_[10], mapping)
-    #print(indata[::args.downsample, mapping].shape)
-    #plotdata[-shift:, :] = coeffs_[0]
-    #print(plotdata[-shift:, :])
-
-    # Fancy indexing with mapping creates a (necessary!) copy:
-    #q.put(indata[::args.downsample, mapping])
-    q.put(coeffs_[::args.downsample, mapping])
-
+    q.put(coeffs_)
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -102,7 +85,6 @@ try:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = device_info['default_samplerate']
 
-    #length = int(args.window * args.samplerate / (1000 * args.downsample))
     plotdata = np.zeros((args.blocksize, len(args.channels)))
 
     fig, ax = plt.subplots()

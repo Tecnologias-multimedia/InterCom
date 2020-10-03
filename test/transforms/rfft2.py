@@ -49,24 +49,7 @@ def audio_callback(indata, frames, time, status):
     spectrum = []
     for c in range(len(args.channels)):
         spectrum.append(20*np.log10(np.sqrt(coeffs[c].real*coeffs[c].real + coeffs[c].imag*coeffs[c].imag) / args.blocksize + 1)*10)
-    #spectrum.append(np.sqrt(coeffs[0].real*coeffs[0].real + coeffs[0].imag*coeffs[0].imag))
-    #spectrum.append(2*np.sqrt(coeffs[1].real*coeffs[1].real + coeffs[1].imag*coeffs[1].imag))
-    #spectrum = np.array(spectrum).reshape(args.blocksize+1, len(args.channels))
-    #spectrum = np.array(spectrum).reshape(args.blocksize+1, 2)
-    spectrum_ = np.stack([spectrum[0], spectrum[1]])
-    #print(coeffs.shape)
-    #spectrum = abs(coeffs)
-    #coeffs_, slices = pywt.coeffs_to_array(coeffs)
-    #coeffs_ = coeffs[:l].reshape((l,1))
-    #coeffs_ = coeffs_.flatten()[:shift]
-    #print(type(indata), type(coeffs_))
-    #print(indata[10][0], coeffs_[10], mapping)
-    #print(indata[::args.downsample, mapping].shape)
-    #plotdata[-shift:, :] = coeffs_[0]
-    #print(plotdata[-shift:, :])
-
-    # Fancy indexing with mapping creates a (necessary!) copy:
-    #q.put(indata[::args.downsample, mapping])
+    spectrum_ = np.stack(spectrum)
     q.put(spectrum_)
 
 def update_plot(frame):
