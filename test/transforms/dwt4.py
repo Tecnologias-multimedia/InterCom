@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sounddevice as sd
 import pywt
+import math
 
 def int_or_str(text):
     """Helper function for argument parsing."""
@@ -45,7 +46,7 @@ q = queue.Queue()
 
 kernel = "db5"
 wavelet = pywt.Wavelet(kernel)
-levels = 4
+levels = 5
 overlaped_area_size = wavelet.dec_len * levels
 print("overlaped_area_size =", overlaped_area_size)
 overlaped_area = np.zeros((overlaped_area_size, len(args.channels)), dtype=np.int16)
@@ -58,13 +59,19 @@ def audio_callback(indata, frames, time, status):
     coeffs = [None]*len(args.channels)
     for c in range(len(args.channels)):
         coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=wavelet, level=levels, mode="per")
-        oas = overlaped_area_size
+        oas = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
+        #oas = overlaped_area_size
+        bs = args.blocksize
         for i in range(len(coeffs_)-1, 0, -1):
-            oas >>= 1
+            oas = int(math.floor(oas/2))
             coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])-oas]
-            #print(oas, len(coeffs_[i])-oas)
+            #coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])]
+            #coeffs_[i] = coeffs_[i][oas:bs+
+            print(i, len(coeffs_[i]))
         coeffs_[0] = coeffs_[0][oas:len(coeffs_[0])-oas]
+        print(0, len(coeffs_[0]))
         coeffs[c], slices = pywt.coeffs_to_array(coeffs_)
+        print(slices)
         #print(coeffs[c].shape)
         #coeffs[c] = 20*np.log10(coeffs[c]+1)
     both_channels = np.stack(coeffs)
