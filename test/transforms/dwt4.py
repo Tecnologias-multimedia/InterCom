@@ -43,55 +43,33 @@ if any(c < 1 for c in args.channels):
 mapping = [c - 1 for c in args.channels]  # Channel numbers start with 1
 q = queue.Queue()
 
-_0_chunk = np.zeros(
-    (args.blocksize, len(args.channels)), dtype=np.int16)
-_1_chunk = np.zeros(
-    (args.blocksize, len(args.channels)), dtype=np.int16)
-_2__chunk = np.zeros(
-    (args.blocksize, len(args.channels)), dtype=np.int16)
-
 kernel = "db5"
 wavelet = pywt.Wavelet(kernel)
-levels = 1
-number_of_overlaped_samples = wavelet.dec_len * levels
+levels = 4
+overlaped_area_size = wavelet.dec_len * levels
+print("overlaped_area_size =", overlaped_area_size)
+overlaped_area = np.zeros((overlaped_area_size, len(args.channels)), dtype=np.int16)
+frames_per_chunk = args.blocksize + overlaped_area_size
+print("frames_per_chunk =", frames_per_chunk)
 
 def audio_callback(indata, frames, time, status):
-    """This is called (from a separate thread) for each audio block."""
-    global _0_chunk
-    global _1_chunk
-    global _2_chunk
-
-    #  _0_chunk      _1_chunk      _2_chunk
-    # +-------------+-------------+-----------+
-    # | indata[t-1] | indata[t-1] | indata[t] |
-    # +-------------+-------------+-----------+
-    _0_chunk = _1_chunk
-    _1_chunk = _2_chunk
-    _2_chunk = indata
-
-    # extended_chunk:
-    # +----+--------+----+
-    # : c0 |   c1   | c2 :
-    # +----+--------+----+
-    extended_chunk = np.concatenate(
-        (_0_chunk[args.blocksize-number_of_overlaped_samples:],
-         _1_chunk,
-         _2_chunk[:number_of_overlaped_samples]), axis=0)
-    print(number_of_overlaped_samples, extended_chunk.shape)
+    global overlaped_area
+    extended_chunk = np.concatenate((overlaped_area, indata), axis=0)
     coeffs = [None]*len(args.channels)
     for c in range(len(args.channels)):
-        coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=kernel, level=levels, mode="per")
-        nos = number_of_overlaped_samples
+        coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=wavelet, level=levels, mode="per")
+        oas = overlaped_area_size
         for i in range(len(coeffs_)-1, 0, -1):
-            nos >>= 1
-            coeffs_[i] = coeffs_[i][nos:len(coeffs_[i])-nos]
-            print(nos, len(coeffs_[i])-nos)
-        coeffs_[0] = coeffs_[0][nos:len(coeffs_[0])-nos]
+            oas >>= 1
+            coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])-oas]
+            #print(oas, len(coeffs_[i])-oas)
+        coeffs_[0] = coeffs_[0][oas:len(coeffs_[0])-oas]
         coeffs[c], slices = pywt.coeffs_to_array(coeffs_)
         #print(coeffs[c].shape)
         #coeffs[c] = 20*np.log10(coeffs[c]+1)
     both_channels = np.stack(coeffs)
     q.put(both_channels)
+    overlaped_area = indata[ args.blocksize : args.blocksize + overlaped_area_size ]
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -139,11 +117,11 @@ try:
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
-        device=args.device, channels=max(args.channels), blocksize=args.blocksize,
+        device=args.device, channels=max(args.channels), blocksize=frames_per_chunk,
         samplerate=args.samplerate, callback=audio_callback)
-    #ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
+    ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
     with stream:
-        #plt.show()
-        input()
+        plt.show()
+        #input()
 except Exception as e:
     parser.exit(type(e).__name__ + ': ' + str(e))
