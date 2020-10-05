@@ -48,6 +48,7 @@ kernel = "db5"
 wavelet = pywt.Wavelet(kernel)
 levels = 5
 overlaped_area_size = wavelet.dec_len * levels
+overlaped_area_size = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
 print("overlaped_area_size =", overlaped_area_size)
 overlaped_area = np.zeros((overlaped_area_size, len(args.channels)), dtype=np.int16)
 frames_per_chunk = args.blocksize + overlaped_area_size
@@ -58,22 +59,27 @@ def audio_callback(indata, frames, time, status):
     extended_chunk = np.concatenate((overlaped_area, indata), axis=0)
     coeffs = [None]*len(args.channels)
     for c in range(len(args.channels)):
+        #print(extended_chunk.shape)
         coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=wavelet, level=levels, mode="per")
-        oas = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
-        #oas = overlaped_area_size
+        #_, slices = pywt.coeffs_to_array(coeffs_)
+        #print(slices)
+        #oas = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
+        oas = overlaped_area_size
         bs = args.blocksize
         for i in range(len(coeffs_)-1, 0, -1):
-            oas = int(math.floor(oas/2))
+            #oas = int(math.floor(oas/2))
+            oas >>= 1
+            #oas = (oas + 1) // 2
+            #print("oas =", oas)
             coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])-oas]
             #coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])]
             #coeffs_[i] = coeffs_[i][oas:bs+
-            print(i, len(coeffs_[i]))
+            #print(i, len(coeffs_[i]))
         coeffs_[0] = coeffs_[0][oas:len(coeffs_[0])-oas]
-        print(0, len(coeffs_[0]))
+        #print(0, len(coeffs_[0]))
         coeffs[c], slices = pywt.coeffs_to_array(coeffs_)
-        print(slices)
         #print(coeffs[c].shape)
-        #coeffs[c] = 20*np.log10(coeffs[c]+1)
+        #coeffs[c] = 1*np.log10(coeffs[c])
     both_channels = np.stack(coeffs)
     q.put(both_channels)
     overlaped_area = indata[ args.blocksize : args.blocksize + overlaped_area_size ]
