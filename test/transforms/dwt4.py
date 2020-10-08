@@ -67,7 +67,7 @@ def audio_callback(indata, frames, time, status):
     for c in range(len(args.channels)):
         coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=wavelet, level=args.levels, mode="per")
         oas = overlaped_area_size
-        bs = args.blocksize
+        #bs = args.blocksize
         for i in range(len(coeffs_)-1, 0, -1):
             #oas = int(math.floor(oas/2))
             oas >>= 1
