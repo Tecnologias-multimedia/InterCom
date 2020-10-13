@@ -22,6 +22,8 @@ except ModuleNotFoundError:
 # https://docs.python.org/3/library/socket.html
 import socket
 
+from multiprocessing import Process
+
 class Intercom_minimal:
     
     # Default audio configuration. See:
@@ -135,8 +137,8 @@ class Intercom_minimal:
                        channels=self.number_of_channels,
                        callback=self.play):
             print("Intercom_minimal: press <CTRL> + <c> to quit")
-            p = Process(target=self.forever)
-            p.start()
+            #p = Process(target=self.forever)
+            #p.start()
             
     # Define the command-line arguments.
     def add_args(self):
@@ -162,6 +164,12 @@ class Intercom_minimal:
                             type=str, default=Intercom_minimal.DESTINATION_ADDRESS)
         return parser
     
+    
+    #def forever(self):
+     #   while True:
+      #      data = self.receive()
+       #     slee
+    
     def record(self, chunk_size):
         stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
         stream.start()
@@ -172,25 +180,31 @@ class Intercom_minimal:
         return chunk
 
     def send(self, data):
-            self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
+        self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
 
     def receive(self):
-            # [Receive an UDP
-            # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom).
-            # "data" is a new object for each recvfrom() call, containing
-            # the payload of the packet. Notice that "data" is a [bytes
-            # object](https://docs.python.org/3/library/stdtypes.html#bytes),
-            # without any particular structure (it is simply an
-            # [inmutable](https://medium.com/@meghamohan/mutable-and-immutable-side-of-python-c2145cf72747)
-            # array of bytes). The sender is ignored.
-            data, sender = self.receiving_sock.recvfrom(self.MAX_PAYLOAD_BYTES)
-            return data
+        # [Receive an UDP
+        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom).
+        # "data" is a new object for each recvfrom() call, containing
+        # the payload of the packet. Notice that "data" is a [bytes
+        # object](https://docs.python.org/3/library/stdtypes.html#bytes),
+        # without any particular structure (it is simply an
+        # [inmutable](https://medium.com/@meghamohan/mutable-and-immutable-side-of-python-c2145cf72747)
+        # array of bytes). The sender is ignored.
+        data, sender = self.receiving_sock.recvfrom(self.MAX_PAYLOAD_BYTES)
+        return data
         
     #def unpack
         
     def play(self, chunk, outdata, frames, time, status):
+        self.send(chunk)
+        
+        chunk = self.receive()
+        # Gives NumPy structure to the chunk.
+        chunk = np.frombuffer(chunk, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
+        
         outdata[:] = chunk
-           
+        
 if __name__ == "__main__":
     intercom = Intercom_minimal()
     parser = intercom.add_args()
@@ -199,4 +213,5 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        print("\nIntercom_minimal: goodbye 
+        print("\nIntercom_minimal: goodbye ")
+
