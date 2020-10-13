@@ -161,15 +161,15 @@ class Intercom_minimal:
                             help="Interlocutor's IP address or name.",
                             type=str, default=Intercom_minimal.DESTINATION_ADDRESS)
         return parser
+    
     def record(self, chunk_size):
         stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
         stream.start()
-
-        while True:
-            chunk, overflowed = stream.read(chunk_size)
-            if overflowed:
-                print("Overflow")
-            return chunk
+            
+        chunk, overflowed = stream.read(chunk_size)
+        if overflowed:
+            print("Overflow")
+        return chunk
 
     def send(self, data):
             self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
@@ -189,4 +189,14 @@ class Intercom_minimal:
     #def unpack
         
     def play(self, chunk, outdata, frames, time, status):
-        outdata[:] = indata
+        outdata[:] = chunk
+           
+if __name__ == "__main__":
+    intercom = Intercom_minimal()
+    parser = intercom.add_args()
+    args = parser.parse_args()
+    intercom.init(args)
+    try:
+        intercom.run()
+    except KeyboardInterrupt:
+        print("\nIntercom_minimal: goodbye 
