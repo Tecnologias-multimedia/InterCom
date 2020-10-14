@@ -123,22 +123,14 @@ class Intercom_minimal:
 
         print("Intercom_minimal: running ...")
 
-    # The audio driver never stops recording and playing. Therefore,
-    # if the queue were empty, then 0-chunks will be generated
-    # (0-chunks generate silence when they are played). A 0-chunk is
-    # also used to define the structure of the incomming chunks.
-    def generate_zero_chunk(self):
-        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
-
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second,
                        blocksize=self.frames_per_chunk,
                        dtype=np.int16,
                        channels=self.number_of_channels,
-                       callback=self.play):
+                       callback=self.record_send_play):
             print("Intercom_minimal: press <CTRL> + <c> to quit")
-            #p = Process(target=self.forever)
-            #p.start()
+            input()
             
     # Define the command-line arguments.
     def add_args(self):
@@ -164,20 +156,12 @@ class Intercom_minimal:
                             type=str, default=Intercom_minimal.DESTINATION_ADDRESS)
         return parser
     
-    
-    #def forever(self):
-     #   while True:
-      #      data = self.receive()
-       #     slee
-    
-    def record(self, chunk_size):
-        stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
-        stream.start()
-            
-        chunk, overflowed = stream.read(chunk_size)
-        if overflowed:
-            print("Overflow")
-        return chunk
+    # The audio driver never stops recording and playing. Therefore,
+    # if the queue were empty, then 0-chunks will be generated
+    # (0-chunks generate silence when they are played). A 0-chunk is
+    # also used to define the structure of the incomming chunks.
+    def generate_zero_chunk(self):
+        return np.zeros((self.frames_per_chunk, self.number_of_channels), self.sample_type)
 
     def send(self, data):
         self.sending_sock.sendto(data, (self.destination_address, self.destination_port))
@@ -196,7 +180,9 @@ class Intercom_minimal:
         
     #def unpack
         
-    def play(self, chunk, outdata, frames, time, status):
+    def record_send_play(self, chunk, outdata, frames, time, status):
+        # The chunk arg works as record
+        # send
         self.send(chunk)
         
         chunk = self.receive()
@@ -214,4 +200,3 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         print("\nIntercom_minimal: goodbye ")
-
