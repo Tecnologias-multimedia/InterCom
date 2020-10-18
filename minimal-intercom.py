@@ -1,10 +1,27 @@
+#
 # Minimal Intercom
+#
+# A very simple inercomunicator based in Intercom_minimal.py and wire.py
+# programs that sends chunk audio in blocks between two (or one) networked
+# processes, based in peer to peer p2p architecture. Both parts are sender
+# and receiver simultaneously
+#
+# The callback method based system (with numpy arrays) will be used to
+# record and play audio. In order to control lantency issues, fixed chunks
+# will be used. The chunks of audio recorder are send using a UDP socket.
+# The receiver will have all chunk received stored in the socket queue instead
+# of using an explicit queue object. It means the callback method has to
+# send the current recorded chunk and withdraw an element of the socket queue.
+# There is no control of the receiver socket queue.
 
+# Package to handle command-line arguments
 import argparse
-import logging
+
+# Package to use socket API for network communication
 import socket
 
-
+# Package that provides bindings for PortAudio library
+# that allows usage of numpy arrays.
 try:
     import sounddevice as sd
 except ModuleNotFoundError:
@@ -12,6 +29,7 @@ except ModuleNotFoundError:
     os.system("pip3 install sounddevice --user")
     import sounddevice as sd
 
+# Package that provides efficient arrays.
 try:
     import numpy as np
 except ModuleNotFoundError:
@@ -20,6 +38,7 @@ except ModuleNotFoundError:
     os.system("pip3 install numpy --user")
     import numpy as np
 
+# Package to process and system monitoring
 try:
     import psutil
 except ModuleNotFoundError:
@@ -27,112 +46,211 @@ except ModuleNotFoundError:
     os.system("pip3 install psutil --user")
     import psutil
 
+# Accumulated CPU usage
+CPU_total = 0
 
+# Number of samples of CPU
+CPU_samples = 0
 
+# MinimalIntercom class
 
 class MinimalIntercom:
+    """
+    Class to wrap Minimal Intercom functionalities and data
 
-    CHANNELS = 2
+    Attributes
+    ----------
 
+    NUMBER_CHANNELS (int) (static): Number of channels by default
+
+    SAMPLE_RATE (int) (static): Sampling frequency. Number of frames per second
+
+    CHUNK_SIZE (int) (static): Size of sampling chunk. A chunk is composed
+    by frames
+
+    SOURCE_PORT (int) (static): Port used to receive data from network
+
+    DESTINATION_PORT (int) (static): Port used to send data to networks
+
+    DESTINATION_ADDRESS (string) (static): IP address of destination computer
+
+    MAX_PAYLOAD_BYTES (int) (static): Maximum size of UDP payload
+
+
+    """
+    # Number of channels by default
+    NUMBER_CHANNELS = 1
+
+    # Sampling frequency. Number of frames per second
     SAMPLE_RATE = 44100
 
-    CHUNK_SIZE = 1024
+    # Size of sampling chunk. A chunk is composed by frames
+    CHUNK_SIZE = 512
 
+    # Port used to receive data from network
     SOURCE_PORT = 7676
 
+    # Port used to send data to networks
     DESTINATION_PORT = 7676
 
-    DESTINATION_IP = "localhost" #"192.168.1.37"
+    # IP address of destination computer
+    DESTINATION_ADDRESS = "localhost" # "192.168.1.37"
 
-    MAX_PAYLOAD_BYTES =  32768
-
-    NUMPY = 1
-
-    # Expected TCP connection for synchronize variables, however
-    # at this moment, variables would be passed in constructor
+    #  Maximum size of UDP payload
+    MAX_PAYLOAD_BYTES = 32768
 
     def __init__(self, args):
-        # self.channels = argument["key"]  if "channels" in arguments else self.channels = CHANNELS
-        self.channels = args.number_of_channels
+        """
+        Class constructor
+
+        The constructor class requires several arguments that must be provided before
+        to get an intercom instance. The constructor also creates the sockets required
+        to send and receive data. In order to acquire the arguments correctly, there
+        is an static method called add_args.
+        """
+
+        # Elemental instance variables initialized by arguments
+        self.number_of_channels = args.number_of_channels
         self.sample_rate = args.frames_per_second
         self.chunk_size = args.frames_per_chunk
         self.source_port = args.source_port
-        self.destination_IP = args.destination_IP
+        self.destination_address = args.destination_address
         self.destination_port = args.destination_port
 
+        # Stream parameters for numpy type
+        self.sample_type = np.int16
 
+        # Generated attributes using elemental instance varaibles
+        self.samples_per_chunk = self.chunk_size * self.number_of_channels
+        self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
 
-        # Endpoints pair decalration
-        self.sender_endpoint = (self.destination_IP, self.destination_port)
+        # Assertion is activated if number of bytes per chunk is less than maximum payload size
+        # This action is used to ensure reliable UDP communication
+        assert self.bytes_per_chunk <= MinimalIntercom.MAX_PAYLOAD_BYTES, \
+        f"bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={MinimalIntercom.MAX_PAYLOAD_BYTES}h"
+
+        # Endpoints pair declaration
+        self.sender_endpoint = (self.destination_address, self.destination_port)
         self.receiver_endpoint = ("0.0.0.0", self.source_port)
 
-        # Socket definition
+        # Socket initialization
         self.sender_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.receiver_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
+        # Set receiver socket in non bloking
+        self.receiver_socket.setblocking(0)
 
         # Bind listener socket
         self.receiver_socket.bind(self.receiver_endpoint)
 
-        # Stream parameters
-
-        if MinimalIntercom.NUMPY == 1:
-            self.data_type = np.int16
-        else:
-            self.data_type = "int16"
+        # Auxiliary chunk filled width zeros
         self.zero_chunk = self.generate_zero_chunk()
-        # Print parameters
-        self.data=self.generate_zero_chunk()
 
+        # Data received via socket. Initialized with zero values
+        self.data = self.generate_zero_chunk()
+
+    # Destructor of class
     def __del__(self):
+        """ Destructor of class. Just closes socket before to destroy it """
         self.receiver_socket.close()
 
+    def to_print(self):
+        """To print instance variables"""
+
+        print(f"Minimal intercom: number_of_channels={self.number_of_channels}")
+        print(f"Minimal intercom: sample rate={self.sample_rate}")
+        print(f"Minimal intercom: chunk_size={self.chunk_size}")
+        print(f"Minimal intercom: samples_per_chunk={self.samples_per_chunk}")
+        print(f"Minimal intercom: source port={self.source_port}")
+        print(f"Minimal intercom: destination_address={self.destination_address}")
+        print(f"Minimal intercom: destination_port={self.destination_port}")
+        print(f"Minimal intercom: bytes_per_chunk={self.bytes_per_chunk}")
+
+    # Zero chunk generator
     def generate_zero_chunk(self):
-        return np.zeros((self.chunk_size, self.channels), self.data_type)
+        """ Generator of numpy chunk filled with zeros
+
+        Returns
+        ------
+        numpy array filled with zeros
+        """
+        return np.zeros((self.chunk_size, self.number_of_channels), self.sample_type)
 
     def send(self, data):
-        self.sender_socket.sendto(data,  (self.destination_IP, self.destination_port)) #self.sender_endpoint)
+        """ Send data over sender socket
+
+        Parameters
+        _________
+        data
+            Data to send over UDP socket. A numpy array is expected
+        """
+        self.sender_socket.sendto(data, self.sender_endpoint)  #self.sender_endpoint)
 
     def receive(self):
-        data, status = self.receiver_socket.recvfrom(self.MAX_PAYLOAD_BYTES)
+        """Receive data from receiver socket
 
-        if not data:
-            data = self.zero_chunk
-        else:
-            data = np.frombuffer(data, np.int16).reshape(self.chunk_size, self.channels)
-        #if data:
-        #    print("NO DATA")
-        #    data = self.generate_zero_chunk()
-        self.data = data
+        Raises
+        ______
+        Resource temporarily unavailable
+            Socket may be empty. In non-blocking UDP socket an exception
+            of this type is raised.
+        """
 
+        # Data is required from socket. Howvere, socket may have no data, so to hadle
+        # this situation, try-catch block is required
+        try:
+            # Store received data in local variable
+            data, status = self.receiver_socket.recvfrom(self.bytes_per_chunk)
+
+            # Due to data is byte object, conversion to numpy array is required
+            data = np.frombuffer(data, self.sample_type).reshape(self.chunk_size, self.number_of_channels)
+        except Exception as e:
+            print("Exception: ", e)
+            # Id there is no data in socket, get zero filled chunk
+            data = self.generate_zero_chunk()
+
+        # Return data
+        return data
+
+    def feedback(self):
+        global CPU_total
+        global CPU_samples
+        CPU_usage = psutil.cpu_percent()  # User (not intercom) time
+        CPU_total += CPU_usage
+        CPU_samples += 1
+        print(f"{int(CPU_usage)}", flush=True, end=' ')
+
+    # Callback method required from non blocking Sounddevice audio stream
     def callback(self, indata, outdata, frames, time, status):
-        #if status:
-        #    print(status)
+        """Callback method
 
-        #self.receive()
+        In non blocking audio stream, a new thread is created
+        and periodically executes the callback method. Usually
+        the call occurs when new input data (indata) is available to
+        manipulate. Is recommended to manage output stream in the callback
+        method also
 
+        Note: This method has the implementation of the algorithm
+        proposed in milestone 5 in Multimedia Technology subject
+
+        The arguments are imposed to Sounndevice callback signature
+        """
+
+        # Send data via sender socket
         self.send(indata)
+
+        # Receive data via receiver socket
+        self.data = self.receive()
 
         outdata[:] = self.data
 
+        self.feedback()
+
 
     def start(self):
-        if MinimalIntercom.NUMPY == 1:
-            with sd.Stream(samplerate = self.sample_rate, blocksize = self.chunk_size,
-                           dtype = self.data_type, channels = self.channels,
-                           callback = self.callback):
-
-                while True:
-                    self.receive()
-                #   print('#' * 80)
-                #   print('press Return to quit')
-                #   print('#' * 80)
-                #   input()
-
-        else:
-            with sd.RawStream(samplerate = self.sample_rate, blocksize = self.chunk_size,
-                           dtype = self.data_type, channels = self.channels,
-                           callback = self.callback):
-                pass
+        with sd.Stream(samplerate=self.sample_rate, blocksize=self.chunk_size, dtype=self.sample_type,
+                       channels=self.number_of_channels, callback=self.callback):
+            input()
 
     @staticmethod
     def add_args():
@@ -146,64 +264,26 @@ class MinimalIntercom:
                             type=int, default=MinimalIntercom.SAMPLE_RATE)
         parser.add_argument("-c", "--number_of_channels",
                             help="Number of channels.",
-                            type=int, default=MinimalIntercom.CHANNELS)
+                            type=int, default=MinimalIntercom.NUMBER_CHANNELS)
         parser.add_argument("-p", "--source_port",
                             help="My listening port.",
                             type=int, default=MinimalIntercom.SOURCE_PORT)
         parser.add_argument("-i", "--destination_port",
                             help="Interlocutor's listening port.",
                             type=int, default=MinimalIntercom.DESTINATION_PORT)
-        parser.add_argument("-a", "--destination_IP",
+        parser.add_argument("-a", "--destination_address",
                             help="Interlocutor's IP address or name.",
-                            type=str, default=MinimalIntercom.DESTINATION_IP)
+                            type=str, default=MinimalIntercom.DESTINATION_ADDRESS)
         return parser
 
-#Global variable declaration
+# MAIN
 
-
-"""
-class MinimalIntercom2:
-
-    def __init__(self, dest_IP, dest_Port):
-    #Definimos un socket de familia direccion puerto (AF_INET)
-    # y de tipo UDP (SCK_DGRAM)
-        self.UDPsocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
-        self.stream.start()
-
-    # Ligamos el socket
-        self.UDPsocket.bind((dest_IP, dest_Port))
-
-
-
-    def send(self):
-        chunk, overflowed = self.stream.read(1024)
-        self.UDPsocket.sendto(chunk, ("127.0.0.1", 7777))
-
-    def receive(self):
-        chunk,server=self.UDPsocket.recvfrom(7777);
-        self.stream.write(chunk)
-
-
-intercom = MinimalIntercom("127.0.0.1",7777);
-while True:
-    intercom.send()
-    intercom.receive()
-
-#intercom.send(b"Wepale");
-#intercom.receive()
-"""
-
-
-# Empieza el programa
 if __name__ == "__main__":
- # intercom = MinimalIntercom()
     parser_arguments = MinimalIntercom.add_args()
     args = parser_arguments.parse_args()
-    print(args)
+    # print(args)
     intercom = MinimalIntercom(args)
-    intercom.start()
-
+    intercom.to_print()
     try:
         intercom.start()
     except KeyboardInterrupt:
