@@ -22,14 +22,8 @@
 # https://docs.python.org/3/library/argparse.html.
 #
 
-# TODO: control exceptions with timeout --> done
-# TODO: delete queue --> done.
-# TODO: fix args error.
 
 import argparse
-
-#from multiprocessing import Process
-
 import time
 
 # Handle the sound card. See:
@@ -54,9 +48,6 @@ except ModuleNotFoundError:
 # https://docs.python.org/3/library/socket.html
 import socket
 
-# Used for implementing a FIFO queue of chunks of audio. See:
-# https://docs.python.org/3/library/queue.html
-#import queue
 
 # Process and system monitoring. See:
 # https://pypi.org/project/psutil/
@@ -138,8 +129,6 @@ class Intercom_minimal:
 
         self.samples_per_chunk = self.frames_per_chunk * self.number_of_channels
         self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
-     ##   assert self.bytes_per_chunk <= Intercom_minimal.MAX_PAYLOAD_BYTES, \
-       ##   f"bytes_per_chunk={self.bytes_per_chunk} > MAX_PAYLOAD_BYTES={Intercom_minimal.MAX_PAYLOAD_BYTES}"
 
         # Sending and receiving sockets creation and configuration for
         # UDP traffic. See:
@@ -149,8 +138,6 @@ class Intercom_minimal:
         self.listening_endpoint = ("0.0.0.0", self.my_port)
         self.receiving_sock.bind(self.listening_endpoint)
 
-        # A queue to store up to 100 chunks.
-        #self.q = queue.Queue(maxsize=100)
 
         print(f"Intercom_minimal: number_of_channels={self.number_of_channels}")
         print(f"Intercom_minimal: frames_per_second={self.frames_per_second}")
@@ -209,24 +196,12 @@ class Intercom_minimal:
     # recvfrom*() are blocking methods.
     #def receive_and_control(self):
         
-        # Receives a chunk from the network. Chunk is a different
-        # object after each call.
-        #chunk = self.receive()
-
-        # Set a timeout to not wait forever.
-        #try:
-            #chunk = self.receive()
-        #except socket.timeout
-            #chunk = self.zero_chunk()
-        
-        # Gives NumPy structure to the chunk.
-        #chunk = np.frombuffer(chunk, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         
         # Puts the received chunk on the top of the queue. Notice that
         # this is a pointers copy ([shallow
         # copy](https://docs.python.org/3.8/library/copy.html)), not a
         # contents copy (deep copy).
-        #self.q.put(chunk)
+
 
     # Shows CPU usage.
     def feedback(self):
@@ -265,10 +240,7 @@ class Intercom_minimal:
         # Gives NumPy structure to the chunk.
         chunk = np.frombuffer(chunk, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
         
-        #try:
-            #chunk = self.q.get_nowait()
-        #except queue.Empty:
-            #chunk = self.zero_chunk # Shallow copy
+        
 
         # Copy the data of chunk to outdata using slicing. Notice that
         # "outdata = chunk" only would copy pointers to objects (.
@@ -285,8 +257,6 @@ class Intercom_minimal:
                        channels=self.number_of_channels,
                        callback=self.record_send_and_play):
             print("Intercom_minimal: press <CTRL> + <c> to quit")
-            #p = Process(target=record_send_and_play())
-            #p.start()
             while True:
                 time.sleep(1)
                 print(" ")
