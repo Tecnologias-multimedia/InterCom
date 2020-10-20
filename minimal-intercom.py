@@ -58,46 +58,32 @@ class MinimalIntercom:
     """
     Class to wrap Minimal Intercom functionalities and data
 
-    Attributes
-    ----------
-
-    NUMBER_CHANNELS (int) (static): Number of channels by default
-
-    SAMPLE_RATE (int) (static): Sampling frequency. Number of frames per second
-
-    CHUNK_SIZE (int) (static): Size of sampling chunk. A chunk is composed
-    by frames
-
-    SOURCE_PORT (int) (static): Port used to receive data from network
-
-    DESTINATION_PORT (int) (static): Port used to send data to networks
-
-    DESTINATION_ADDRESS (string) (static): IP address of destination computer
-
-    MAX_PAYLOAD_BYTES (int) (static): Maximum size of UDP payload
-
 
     """
-    # Number of channels by default
+
     NUMBER_CHANNELS = 1
+    """(int) (static): Number of channels by default"""
 
-    # Sampling frequency. Number of frames per second
     SAMPLE_RATE = 44100
+    """(int) (static): Sampling frequency. Number of frames per second"""
 
-    # Size of sampling chunk. A chunk is composed by frames
     CHUNK_SIZE = 512
+    """(int) (static): Size of sampling chunk. A chunk is composed
+    by frames"""
 
-    # Port used to receive data from network
+
     SOURCE_PORT = 7676
+    """(int) (static): Port used to receive data from network"""
 
-    # Port used to send data to networks
     DESTINATION_PORT = 7676
+    """(int) (static): Port used to send data to networks"""
 
-    # IP address of destination computer
     DESTINATION_ADDRESS = "localhost" # "192.168.1.37"
+    """(string) (static): IP address of destination computer"""
 
-    #  Maximum size of UDP payload
+
     MAX_PAYLOAD_BYTES = 32768
+    """(int) (static): Maximum size of UDP payload"""
 
     def __init__(self, args):
         """
@@ -110,19 +96,33 @@ class MinimalIntercom:
         """
 
         # Elemental instance variables initialized by arguments
+
         self.number_of_channels = args.number_of_channels
+        """number_of_channels (int): Number of channels"""
+
         self.sample_rate = args.frames_per_second
+        """Sampling frequency. Number of frames per second"""
+
         self.chunk_size = args.frames_per_chunk
+        """Size of sampling chunk."""
+
         self.source_port = args.source_port
+        """Port used to listen incoming data"""
+
         self.destination_address = args.destination_address
+        """IP address used to send data"""
+
         self.destination_port = args.destination_port
+        """Port used to send data"""
 
-        # Stream parameters for numpy type
         self.sample_type = np.int16
+        """Typo of sample. Used for data definition and size calculation"""
 
-        # Generated attributes using elemental instance varaibles
         self.samples_per_chunk = self.chunk_size * self.number_of_channels
+        """Number of audio samples required per chunk."""
+
         self.bytes_per_chunk = self.samples_per_chunk * np.dtype(self.sample_type).itemsize
+        """Size of audio chunk in bytes."""
 
         # Assertion is activated if number of bytes per chunk is less than maximum payload size
         # This action is used to ensure reliable UDP communication
@@ -131,14 +131,22 @@ class MinimalIntercom:
 
         # Endpoints pair declaration
         self.sender_endpoint = (self.destination_address, self.destination_port)
+        """Sender endpoint. Fixed to destination IP address and port"""
+
         self.receiver_endpoint = ("0.0.0.0", self.source_port)
+        """Receiver endpoint. Fixed to any IP address and port used for listening"""
 
         # Socket initialization
         self.sender_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        """Sender socket. Used to send data."""
+
         self.receiver_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        """Receiver socket. Binded to receiver endpoint. By default is set to 
+        non blocking mode"""
 
         # Set receiver socket in non bloking
         self.receiver_socket.setblocking(0)
+        self.receiver_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 30000)
 
         # Bind listener socket
         self.receiver_socket.bind(self.receiver_endpoint)
@@ -148,6 +156,7 @@ class MinimalIntercom:
 
         # Data received via socket. Initialized with zero values
         self.data = self.generate_zero_chunk()
+        """Numpy array to store data received """
 
     # Destructor of class
     def __del__(self):
@@ -155,7 +164,7 @@ class MinimalIntercom:
         self.receiver_socket.close()
 
     def to_print(self):
-        """To print instance variables"""
+        """To print instance main variables. Used to know current instance's status"""
 
         print(f"Minimal intercom: number_of_channels={self.number_of_channels}")
         print(f"Minimal intercom: sample rate={self.sample_rate}")
@@ -172,7 +181,7 @@ class MinimalIntercom:
 
         Returns
         ------
-        numpy array filled with zeros
+            numpy array filled with zeros
         """
         return np.zeros((self.chunk_size, self.number_of_channels), self.sample_type)
 
@@ -180,9 +189,9 @@ class MinimalIntercom:
         """ Send data over sender socket
 
         Parameters
-        _________
-        data
-            Data to send over UDP socket. A numpy array is expected
+        ----------
+            data
+                Data to send over UDP socket. A numpy array is expected
         """
         self.sender_socket.sendto(data, self.sender_endpoint)  #self.sender_endpoint)
 
@@ -190,13 +199,17 @@ class MinimalIntercom:
         """Receive data from receiver socket
 
         Raises
-        ______
-        Resource temporarily unavailable
-            Socket may be empty. In non-blocking UDP socket an exception
-            of this type is raised.
+        ------
+            Errno 11
+                Resource temporarily unavailable. Socket may be empty.
+                In non-blocking UDP socket an exception of this type is raised.
+
+        Returns
+        -------
+            Numpy array of FIFO socket buffer
         """
 
-        # Data is required from socket. Howvere, socket may have no data, so to hadle
+        # Data is required from socket. However, socket may have no data, so to handle
         # this situation, try-catch block is required
         try:
             # Store received data in local variable
@@ -213,6 +226,7 @@ class MinimalIntercom:
         return data
 
     def feedback(self):
+        """Calculates process parameters"""
         global CPU_total
         global CPU_samples
         CPU_usage = psutil.cpu_percent()  # User (not intercom) time
@@ -239,21 +253,27 @@ class MinimalIntercom:
         # Send data via sender socket
         self.send(indata)
 
-        # Receive data via receiver socket
-        self.data = self.receive()
+        # Receive and store data to play
+        outdata[:] = self.receive()
 
-        outdata[:] = self.data
-
+        # Print current process status
         self.feedback()
 
-
     def start(self):
+        """Starts sounddevice audio stream via callbacks method"""
         with sd.Stream(samplerate=self.sample_rate, blocksize=self.chunk_size, dtype=self.sample_type,
                        channels=self.number_of_channels, callback=self.callback):
             input()
 
     @staticmethod
     def add_args():
+        """Allows to parse command line arguments. Default values (class attributes)
+            are used by any parameter not provided
+
+            Returns
+            -------
+                Parser structure with parameters to initialize MinimalIntercom instance
+        """
         parser = argparse.ArgumentParser(description = "Real-Time Audio Intercommunicator",
                                         formatter_class = argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-s", "--frames_per_chunk",
@@ -277,7 +297,6 @@ class MinimalIntercom:
         return parser
 
 # MAIN
-
 if __name__ == "__main__":
     parser_arguments = MinimalIntercom.add_args()
     args = parser_arguments.parse_args()
