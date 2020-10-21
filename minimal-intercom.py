@@ -144,7 +144,7 @@ class MinimalIntercom:
 
         # Set receiver socket in non bloking
         self.receiver_socket.setblocking(False)
-        self.receiver_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 30000)
+        self.receiver_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 10*self.bytes_per_chunk)
 
         # Bind listener socket
         self.receiver_socket.bind(self.receiver_endpoint)
