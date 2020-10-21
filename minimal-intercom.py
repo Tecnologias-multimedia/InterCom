@@ -7,7 +7,7 @@
 # and receiver simultaneously
 #
 # The callback method based system (with numpy arrays) will be used to
-# record and play audio. In order to control lantency issues, fixed chunks
+# record and play audio. In order to control latency issues, fixed chunks
 # will be used. The chunks of audio recorder are send using a UDP socket.
 # The receiver will have all chunk received stored in the socket queue instead
 # of using an explicit queue object. It means the callback method has to
@@ -57,8 +57,6 @@ CPU_samples = 0
 class MinimalIntercom:
     """
     Class to wrap Minimal Intercom functionalities and data
-
-
     """
 
     NUMBER_CHANNELS = 1
@@ -145,7 +143,7 @@ class MinimalIntercom:
         non blocking mode"""
 
         # Set receiver socket in non bloking
-        self.receiver_socket.setblocking(0)
+        self.receiver_socket.setblocking(False)
         self.receiver_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 30000)
 
         # Bind listener socket
@@ -160,7 +158,7 @@ class MinimalIntercom:
 
     # Destructor of class
     def __del__(self):
-        """ Destructor of class. Just closes socket before to destroy it """
+        """ Destructor of class. Just closes the socket before to destroy it """
         self.receiver_socket.close()
 
     def to_print(self):
@@ -274,8 +272,8 @@ class MinimalIntercom:
             -------
                 Parser structure with parameters to initialize MinimalIntercom instance
         """
-        parser = argparse.ArgumentParser(description = "Real-Time Audio Intercommunicator",
-                                        formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(description="Time based intercom",
+                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         parser.add_argument("-s", "--frames_per_chunk",
                             help="Number of frames (stereo samples) per chunk.",
                             type=int, default=MinimalIntercom.CHUNK_SIZE)
@@ -296,7 +294,9 @@ class MinimalIntercom:
                             type=str, default=MinimalIntercom.DESTINATION_ADDRESS)
         return parser
 
+
 # MAIN
+
 if __name__ == "__main__":
     parser_arguments = MinimalIntercom.add_args()
     args = parser_arguments.parse_args()
