@@ -10,7 +10,6 @@ class UdpSender():
     def send(self, packed_chunk, out_port, destination):
         """Send data."""
         self.sock.sendto(packed_chunk, (destination, out_port))
-        #print(f"message {packed_chunk} sent to destination {destination}")
 
     def __exit__(self,ext_type,exc_value,traceback):
         """Close the socket."""
