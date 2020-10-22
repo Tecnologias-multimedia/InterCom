@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
     parents=[parser])
 parser.add_argument(
-    'frequency', nargs='?', metavar='FREQUENCY', type=float, default=500,
+    'frequency', nargs='?', metavar='FREQUENCY', type=float, default=1000,
     help='frequency in Hz (default: %(default)s)')
 parser.add_argument(
     '-d', '--device', type=int_or_str,
@@ -55,6 +55,7 @@ try:
     with sd.OutputStream(device=args.device, channels=1, callback=callback,
                          samplerate=samplerate):
         print('#' * 80)
+        print("Sine frequency =", args.frequency, "Hz")
         print('press Return to quit')
         print('#' * 80)
         input()

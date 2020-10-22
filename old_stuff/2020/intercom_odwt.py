@@ -62,6 +62,7 @@ class Intercom_ODWT(Intercom_WDWT):
         for i in range(len(coeffs_in_subbands)-1, 0, -1):
             nos >>= 1
             coeffs_in_subbands[i] = coeffs_in_subbands[i][nos:len(coeffs_in_subbands[i])-nos]
+            print(nos, len(coeffs_in_subbands[i])-nos) 
         coeffs_in_subbands[0] = coeffs_in_subbands[0][nos:len(coeffs_in_subbands[0])-nos]
         chunk = wt.coeffs_to_array(coeffs_in_subbands)[0].astype(self.precision_type)
         signs = chunk & self.sign_mask

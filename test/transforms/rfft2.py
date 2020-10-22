@@ -26,7 +26,7 @@ parser.add_argument(
     '-i', '--interval', type=float, default=0,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, default=1024, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=2048, help='block size (in samples)')
 parser.add_argument(
     '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
@@ -44,29 +44,12 @@ def audio_callback(indata, frames, time, status):
     if status:
         print(status, file=sys.stderr)
     coeffs = []
-    for c in range(2):
+    for c in range(len(args.channels)):
         coeffs.append(np.fft.rfft(indata[:, c]))
     spectrum = []
-    for c in range(2):
-        spectrum.append(np.sqrt(coeffs[c].real*coeffs[c].real + coeffs[c].imag*coeffs[c].imag))
-    #spectrum.append(np.sqrt(coeffs[0].real*coeffs[0].real + coeffs[0].imag*coeffs[0].imag))
-    #spectrum.append(2*np.sqrt(coeffs[1].real*coeffs[1].real + coeffs[1].imag*coeffs[1].imag))
-    #spectrum = np.array(spectrum).reshape(args.blocksize+1, len(args.channels))
-    #spectrum = np.array(spectrum).reshape(args.blocksize+1, 2)
-    spectrum_ = np.stack([spectrum[0], spectrum[1]])
-    #print(coeffs.shape)
-    #spectrum = abs(coeffs)
-    #coeffs_, slices = pywt.coeffs_to_array(coeffs)
-    #coeffs_ = coeffs[:l].reshape((l,1))
-    #coeffs_ = coeffs_.flatten()[:shift]
-    #print(type(indata), type(coeffs_))
-    #print(indata[10][0], coeffs_[10], mapping)
-    #print(indata[::args.downsample, mapping].shape)
-    #plotdata[-shift:, :] = coeffs_[0]
-    #print(plotdata[-shift:, :])
-
-    # Fancy indexing with mapping creates a (necessary!) copy:
-    #q.put(indata[::args.downsample, mapping])
+    for c in range(len(args.channels)):
+        spectrum.append(20*np.log10(np.sqrt(coeffs[c].real*coeffs[c].real + coeffs[c].imag*coeffs[c].imag) / args.blocksize + 1)*10)
+    spectrum_ = np.stack(spectrum)
     q.put(spectrum_)
 
 def update_plot(frame):
@@ -124,7 +107,7 @@ try:
     ax.set_yticks([0])
     ax.yaxis.grid(True)
     ax.tick_params(bottom=False, top=False, labelbottom=False,
-                   right=False, left=False)
+                   right=False, left=False, labelleft=False)
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(

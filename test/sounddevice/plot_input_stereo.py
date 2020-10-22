@@ -71,7 +71,7 @@ def update_plot(frame):
         shift = len(data)
         plotdata = np.roll(plotdata, -shift, axis=0)
         plotdata[-shift:, :] = data
-        print(data.shape)
+        #print(data.shape)
     for column, line in enumerate(lines):
         #line.set_ydata(plotdata[:, column]/(column+1))
         line.set_ydata(plotdata[:, column])

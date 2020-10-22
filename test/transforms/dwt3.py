@@ -30,7 +30,7 @@ parser.add_argument(
 parser.add_argument(
     '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
-    'channels', type=int, default=[1], nargs='*', metavar='CHANNEL',
+    'channels', type=int, default=[1, 2], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
 args = parser.parse_args()
 if any(c < 1 for c in args.channels):
@@ -40,16 +40,13 @@ q = queue.Queue()
 
 def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
-    if status:
-        print(status, file=sys.stderr)
-
-    flat = indata.flatten()
-    l = indata.shape[0]
-    coeffs = pywt.wavedec(flat, "db5", mode='per')
-    coeffs_, slices = pywt.coeffs_to_array(coeffs)
-    coeffs_ = coeffs_[:l].reshape((l,1))
-    coeffs_ = 20*np.log10(coeffs_+1)
-    q.put(coeffs_)
+    coeffs = [None]*len(args.channels)
+    for c in range(len(args.channels)):
+        coeffs_ = pywt.wavedec(indata[:, c], "db5", mode='per')
+        coeffs[c], slices = pywt.coeffs_to_array(coeffs_)
+        coeffs[c] = 20*np.log10(coeffs[c]+1)
+    both_channels = np.stack(coeffs)
+    q.put(both_channels)
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -64,9 +61,11 @@ def update_plot(frame):
             data = q.get_nowait()
         except queue.Empty:
             break
-        shift = len(data)
-        plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata[-shift:, :] = data
+        shift = len(data[0])
+        plotdata = np.empty((shift*len(args.channels), ))
+        plotdata[0::2] = data[0, :]
+        plotdata[1::2] = data[1, :]
+        plotdata = plotdata.reshape((shift, len(args.channels)))
     for column, line in enumerate(lines):
         line.set_ydata(plotdata[:, column])
     return lines
