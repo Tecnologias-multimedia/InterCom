@@ -8,14 +8,12 @@ import argparse
 import queue
 import sys
 
-
 def int_or_str(text):
     """Helper function for argument parsing."""
     try:
         return int(text)
     except ValueError:
         return text
-
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
@@ -25,20 +23,14 @@ parser.add_argument(
     '-d', '--device', type=int_or_str,
     help='input device (numeric ID or substring)')
 parser.add_argument(
-    '-w', '--window', type=float, default=200, metavar='DURATION',
-    help='visible time slot (default: %(default)s ms)')
-parser.add_argument(
-    '-i', '--interval', type=float, default=30,
+    '-i', '--interval', type=float, default=0,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=512, help='block size (in samples)')
 parser.add_argument(
-    '-r', '--samplerate', type=float, help='sampling rate of audio device')
+    '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
-    '-n', '--downsample', type=int, default=10, metavar='N',
-    help='display every Nth sample (default: %(default)s)')
-parser.add_argument(
-    'channels', type=int, default=[1,2], nargs='*', metavar='CHANNEL',
+    'channels', type=int, default=[1, 2], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
 args = parser.parse_args()
 if any(c < 1 for c in args.channels):
@@ -51,9 +43,24 @@ def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     if status:
         print(status, file=sys.stderr)
-    # Fancy indexing with mapping creates a (necessary!) copy:
-    q.put(indata[::args.downsample, mapping])
+    flat = indata.flatten()
+    l = indata.shape[0]>>1
+    coeffs = np.fft.rfft(flat)
+    #print(coeffs.shape)
+    spectrum = np.sqrt(coeffs.real*coeffs.real + coeffs.imag*coeffs.imag)
+    #spectrum = abs(coeffs)
+    #coeffs_, slices = pywt.coeffs_to_array(coeffs)
+    #coeffs_ = coeffs[:l].reshape((l,1))
+    #coeffs_ = coeffs_.flatten()[:shift]
+    #print(type(indata), type(coeffs_))
+    #print(indata[10][0], coeffs_[10], mapping)
+    #print(indata[::args.downsample, mapping].shape)
+    #plotdata[-shift:, :] = coeffs_[0]
+    #print(plotdata[-shift:, :])
 
+    # Fancy indexing with mapping creates a (necessary!) copy:
+    #q.put(indata[::args.downsample, mapping])
+    q.put(spectrum)
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -69,11 +76,10 @@ def update_plot(frame):
         except queue.Empty:
             break
         shift = len(data)
-        plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata[-shift:, :] = data
-        #print(data.shape)
+        #plotdata = np.roll(plotdata, -shift, axis=0)
+        #plotdata[-shift:, :] = data.reshape((shift, len(args.channels)))
+        plotdata = data.reshape((shift, len(args.channels)))
     for column, line in enumerate(lines):
-        #line.set_ydata(plotdata[:, column]/(column+1))
         line.set_ydata(plotdata[:, column])
     return lines
 
@@ -82,6 +88,7 @@ try:
     import matplotlib.pyplot as plt
     import numpy as np
     import sounddevice as sd
+    import pywt
 
     if args.list_devices:
         print(sd.query_devices())
@@ -90,15 +97,16 @@ try:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = device_info['default_samplerate']
 
-    length = int(args.window * args.samplerate / (1000 * args.downsample))
-    plotdata = np.zeros((length, len(args.channels)))
+    #length = int(args.window * args.samplerate / (1000 * args.downsample))
+    length = 1024
+    plotdata = np.zeros((length//2+1, len(args.channels)))
 
     fig, ax = plt.subplots()
     lines = ax.plot(plotdata)
     if len(args.channels) > 1:
         ax.legend(['channel {}'.format(c) for c in args.channels],
                   loc='lower left', ncol=len(args.channels))
-    ax.axis((0, len(plotdata), -1, 1))
+    ax.axis((0, len(plotdata), 0, 1))
     ax.set_yticks([0])
     ax.yaxis.grid(True)
     ax.tick_params(bottom=False, top=False, labelbottom=False,
@@ -106,7 +114,7 @@ try:
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
-        device=args.device, channels=max(args.channels),
+        device=args.device, channels=max(args.channels), blocksize=length,
         samplerate=args.samplerate, callback=audio_callback)
     ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
     with stream:

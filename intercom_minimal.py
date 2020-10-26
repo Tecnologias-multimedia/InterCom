@@ -70,51 +70,17 @@ class Intercom_minimal:
     # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
     
     # 1 = mono, 2 = stereo.
+
     NUMBER_OF_CHANNELS = 2
-
-    # Sampling frequency (44100 Hz -> CD quality). A frame is a
-    # structure:
-    #
-    # frame {
-    #   [number_of_channels] int16 sample;
-    # }
     FRAMES_PER_SECOND = 44100
-
-    # Number of frames per chunk of audio interchanged with the sound
-    # card.
     FRAMES_PER_CHUNK = 1024
-
-    # Default network configuration. See: 
-
-    # Maximum size of the
-    # [payload](https://en.wikipedia.org/wiki/User_Datagram_Protocol)
-    # of a transmitted packet. This parameter is used by the OS to
-    # allocate memory for incomming packets. Notice that this value
-    # limites the maximum length (in bytes) of a chunk.
-    MAX_PAYLOAD_BYTES = 32768
-
-    # [Port](https://en.wikipedia.org/wiki/Port_(computer_networking))
-    # that my machine will use to listen to the incomming packets.
     MY_PORT = 4444
-
-    # Port that my interlocutor's machine will use to listen to the
-    # incomming packets.
     DESTINATION_PORT = 4444
-
-    # [Hostname](https://en.wikipedia.org/wiki/Hostname) or [IP
-    # address](https://en.wikipedia.org/wiki/IP_address) of my
-    # interlocutor's
-    # [host](https://en.wikipedia.org/wiki/Host_(network)).
     DESTINATION_ADDRESS = "localhost"
 
-    def init(self, args):
-        
-        # Gathers the information provided by the args object, and
-        # initializes other structures, such as the socket and the
-        # queue.
+    MAX_PAYLOAD_BYTES = 32768
 
-        # Command-line parameters. Notice that args is only an
-        # argument for init(), not for the rest of methods.
+    def init(self, args):
         self.number_of_channels = args.number_of_channels
         self.frames_per_second = args.frames_per_second
         self.frames_per_chunk = args.frames_per_chunk
@@ -179,14 +145,6 @@ class Intercom_minimal:
     # Receive a piece of data (a complete chunk in the case of
     # Intercom_minimal). The sender is ignored.
     def receive(self):
-        # [Receive an UDP
-        # packet](https://docs.python.org/3/library/socket.html#socket.socket.recvfrom).
-        # "data" is a new object for each recvfrom() call, containing
-        # the payload of the packet. Notice that "data" is a [bytes
-        # object](https://docs.python.org/3/library/stdtypes.html#bytes),
-        # without any particular structure (it is simply an
-        # [inmutable](https://medium.com/@meghamohan/mutable-and-immutable-side-of-python-c2145cf72747)
-        # array of bytes). The sender is ignored.
         data, sender = self.receiving_sock.recvfrom(self.MAX_PAYLOAD_BYTES)
         return data
 
@@ -229,27 +187,17 @@ class Intercom_minimal:
     # https://nbviewer.jupyter.org/github/vicente-gonzalez-ruiz/YAPT/blob/master/multimedia/sounddevice.ipynb
     # for a deeper description of the callback function.
     def record_send_and_play(self, indata, outdata, frames, time, status):
-        # Send the chunk.
         self.send(indata)
-        
         try:
             chunk = self.receive()
         except BlockingIOError:
             chunk = self.zero_chunk
-        
-        # Gives NumPy structure to the chunk.
         chunk = np.frombuffer(chunk, np.int16).reshape(self.frames_per_chunk, self.number_of_channels)
-        
-        
-
-        # Copy the data of chunk to outdata using slicing. Notice that
-        # "outdata = chunk" only would copy pointers to objects (.
         outdata[:] = chunk
-
-        # Feedback message (one per chunk).
         self.feedback()
 
     # Runs the intercom.
+
     def run(self):
         with sd.Stream(samplerate=self.frames_per_second,
                        blocksize=self.frames_per_chunk,
@@ -260,7 +208,7 @@ class Intercom_minimal:
             while True:
                 time.sleep(1)
                 print(" ")
-                #self.receive_and_control()
+                
 
     # Define the command-line arguments.
     def add_args(self):

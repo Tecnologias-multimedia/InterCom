@@ -1,5 +1,6 @@
 # Welcome!
 
+<<<<<<< HEAD
 Inter Com is a low-latency full-duplex intercom(municator) designed for the transmission of media (audio and video) between networked users.. 
 
 ## Implementation
@@ -62,3 +63,6 @@ Each host runs a instance of InterCom.
                Host C          
 ```
 Each host runs two instances of InterCom.
+=======
+InterCom is a low-latency full-duplex intercom(municator) designed for the transmission of media (audio and video) between networked users. 
+>>>>>>> 957514e1afb93b0c9e527ea524591a462cf60449

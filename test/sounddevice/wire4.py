@@ -7,7 +7,7 @@ stream.start()
 
 while True:
     chunk, overflowed = stream.read(stream.read_available)
-    print(len(chunk), end=' ', flush=True)
+    #print(len(chunk), end=' ', flush=True)
     if overflowed:
         print("Overflow")
     stream.write(chunk)

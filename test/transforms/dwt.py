@@ -8,14 +8,12 @@ import argparse
 import queue
 import sys
 
-
 def int_or_str(text):
     """Helper function for argument parsing."""
     try:
         return int(text)
     except ValueError:
         return text
-
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
@@ -31,14 +29,14 @@ parser.add_argument(
     '-i', '--interval', type=float, default=30,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=512, help='block size (in samples)')
 parser.add_argument(
     '-r', '--samplerate', type=float, help='sampling rate of audio device')
 parser.add_argument(
     '-n', '--downsample', type=int, default=10, metavar='N',
     help='display every Nth sample (default: %(default)s)')
 parser.add_argument(
-    'channels', type=int, default=[1,2], nargs='*', metavar='CHANNEL',
+    'channels', type=int, default=[1], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
 args = parser.parse_args()
 if any(c < 1 for c in args.channels):
@@ -51,8 +49,22 @@ def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     if status:
         print(status, file=sys.stderr)
+
+    flat = indata.flatten()
+    l = indata.shape[0]
+    coeffs = pywt.wavedec(flat, "db5", mode='per')
+    coeffs_, slices = pywt.coeffs_to_array(coeffs)
+    coeffs_ = coeffs_[:l].reshape((l,1))
+    #coeffs_ = coeffs_.flatten()[:shift]
+    #print(type(indata), type(coeffs_))
+    #print(indata[10][0], coeffs_[10], mapping)
+    #print(indata[::args.downsample, mapping].shape)
+    #plotdata[-shift:, :] = coeffs_[0]
+    #print(plotdata[-shift:, :])
+
     # Fancy indexing with mapping creates a (necessary!) copy:
-    q.put(indata[::args.downsample, mapping])
+    #q.put(indata[::args.downsample, mapping])
+    q.put(coeffs_[::args.downsample, mapping])
 
 
 def update_plot(frame):
@@ -71,17 +83,18 @@ def update_plot(frame):
         shift = len(data)
         plotdata = np.roll(plotdata, -shift, axis=0)
         plotdata[-shift:, :] = data
-        #print(data.shape)
     for column, line in enumerate(lines):
-        #line.set_ydata(plotdata[:, column]/(column+1))
         line.set_ydata(plotdata[:, column])
     return lines
+
 
 try:
     from matplotlib.animation import FuncAnimation
     import matplotlib.pyplot as plt
     import numpy as np
     import sounddevice as sd
+    import pywt
+    db1 = pywt.Wavelet('db1')
 
     if args.list_devices:
         print(sd.query_devices())
