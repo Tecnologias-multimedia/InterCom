@@ -7,7 +7,12 @@ Matplotlib and NumPy have to be installed.
 import argparse
 import queue
 import sys
-
+from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+import numpy as np
+import sounddevice as sd
+import pywt
+import math
 
 def int_or_str(text):
     """Helper function for argument parsing."""
@@ -16,8 +21,8 @@ def int_or_str(text):
     except ValueError:
         return text
 
-
-parser = argparse.ArgumentParser(description=__doc__)
+parser = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument(
     '-l', '--list-devices', action='store_true',
     help='show list of audio devices and exit')
@@ -25,20 +30,18 @@ parser.add_argument(
     '-d', '--device', type=int_or_str,
     help='input device (numeric ID or substring)')
 parser.add_argument(
-    '-w', '--window', type=float, default=200, metavar='DURATION',
-    help='visible time slot (default: %(default)s ms)')
-parser.add_argument(
-    '-i', '--interval', type=float, default=30,
+    '-i', '--interval', type=float, default=0,
     help='minimum time between plot updates (default: %(default)s ms)')
 parser.add_argument(
-    '-b', '--blocksize', type=int, help='block size (in samples)')
+    '-b', '--blocksize', type=int, default=1024, help='block size (in samples)')
 parser.add_argument(
-    '-r', '--samplerate', type=float, help='sampling rate of audio device')
+    '-r', '--samplerate', type=float, default=44100, help='sampling rate of audio device')
 parser.add_argument(
-    '-n', '--downsample', type=int, default=10, metavar='N',
-    help='display every Nth sample (default: %(default)s)')
+    '-v', '--levels', type=int, default=5, help='number of levels of the DWT')
 parser.add_argument(
-    'channels', type=int, default=[1], nargs='*', metavar='CHANNEL',
+    '-w', '--wavelet', type=str, default="db5", help=f'wavelet name from {pywt.wavelist()}')
+parser.add_argument(
+    'channels', type=int, default=[1, 2], nargs='*', metavar='CHANNEL',
     help='input channels to plot (default: the first)')
 args = parser.parse_args()
 if any(c < 1 for c in args.channels):
@@ -46,15 +49,34 @@ if any(c < 1 for c in args.channels):
 mapping = [c - 1 for c in args.channels]  # Channel numbers start with 1
 q = queue.Queue()
 
+kernel = args.wavelet
+print("kernel =", args.wavelet)
+wavelet = pywt.Wavelet(kernel)
+print("levels =", args.levels)
+overlaped_area_size = wavelet.dec_len * args.levels
+overlaped_area_size = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
+print("overlaped_area_size =", overlaped_area_size)
+overlaped_area = np.zeros((overlaped_area_size, len(args.channels)), dtype=np.int16)
+frames_per_chunk = args.blocksize + overlaped_area_size
+print("frames_per_chunk =", frames_per_chunk)
 
 def audio_callback(indata, frames, time, status):
-    """This is called (from a separate thread) for each audio block."""
-    sys.stderr.write(f"{len(indata)} "); sys.stderr.flush()
-    if status:
-        print(status, file=sys.stderr)
-    # Fancy indexing with mapping creates a (necessary!) copy:
-    q.put(indata[::args.downsample, mapping])
-
+    global overlaped_area
+    extended_chunk = np.concatenate((overlaped_area, indata), axis=0)
+    coeffs = [None]*len(args.channels)
+    for c in range(len(args.channels)):
+        coeffs_ = pywt.wavedec(extended_chunk[:, c], wavelet=wavelet, level=args.levels, mode="per")
+        oas = overlaped_area_size
+        #bs = args.blocksize
+        for i in range(len(coeffs_)-1, 0, -1):
+            #oas = int(math.floor(oas/2))
+            oas >>= 1
+            coeffs_[i] = coeffs_[i][oas:len(coeffs_[i])-oas]
+        coeffs_[0] = coeffs_[0][oas:len(coeffs_[0])-oas]
+        coeffs[c], slices = pywt.coeffs_to_array(coeffs_)
+    both_channels = np.stack(coeffs)
+    q.put(both_channels)
+    overlaped_area = indata[ args.blocksize : args.blocksize + overlaped_area_size ]
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -69,19 +91,16 @@ def update_plot(frame):
             data = q.get_nowait()
         except queue.Empty:
             break
-        shift = len(data)
-        plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata[-shift:, :] = data
+        shift = len(data[0])
+        plotdata = np.empty((shift*len(args.channels), ))
+        plotdata[0::2] = data[0, :]
+        plotdata[1::2] = data[1, :]
+        plotdata = plotdata.reshape((shift, len(args.channels)))
     for column, line in enumerate(lines):
         line.set_ydata(plotdata[:, column])
     return lines
 
-
 try:
-    from matplotlib.animation import FuncAnimation
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import sounddevice as sd
 
     if args.list_devices:
         print(sd.query_devices())
@@ -90,8 +109,7 @@ try:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = device_info['default_samplerate']
 
-    length = int(args.window * args.samplerate / (1000 * args.downsample))
-    plotdata = np.zeros((length, len(args.channels)))
+    plotdata = np.zeros((args.blocksize, len(args.channels)))
 
     fig, ax = plt.subplots()
     lines = ax.plot(plotdata)
@@ -106,10 +124,11 @@ try:
     fig.tight_layout(pad=0)
 
     stream = sd.InputStream(
-        device=args.device, channels=max(args.channels),
+        device=args.device, channels=max(args.channels), blocksize=frames_per_chunk,
         samplerate=args.samplerate, callback=audio_callback)
     ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
     with stream:
         plt.show()
+        #input()
 except Exception as e:
     parser.exit(type(e).__name__ + ': ' + str(e))
