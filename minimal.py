@@ -70,7 +70,9 @@ class Minimal:
         self.receiving_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.receiving_socket.bind(self.listening_endpoint)
-        self.receiving_socket.settimeout(0)
+        chunk_time = args.frames_per_chunk / args.frames_per_second
+        print("chunk_time =", chunk_time, "seconds")
+        self.receiving_socket.settimeout(chunk_time)
         self.zero_chunk = self.generate_zero_chunk()
 
     def pack(self, chunk):
@@ -191,7 +193,7 @@ class Minimal:
         try:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
-        except BlockingIOError:
+        except socket.timeout:
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
         if __debug__:
@@ -269,7 +271,7 @@ class Minimal__verbose(Minimal):
             raise
 
     def _print_feedback(self):
-        ''' Conputes and shows the statistics. '''
+        ''' Computes and shows the statistics. '''
         elapsed_time = time.time() - self.old_time
         elapsed_CPU_time = psutil.Process().cpu_times()[0] - self.old_CPU_time
         self.CPU_usage = 100 * elapsed_CPU_time / elapsed_time
