@@ -61,7 +61,7 @@ PING 217.216.135.188 (217.216.135.188) 1024(1052) bytes of data.
 1032 bytes from 217.216.135.188: icmp_seq=60 ttl=56 time=62.1 ms
 1032 bytes from 217.216.135.188: icmp_seq=61 ttl=56 time=58.6 ms
 1032 bytes from 217.216.135.188: icmp_seq=62 ttl=56 time=64.7 ms
-1032 bytes from 217.216.135.188: icmp_seq=63 ttl=56 time=96.0 ms
+1032 bytes from 217.216.135.188: icmp_seq=63 ttl=56 time=56.0 ms
 1032 bytes from 217.216.135.188: icmp_seq=64 ttl=56 time=66.8 ms
 1032 bytes from 217.216.135.188: icmp_seq=65 ttl=56 time=60.6 ms
 1032 bytes from 217.216.135.188: icmp_seq=66 ttl=56 time=64.6 ms
@@ -79,7 +79,7 @@ PING 217.216.135.188 (217.216.135.188) 1024(1052) bytes of data.
 1032 bytes from 217.216.135.188: icmp_seq=78 ttl=56 time=60.1 ms
 1032 bytes from 217.216.135.188: icmp_seq=79 ttl=56 time=61.8 ms
 1032 bytes from 217.216.135.188: icmp_seq=80 ttl=56 time=59.8 ms
-1032 bytes from 217.216.135.188: icmp_seq=81 ttl=56 time=102 ms
+1032 bytes from 217.216.135.188: icmp_seq=81 ttl=56 time=65.2 ms
 1032 bytes from 217.216.135.188: icmp_seq=82 ttl=56 time=67.4 ms
 1032 bytes from 217.216.135.188: icmp_seq=83 ttl=56 time=60.7 ms
 1032 bytes from 217.216.135.188: icmp_seq=84 ttl=56 time=62.6 ms
