@@ -86,7 +86,7 @@ PING localhost (127.0.0.1) 1024(1052) bytes of data.
 1032 bytes from localhost (127.0.0.1): icmp_seq=85 ttl=64 time=0.037 ms
 1032 bytes from localhost (127.0.0.1): icmp_seq=86 ttl=64 time=0.035 ms
 1032 bytes from localhost (127.0.0.1): icmp_seq=87 ttl=64 time=0.040 ms
-1032 bytes from localhost (127.0.0.1): icmp_seq=88 ttl=64 time=0.212 ms
+1032 bytes from localhost (127.0.0.1): icmp_seq=88 ttl=64 time=0.032 ms
 1032 bytes from localhost (127.0.0.1): icmp_seq=89 ttl=64 time=0.030 ms
 1032 bytes from localhost (127.0.0.1): icmp_seq=90 ttl=64 time=0.042 ms
 1032 bytes from localhost (127.0.0.1): icmp_seq=91 ttl=64 time=0.036 ms
