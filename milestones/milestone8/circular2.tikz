@@ -1,0 +1,22 @@
+\documentclass{article}
+
+\usepackage{tikz}
+
+\begin{document}
+\sffamily
+\textbf{Circular buffer:}
+
+\begin{tikzpicture}[>=latex,font=\sffamily,semithick,scale=1.75]
+    \fill [green!25] (0,0) -- (67.5:1) arc [end angle=-22.5, start angle=67.5, radius=1] -- cycle;
+    \draw [thick] (0,0) circle (1);
+    \foreach \angle in {90,67.5,...,-67.5}
+        \draw (\angle:1) -- (\angle-180:1);
+    \node [circle,thick,fill=white,draw=black,align=center,minimum size=3cm] at (0,0) {FIFO as a\\Circulate Buffer};
+    \draw [<-] (56.25:1) -- (56.25:1.25) -- +(.333,0)
+        node [right,inner xsep=.333cm] (Head) {Head (extract)};
+    \draw [<-] (-33.75:1) -- (-33.75:1.25) -- +(.333,0)
+        node [right,inner xsep=.333cm] (Tail) {Tail (insert)};
+    \draw [->,shorten >=5pt,shorten <=5pt] (Tail.west) to [bend right] 
+        node [midway,sloped,above,allow upside down] {\footnotesize 4\,bytes in FIFO}
+    (Head.west);
+\end{tikzpicture}

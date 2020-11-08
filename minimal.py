@@ -29,11 +29,14 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument("-i", "--input-device", type=int_or_str, help="Input device ID or substring")
 parser.add_argument("-o", "--output-device", type=int_or_str, help="Output device ID or substring")
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
-parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
+parser.add_argument("-c", "--frames_per_chunk", type=int, default=512, help="Number of frames in a chunk")
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
+parser.add_argument("-j", "--jitter", type=int, default=120, help="Jitter time in ms")
 parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
+
+args = parser.parse_args()
 
 class Minimal:
     """
@@ -70,9 +73,9 @@ class Minimal:
         self.receiving_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.receiving_socket.bind(self.listening_endpoint)
-        chunk_time = args.frames_per_chunk / args.frames_per_second
-        print("chunk_time =", chunk_time, "seconds")
-        self.receiving_socket.settimeout(chunk_time)
+        self.chunk_time = args.frames_per_chunk / args.frames_per_second
+        print("chunk_time =", self.chunk_time, "seconds")
+        self.receiving_socket.settimeout(self.chunk_time)
         self.zero_chunk = self.generate_zero_chunk()
 
     def pack(self, chunk):
@@ -326,7 +329,7 @@ class Minimal__verbose(Minimal):
             print(f"\nCPU usage average = {self.CPU_average_usage} %")
             print(f"Payload sent average = {self.sent_average} kilo bits per second")
             print(f"Payload received average = {self.received_average} kilo bits per second")
-
+"""
 if __name__ == "__main__":
     parser.description = __doc__
     args = parser.parse_args()
@@ -340,3 +343,4 @@ if __name__ == "__main__":
         parser.exit("\nInterrupted by user")
     except Exception as e:
         parser.exit(type(e).__name__ + ": " + str(e))
+"""
