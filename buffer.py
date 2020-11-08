@@ -17,12 +17,13 @@ class Buffer(Minimal):
         self.jitter_to_chunk_time = math.ceil(args.jitter / (self.chunk_time * 1000))
         self.buffer_size = 2 * self.jitter_to_chunk_time
         self.filled_cells = 0
-        self.head_cell = np.uint16(0)
+        self.head_cell = np.uint16(1)
         self.tail_cell = np.uint16(0)
 
         self.current_cell = np.uint16(0)
 
         self.to_u16 = lambda x : np.uint16(x)
+
         self.update_head = lambda: self.to_u16((self.head_cell + 1) % Buffer.MAX_CHUNK)
         self.update_tail = lambda: self.to_u16((self.tail_cell + 1) % Buffer.MAX_CHUNK)
 
@@ -38,8 +39,8 @@ class Buffer(Minimal):
         # Create fixed empty array
         self.buffer = [None] * self.buffer_size
 
-        #for i in range(len(self.buffer)):
-        #    self.buffer[i] = self.zero_chunk
+        for i in range(len(self.buffer)):
+            self.buffer[i] = self.zero_chunk
 
         self.half_buffer = False
 
@@ -51,33 +52,39 @@ class Buffer(Minimal):
     def play(self, outdata):
         if not self.half_buffer :
             to_play = self.zero_chunk
+            # print("Executing ZERO #####")
         else:
-            to_play = self.buffer[self.current_cell]
-            self.buffer[self.current_cell] = self.zero_chunk
-            self.update_cell()
+            # print("Executing buffer #####")
+            to_play = self.buffer[self.current_cell % self.buffer_size]
+            self.buffer[self.current_cell % self.buffer_size] = self.zero_chunk
+            self.current_cell = self.update_cell()
         outdata[:] = to_play
 
     # TODO EXECUTES IN MAIN THREAD
     def receive_and_buffer(self):
         received = True
-        print("RECEPCIÓN")
+        # print("RECEPCIÓN")
         try:
             data = self.receive()
             data = np.frombuffer(data, dtype=np.int16).reshape(args.frames_per_chunk + 1, Buffer.NUMBER_OF_CHANNELS)
             chunk_index = self.to_u16(data[0,0])
-            print("Antes de bloqueo")
+            # print("Antes de bloqueo")
+            # print(data)
             data = data[1:,:] # FIXME REVISAR Y REPARAR, EL FALLO ESTA AQUI. ESTABA EN [1,:]
-            print("Datos recibidos")
+            # print("Datos recibidos")
         except socket.timeout:
-            print("Movidote de to xungo en recibir")
+            # print("Movidote de to xungo en recibir")
+            pass
+        except Exception as e:
+            # print("Excepción: ", e)
             pass
         else :
-            print("Almacenado en buffer")
-            self.buffer[chunk_index] = data
-            print(data)
+            # print("Almacenado en buffer")
+            self.buffer[chunk_index % self.buffer_size] = data
+            # print("Datos pros", data)
 
+        # print("Valor ###: ", self.buffer[int(len(self.buffer) / 2)])
         if (self.buffer[int(len(self.buffer) / 2)]) is not None:
-            print("DEBE SALIR ESTE MENSAJE")
             self.half_buffer = True
 
     # TODO
@@ -87,12 +94,14 @@ class Buffer(Minimal):
                 self.receive_and_buffer()
 
     def send(self, data):
-        print("ENVÍO")
         # Chunk is a matrix with 2 rows and frames_per_chunk columns
         # astype is needed to avoid implicit casting to int32
         chunk = np.concatenate(([[self.head_cell, 0]], data)).astype(np.int16)
+       # print("Cabecera: ", self.head_cell)
+       # print("Datos concatenados", chunk)
         super().send(chunk)
-        self.update_head()
+        self.head_cell = self.update_head()
+        # print("Cabecera: ", self.head_cell)
 
 if __name__ == "__main__":
     parser.description = __doc__

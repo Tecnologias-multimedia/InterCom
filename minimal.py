@@ -33,7 +33,7 @@ parser.add_argument("-c", "--frames_per_chunk", type=int, default=512, help="Num
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
-parser.add_argument("-j", "--jitter", type=int, default=120, help="Jitter time in ms")
+parser.add_argument("-j", "--jitter", type=int, default=8, help="Jitter time in ms")
 parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
 
 args = parser.parse_args()
@@ -329,6 +329,7 @@ class Minimal__verbose(Minimal):
             print(f"\nCPU usage average = {self.CPU_average_usage} %")
             print(f"Payload sent average = {self.sent_average} kilo bits per second")
             print(f"Payload received average = {self.received_average} kilo bits per second")
+
 """
 if __name__ == "__main__":
     parser.description = __doc__
