@@ -20,13 +20,16 @@
 # them. We will call to this structure "packet".
 #
 
-from minimal import *
 import sounddevice as sd
-from struct import *
+import struct
 import numpy as np
 import psutil
 import time
 from multiprocessing import Process
+import minimal
+from minimal import *
+#minimal.parser.add_argument("-b","--buffering_time", type=int, default=100, help="Miliseconds to buffer")
+#print("buffering_time =", minimal.parser.parse_args().buffering_time,"miliseconds")
 
 # Accumulated percentage of used CPU. 
 CPU_total = 0
@@ -49,7 +52,7 @@ class Buffer(Minimal):
     CHUNKS_TO_BUFFER = 8
 
     def init(self, args):
-        Intercom_minimal.init(self, args)
+        Minimal.__init__(self)
         self.chunks_to_buffer = args.chunks_to_buffer
         print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
         
@@ -96,12 +99,14 @@ class Buffer(Minimal):
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
         #receive
-        message = self.receive()
+        print("recibir")
+        message = super().receive()
         #unpack
-        tmp, tmpChunk = unpack()
+        tmp = struct.unpack('Is',message)
         #buffer
-        chunk_number = tmp
-        chunk = numpy.fromstring(tmpChunk, dtype=np.int16)
+        print("desempaquetado"+tmp)
+        chunk_number = tmp[0]
+        chunk = numpy.fromstring(tmp[1:], dtype=np.int16)
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
 
@@ -110,7 +115,8 @@ class Buffer(Minimal):
         # Now, attached to the chunk (as a header) we need to send the
         # recorded chunk number. Thus, the receiver will know where to
         # insert the chunk into the buffer.
-        chunk = pack(self.recorded_chunk_number, chunk)
+        chunk = struct.pack('Is',self.recorded_chunk_number, chunk)
+        print("empaquetado"+chunk)
         super().send(chunk)
 
     # Gets the next available chunk from the buffer and send it to the
@@ -145,7 +151,7 @@ class Buffer(Minimal):
         print("Intercom_buffer: press <CTRL> + <c> to quit")
         print("Intercom_buffer: buffering ... ")
 
-        with sd.Stream(samplerate=self.frames_per_second, blocksize=self.frames_per_chunk, dtype=self.sample_type, channels=self.number_of_channels, callback=self.record_send_and_play):
+        with sd.Stream(samplerate=args.frames_per_second, blocksize=args.frames_per_chunk, dtype=super().SAMPLE_TYPE, channels=super().NUMBER_OF_CHANNELS, callback=self.record_send_and_play):
             first_received_chunk_number = self.receive_and_buffer()
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             while True:
@@ -176,16 +182,19 @@ class Buffer(Minimal):
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
-        parser = Intercom_minimal.add_args(self)
+        parser = minimal.parser
         parser.add_argument("-b", "--chunks_to_buffer",
                             help="Number of chunks to buffer",
-                            type=int, default=Intercom_buffer.CHUNKS_TO_BUFFER)
+                            type=int, default=Buffer.CHUNKS_TO_BUFFER)
+        #parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
         return parser
 
 if __name__ == "__main__":
+    minimal.parser.description = __doc__
+    args 
     intercom = Buffer()
     parser = intercom.add_args()
-    args = parser.parse_args()
+    #args = parser.parse_args()
     intercom.init(args)
     try:
         intercom.run()

@@ -35,6 +35,8 @@ parser.add_argument("-a", "--destination_address", type=int_or_str, default="loc
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
 
+#args=parser.parse_args()
+
 class Minimal:
     """
     Definition a minimal InterCom (no compression, no quantization, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks.
@@ -327,7 +329,7 @@ class Minimal__verbose(Minimal):
 
 if __name__ == "__main__":
     parser.description = __doc__
-    args = parser.parse_args()
+    args 
     if args.verbose:
         intercom = Minimal__verbose()
     else:
