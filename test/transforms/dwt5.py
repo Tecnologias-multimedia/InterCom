@@ -87,7 +87,7 @@ def update_plot(frame):
     """This is called by matplotlib for each plot update.
 
     Typically, audio callbacks happen more frequently than plot updates,
-    therefore the queue tends to contain multiple blocks of audio data.
+    therefore the queue tends to contain multiple blocks of audio data./ self.frames_per_cycle / self.NUMBER_OF_CHANNELS)
 
     """
     global plotdata
