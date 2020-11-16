@@ -54,8 +54,12 @@ class Buffer(Minimal):
 
     def init(self, args):
         Minimal.__init__(self)
+<<<<<<< HEAD
         chunk_time = args.frames_per_chunk / args.frames_per_second
         self.chunks_to_buffer = (int)(args.buffering_time / (chunk_time*1000))
+=======
+        self.chunks_to_buffer = args.chunks_to_buffer
+>>>>>>> 6133cebe885f14e7d6cd196de71a838d5a6dc538
         print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
@@ -187,8 +191,13 @@ class Buffer(Minimal):
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
+<<<<<<< HEAD
         minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Miliseconds to buffer")
         #minimal.parser.add_argument("-b", "--chunks_to_buffer", help="Number of chunks to buffer", type=int, default=Buffer.CHUNKS_TO_BUFFER)
+=======
+        #minimal.parser.add_argument("-b","--buffering_time", type=int, default=100, help="Miliseconds to buffer")
+        minimal.parser.add_argument("-b", "--chunks_to_buffer", help="Number of chunks to buffer", type=int, default=Buffer.CHUNKS_TO_BUFFER)
+>>>>>>> 6133cebe885f14e7d6cd196de71a838d5a6dc538
         return minimal.parser
 
 if __name__ == "__main__":
@@ -200,3 +209,4 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         print("Intercom_buffer: goodbye ¯\_(ツ)_/¯")
+
