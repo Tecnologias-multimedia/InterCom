@@ -62,7 +62,7 @@ class Minimal:
     """
     MAX_PAYLOAD_BYTES = 32768
     SAMPLE_TYPE = np.int16
-    NUMBER_OF_CHANNELS = 2
+    NUMBER_OF_CHANNELS = 1
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
