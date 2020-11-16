@@ -34,17 +34,10 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument("-i", "--input-device", type=int_or_str, help="Input device ID or substring")
 parser.add_argument("-o", "--output-device", type=int_or_str, help="Output device ID or substring")
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
-parser.add_argument("-c", "--frames_per_chunk", type=int, default=512, help="Number of frames in a chunk")
+parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
-<<<<<<< HEAD
-parser.add_argument("-j", "--jitter", type=int, default=8, help="Jitter time in ms")
-parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
-=======
->>>>>>> b70da276682fc435fdfef4e3d4ff9fe6a6999bf9
-
-args = parser.parse_args()
 
 class Minimal:
     """
@@ -81,18 +74,11 @@ class Minimal:
         #self.sending_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
-<<<<<<< HEAD
-        self.receiving_socket.bind(self.listening_endpoint)
-        self.chunk_time = args.frames_per_chunk / args.frames_per_second
-        print("chunk_time =", self.chunk_time, "seconds")
-        self.receiving_socket.settimeout(self.chunk_time)
-=======
         self.sock.bind(self.listening_endpoint)
         #self.sock.settimeout(0)
         #self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF, self.RECV_BUF_SIZE)
         #print("buffer size =", self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
->>>>>>> b70da276682fc435fdfef4e3d4ff9fe6a6999bf9
         self.zero_chunk = self.generate_zero_chunk()
         if __debug__:
             print("\nInterCom parameters:\n")
@@ -488,7 +474,6 @@ class Minimal__verbose(Minimal):
         if args.show_samples:
             self.show_outdata(outdata)
 
-"""
 if __name__ == "__main__":
     parser.description = __doc__
     try:
@@ -504,11 +489,6 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         parser.exit("\nInterrupted by user")
-<<<<<<< HEAD
-    except Exception as e:
-        parser.exit(type(e).__name__ + ": " + str(e))
-"""
-=======
     #except Exception as e:
     #    parser.exit(type(e).__name__ + ": " + str(e))
->>>>>>> b70da276682fc435fdfef4e3d4ff9fe6a6999bf9
+
