@@ -35,6 +35,8 @@ parser.add_argument("-a", "--destination_address", type=int_or_str, default="loc
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
 
+args=parser.parse_args()
+
 class Minimal:
     """
     Definition a minimal InterCom (no compression, no quantization, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks.
@@ -72,7 +74,7 @@ class Minimal:
         self.receiving_socket.bind(self.listening_endpoint)
         chunk_time = args.frames_per_chunk / args.frames_per_second
         print("chunk_time =", chunk_time, "seconds")
-        self.receiving_socket.settimeout(chunk_time)
+        #self.receiving_socket.settimeout(chunk_time)
         self.zero_chunk = self.generate_zero_chunk()
 
     def pack(self, chunk):
