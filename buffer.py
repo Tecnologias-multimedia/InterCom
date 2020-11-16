@@ -30,6 +30,7 @@ import minimal
 from minimal import *
 #minimal.parser.add_argument("-b","--buffering_time", type=int, default=100, help="Miliseconds to buffer")
 #print("buffering_time =", minimal.parser.parse_args().buffering_time,"miliseconds")
+        
 
 # Accumulated percentage of used CPU. 
 CPU_total = 0
@@ -53,7 +54,8 @@ class Buffer(Minimal):
 
     def init(self, args):
         Minimal.__init__(self)
-        self.chunks_to_buffer = args.chunks_to_buffer
+        chunk_time = args.frames_per_chunk / args.frames_per_second
+        self.chunks_to_buffer = (int)(args.buffering_time / (chunk_time*1000))
         print(f"Intercom_buffer: chunks_to_buffer={self.chunks_to_buffer}")
         
         # By definition, the buffer has CHUNKS_TO_BUFFER chunks when
@@ -99,14 +101,16 @@ class Buffer(Minimal):
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
         #receive
-        print("recibir")
         message = super().receive()
         #unpack
-        tmp = struct.unpack('Is',message)
+        tmp = struct.unpack("=I%sf"%(args.frames_per_chunk*super().NUMBER_OF_CHANNELS), message)
+        #tmp = np.frombuffer(message, dtype=np.int16).reshape(args.frames_per_chunk+1, super().NUMBER_OF_CHANNELS)
         #buffer
-        print("desempaquetado"+tmp)
+        #print("desempaquetado"+tmp)
         chunk_number = tmp[0]
-        chunk = numpy.fromstring(tmp[1:], dtype=np.int16)
+        chunk = np.reshape(tmp[1:], (args.frames_per_chunk, super().NUMBER_OF_CHANNELS))
+        #chunk_number = tmp[0, 0]
+        #chunk = tmp[1:,:]
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
 
@@ -115,8 +119,9 @@ class Buffer(Minimal):
         # Now, attached to the chunk (as a header) we need to send the
         # recorded chunk number. Thus, the receiver will know where to
         # insert the chunk into the buffer.
-        chunk = struct.pack('Is',self.recorded_chunk_number, chunk)
-        print("empaquetado"+chunk)
+        chunk = struct.pack("=I%sf"%(args.frames_per_chunk*super().NUMBER_OF_CHANNELS), self.recorded_chunk_number, *chunk.flatten('F'))
+        #print("empaquetado"+chunk)
+        #chunk = np.concatenate(([[self.recorded_chunk_number, 0]], chunk)).astype(np.int16)
         super().send(chunk)
 
     # Gets the next available chunk from the buffer and send it to the
@@ -182,19 +187,14 @@ class Buffer(Minimal):
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
-        parser = minimal.parser
-        parser.add_argument("-b", "--chunks_to_buffer",
-                            help="Number of chunks to buffer",
-                            type=int, default=Buffer.CHUNKS_TO_BUFFER)
-        #parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
-        return parser
+        minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Miliseconds to buffer")
+        #minimal.parser.add_argument("-b", "--chunks_to_buffer", help="Number of chunks to buffer", type=int, default=Buffer.CHUNKS_TO_BUFFER)
+        return minimal.parser
 
 if __name__ == "__main__":
-    minimal.parser.description = __doc__
-    args 
     intercom = Buffer()
     parser = intercom.add_args()
-    #args = parser.parse_args()
+    args = parser.parse_args()
     intercom.init(args)
     try:
         intercom.run()
