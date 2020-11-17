@@ -39,6 +39,9 @@ parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My l
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 
+args = parser.parse_args()
+
+
 class Minimal:
     """
     Definition a minimal InterCom (no compression, no quantization, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks.
