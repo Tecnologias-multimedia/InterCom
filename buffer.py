@@ -101,7 +101,7 @@ class Buffer(Minimal):
         self.half_buffer = False
         """(Boolean) Controls the initial state of the buffer that requires to be half-filled"""
 
-    # TODO THIS IS THE CALLBACK
+    # THIS IS THE CALLBACK
     def record_send_and_play(self, indata, outdata, frames, time, status):
         """ Callback function used by Sounddevice
 
@@ -131,7 +131,6 @@ class Buffer(Minimal):
             to_play = self.zero_chunk
         else:
             position = self.index_local_cell % self.buffer_size
-            # print("Reproduciendo: ", self.index_local_cell)
             to_play = self.buffer[position]
             self.buffer[position] = self.zero_chunk
             self.filled_cells = self.filled_cells - 1
