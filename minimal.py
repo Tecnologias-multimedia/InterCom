@@ -38,6 +38,15 @@ parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Nu
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
+parser.add_argument("-j", "--jitter", type=int, default=8, help="Jitter time")
+
+parser.description = __doc__
+
+try:
+    argcomplete.autocomplete(parser)
+except Exception:
+    print("argcomplete not working :-/")
+args = parser.parse_known_args()[0]
 
 class Minimal:
     """
@@ -473,6 +482,7 @@ class Minimal__verbose(Minimal):
 
         if args.show_samples:
             self.show_outdata(outdata)
+
 
 if __name__ == "__main__":
     parser.description = __doc__

@@ -20,6 +20,7 @@ import struct
 
 # Buffer is based by extending minimal class
 from minimal import *
+#import minimal
 
 class Buffer(Minimal):
     """
@@ -201,12 +202,18 @@ class Buffer(Minimal):
         # print("Cabecera: ", self.head_cell)
 
 if __name__ == "__main__":
-    parser.description = __doc__
-    print(args)
-    intercom = Buffer()
-    intercom.run()
-    #print(args)
-
-
-
-
+"""    parser.description = __doc__
+    try:
+        argcomplete.autocomplete(parser)
+    except Exception:
+        print("argcomplete not working :-/")
+    args = parser.parse_known_args()[0]
+"""
+    if args.show_stats or args.show_samples:
+        intercom = Buffer()
+    else:
+        intercom = Buffer()
+    try:
+        intercom.run()
+    except KeyboardInterrupt:
+        parser.exit("\nInterrupted by user")
