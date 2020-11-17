@@ -164,7 +164,7 @@ class Minimal:
         try:
             packed_chunk, sender = self.sock.recvfrom(self.MAX_PAYLOAD_BYTES)
             return packed_chunk
-        except socket.timeout:
+        except BlockingIOError:
         #except Exception as e: #socket.timeout: #BlockingIOError:
             raise
 
