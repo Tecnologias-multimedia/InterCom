@@ -3,8 +3,14 @@ import threading
 from udp_send import UdpSender
 from udp_receive import UdpReceiver
 from args import get_args, show_args
-#import numpy # Por ahora no usaremos numpy porque no le sacaremos provecho
-#assert numpy
+import struct
+import heapq 
+from queue import PriorityQueue
+import numpy
+assert numpy
+
+# Size of the sequence number in bytes
+SEQ_NO_SIZE = 8
 
 class InterCom():
     def __init__(self, args):
@@ -18,6 +24,15 @@ class InterCom():
         self.in_port      = args.in_port
         self.out_port     = args.out_port
         self.address      = args.address
+        self.n            = args.buffer_size
+
+        self.buffer = PriorityQueue(maxsize=self.n * 2)
+        # mutex for waiting until the buffer has a large enough number
+        # of chunks before playing the sound
+        self.lock = threading.Lock()
+        # immediately lock the mutex
+        self.lock.acquire()
+        self.last_played = -1
 
         show_args(args)
 
@@ -45,15 +60,16 @@ class InterCom():
         chunk, _ = stream.read(chunk_size)
         return chunk
             
-    def pack(self, chunk):
+    def pack(self, seq, chunk):
         """TODO
             """
-        return chunk
+        chunk_bytes = bytes(chunk)
+        return struct.pack(f"Q {len(chunk_bytes)}s", seq, chunk_bytes)
 
     def unpack(self, packed_chunk):
         """TODO
             """
-        return packed_chunk
+        return struct.unpack(f"Q {len(packed_chunk) - SEQ_NO_SIZE}s", packed_chunk)
 
     def play(self, chunk, stream):
         """Write samples to the stream.
@@ -76,22 +92,68 @@ class InterCom():
             """
         stream = sd.RawInputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16')
         stream.start()
+
+        seq = 0
         with UdpSender() as sender:
             while True:
                 chunk = self.record(self.frames_per_chunk, stream)
-                packed_chunk = self.pack(chunk)
+                if not chunk: 
+                    continue
+                packed_chunk = self.pack(seq, chunk)
                 sender.send(packed_chunk, self.out_port, self.address)
+                seq += 1
 
     def server(self):
         """ Record a chunk with size ```frames_per_chunk``` and sends it through ```address``` and ```out_port```
             """
-        stream = sd.RawOutputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16')
-        stream.start()
         with UdpReceiver(self.in_port) as receiver:
             while True:
                 packed_chunk = receiver.receive(self.payload_size)
                 chunk = self.unpack(packed_chunk)
-                self.play(chunk, stream)
+                # ignore old chunks
+                if self.should_skip_chunk(chunk[0]):
+                    continue
+                
+                # Store chunks in the buffer
+                self.buffer.put(chunk)
+
+                if self.buffer.qsize() >= self.n and self.lock.locked():
+                    self.lock.release()
+
+    def playback(self):
+        """ Manage and play chunks in the buffer
+            """
+        stream = sd.RawOutputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16')
+        stream.start()
+        while True:
+            # Wait until half of the buffer is full 
+            if self.buffer.qsize() <= self.n:
+                self.lock.acquire()
+            seq, chunk = self.buffer.get()
+            # ignore old chunks
+            if self.should_skip_chunk(seq):
+                continue
+            self.last_played = seq
+            self.play(chunk, stream)
+
+    def should_skip_chunk(self, seq):
+        """ Avoid inserting old chunks in the buffer according to their ```sequence``` number
+            """
+        #Check if the input chunk sequence differs from the current execution sequence 
+        if seq < self.last_played:
+            dif = self.last_played - seq
+            # If the "id" of the chunk is too old, restart the execution sequence
+            if dif > self.n * 2:
+                print(f"received very old chunk ({dif} packets old), updating seq no")
+                self.last_played = seq - 1
+                return False
+            # If the difference with the execution sequence is small, those packages are dropped
+            else:
+                print(f"dropped old chunk ({dif} packets old)")
+                return True
+        else:
+            return False
+
 
 if __name__ == "__main__":
     # Get args
@@ -102,5 +164,7 @@ if __name__ == "__main__":
     # Threads
     clientT = threading.Thread(target=intercom.client)
     serverT = threading.Thread(target=intercom.server)
+    playbackT = threading.Thread(target=intercom.playback)
     clientT.start()
     serverT.start()
+    playbackT.start()
