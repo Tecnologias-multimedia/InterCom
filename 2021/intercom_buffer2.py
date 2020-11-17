@@ -25,7 +25,7 @@
 # 1. Implement the treatment of mono signals.
 # 2. Compute (and show) the buffering time.
 
-from intercom_minimal import Intercom_minimal
+from intercom_minimal2 import Intercom_minimal
 import sounddevice as sd
 import numpy as np
 import psutil
