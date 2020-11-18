@@ -31,7 +31,7 @@ parser.add_argument("-o", "--output-device", type=int_or_str, help="Output devic
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
-parser.add_argument("-a", "--destination_address", type=int_or_str, default="192.168.0.162", help="Destination (interlocutor's listening-) address")
+parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-v", "--verbose", help="Provides running information", action="store_true")
 args=parser.parse_args() 

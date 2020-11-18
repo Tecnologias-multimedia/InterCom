@@ -21,17 +21,15 @@
 #
 
 import sounddevice as sd
-import struct
 import numpy as np
 import psutil
 import time
 from multiprocessing import Process
+#importamos struct y heredamos minimal
+import struct
 import minimal
 from minimal import *
-#minimal.parser.add_argument("-b","--buffering_time", type=int, default=100, help="Miliseconds to buffer")
-#print("buffering_time =", minimal.parser.parse_args().buffering_time,"miliseconds")
         
-
 # Accumulated percentage of used CPU. 
 CPU_total = 0
 
@@ -100,17 +98,11 @@ class Buffer(Minimal):
     # the buffer. As the receive_and_queue() method in
     # Intercom_minimal, this method is called from an infinite loop.
     def receive_and_buffer(self):
-        #receive
+
         message = super().receive()
-        #unpack
         tmp = struct.unpack("=I%sf"%(args.frames_per_chunk*super().NUMBER_OF_CHANNELS), message)
-        #tmp = np.frombuffer(message, dtype=np.int16).reshape(args.frames_per_chunk+1, super().NUMBER_OF_CHANNELS)
-        #buffer
-        #print("desempaquetado"+tmp)
         chunk_number = tmp[0]
         chunk = np.reshape(tmp[1:], (args.frames_per_chunk, super().NUMBER_OF_CHANNELS))
-        #chunk_number = tmp[0, 0]
-        #chunk = tmp[1:,:]
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
         return chunk_number
 
@@ -120,8 +112,6 @@ class Buffer(Minimal):
         # recorded chunk number. Thus, the receiver will know where to
         # insert the chunk into the buffer.
         chunk = struct.pack("=I%sf"%(args.frames_per_chunk*super().NUMBER_OF_CHANNELS), self.recorded_chunk_number, *chunk.flatten('F'))
-        #print("empaquetado"+chunk)
-        #chunk = np.concatenate(([[self.recorded_chunk_number, 0]], chunk)).astype(np.int16)
         super().send(chunk)
 
     # Gets the next available chunk from the buffer and send it to the
@@ -187,10 +177,12 @@ class Buffer(Minimal):
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
-        
-       
-        minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Miliseconds to buffer")
-        #minimal.parser.add_argument("-b", "--chunks_to_buffer", help="Number of chunks to buffer", type=int, default=Buffer.CHUNKS_TO_BUFFER)
+        #parser = Intercom_minimal.add_args(self)
+        #parser.add_argument("-b", "--chunks_to_buffer",
+        #                    help="Number of chunks to buffer",
+        #                    type=int, default=Intercom_buffer.CHUNKS_TO_BUFFER)
+        #return parser
+        minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Milisegundos")
         return minimal.parser
 
 if __name__ == "__main__":
