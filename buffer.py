@@ -28,8 +28,8 @@ import time
 from multiprocessing import Process
 import minimal
 from minimal import *
-#minimal.parser.add_argument("-b","--buffering_time", type=int, default=100, help="Miliseconds to buffer")
-#print("buffering_time =", minimal.parser.parse_args().buffering_time,"miliseconds")
+minimal.parser.add_argument("-b","--buffering_time", type=int, default=1000, help="Miliseconds to buffer")
+print("buffering_time =", minimal.parser.parse_args().buffering_time,"miliseconds")
         
 
 # Accumulated percentage of used CPU. 
@@ -109,7 +109,7 @@ class Buffer(Minimal):
         #buffer
         #print("desempaquetado"+tmp)
         chunk_number = tmp[0]
-        chunk = np.reshape(tmp[1:], (args.frames_per_chunk, super().NUMBER_OF_CHANNELS))
+        chunk = np.reshape(tmp[1:], (args.frames_per_chunk, super().NUMBER_OF_CHANNELS)).astype(np.int16)
         #chunk_number = tmp[0, 0]
         #chunk = tmp[1:,:]
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
@@ -188,8 +188,7 @@ class Buffer(Minimal):
             print(f"\nIntercom_buffer: average CPU usage = {CPU_average} %")
 
     def add_args(self):
-        minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Miliseconds to buffer")
-        #minimal.parser.add_argument("-b", "--chunks_to_buffer", help="Number of chunks to buffer", type=int, default=Buffer.CHUNKS_TO_BUFFER)
+        #minimal.parser.add_argument("-b","--buffering_time", type=int, default=500, help="Miliseconds to buffer")
         return minimal.parser
 
 if __name__ == "__main__":
