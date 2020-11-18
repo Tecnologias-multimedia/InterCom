@@ -70,24 +70,28 @@ class Minimal:
     #RECV_BUF_SIZE = 327680
 
     def __init__(self):
+        #Salida por pantalla
+        # line 76, in __init__
+        #self.listening_endpoint = ("0.0.0.0", args.listening_port)
+        #NameError: name 'args' is not defined
         ''' Constructor. Basically initializes the sockets stuff. '''
         #self.sending_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.listening_endpoint = ("0.0.0.0", args.listening_port)
-        self.sock.bind(self.listening_endpoint)
+        #self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #self.listening_endpoint = ("0.0.0.0", args.listening_port)
+        #self.sock.bind(self.listening_endpoint)
         #self.sock.settimeout(0)
         #self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF, self.RECV_BUF_SIZE)
         #print("buffer size =", self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
-        self.chunk_time = args.frames_per_chunk / args.frames_per_second
-        self.zero_chunk = self.generate_zero_chunk()
-        if __debug__:
-            print("\nInterCom parameters:\n")
-            print(args)
-            print("\nUsing device:\n")
-            print(sd.query_devices(args.input_device))
-            print()
-            print("chunk_time =", self.chunk_time, "seconds")
-            print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
+        #self.chunk_time = args.frames_per_chunk / args.frames_per_second
+        #self.zero_chunk = self.generate_zero_chunk()
+        #if __debug__:
+        #    print("\nInterCom parameters:\n")
+        #    print(args)
+        #    print("\nUsing device:\n")
+        #    print(sd.query_devices(args.input_device))
+        #    print()
+        #    print("chunk_time =", self.chunk_time, "seconds")
+        #    print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
 
     def pack(self, chunk):
         ''' Builds a packet's payloads with a chunk.
