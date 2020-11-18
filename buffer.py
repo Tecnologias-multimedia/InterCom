@@ -62,6 +62,9 @@ class Buffer(Minimal):
         self.index_remote_cell = np.uint16(0)
         """(int) Index of the current chunk to send"""
 
+        self.buffer_head = np.uint16(0)
+        """(int) Index of the head of the buffer"""
+
         # Print minimal information to visualize initialisation
         print("Chunk time: ", self.chunk_time * 1000)
         print("Jitter time: ", self.jitter_time)
@@ -88,7 +91,10 @@ class Buffer(Minimal):
         self.decrement_cells = lambda cells: cells - 1
         """(lambda) Lambda function to decrement variable"""
 
-        self.pack_format = f"H{args.frames_per_chunk*2}h"
+        self.update_head = lambda : (self.buffer_head + 1) % self.buffer_size
+        """(lambda) Lambda function to update the head of the buffer"""
+
+        self.pack_format = f"H{args.frames_per_chunk * self.NUMBER_OF_CHANNELS}h"
         """(string) The format used in struct methods"""
 
         # Create fixed empty array
@@ -130,14 +136,15 @@ class Buffer(Minimal):
         if not self.half_buffer:
             to_play = self.zero_chunk
         else:
-            position = self.index_local_cell % self.buffer_size
-            to_play = self.buffer[position]
-            self.buffer[position] = self.zero_chunk
+            #position = self.index_local_cell % self.buffer_size
+            to_play = self.buffer[self.buffer_head]
+            self.buffer[self.buffer_head] = self.zero_chunk
             self.filled_cells = self.filled_cells - 1
-            self.index_local_cell = self.update_local_index()
+            self.buffer_head = self.update_head()
+            #self.index_local_cell = self.update_local_index()
         outdata[:] = to_play
 
-    # TODO EXECUTES IN MAIN THREAD
+    # EXECUTES IN MAIN THREAD
     def receive_and_buffer(self):
         """ Receive data from the socket and stores it in the buffer
 
@@ -170,7 +177,6 @@ class Buffer(Minimal):
         if (self.filled_cells >= (len(self.buffer)/2)):
             self.half_buffer = True
 
-    # TODO
     def start(self):
         self.sock.settimeout(0)
         """Starts sounddevice audio stream via callback method"""
@@ -181,7 +187,7 @@ class Buffer(Minimal):
     def send(self, data):
         """ Send data over sender socket
 
-            Uses parent's method to send data.
+            Uses the method of the parent to send data.
 
             Parameters
             ----------
