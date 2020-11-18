@@ -118,7 +118,6 @@ class Intercom_minimal:
         self.number_of_channels = args.number_of_channels
         self.frames_per_second = args.frames_per_second
         self.frames_per_chunk = args.frames_per_chunk
-        self.chunk_time = (self.frames_per_chunk / self.frames_per_second) * 1000
         self.my_port = args.my_port
         self.destination_address = args.destination_address 
         self.destination_port = args.destination_port
