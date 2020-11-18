@@ -45,9 +45,9 @@ class Buffer(Minimal):
 
         super().__init__()
 
-        self.jitter_time = args.jitter
+        self.jitter_time = args.buffer_time
 
-        self.jitter_to_chunk_time = math.ceil(args.jitter / (self.chunk_time * 1000))
+        self.jitter_to_chunk_time = math.ceil(args.buffer_time/ (self.chunk_time * 1000))
         """(int) Result to convert jitter time to chunks size"""
 
         self.buffer_size = 2 * self.jitter_to_chunk_time
