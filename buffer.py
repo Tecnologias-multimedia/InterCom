@@ -26,7 +26,7 @@ class Buffer(Minimal):
         self.udp_port = port
 
         self.samplerate = 44100
-        self.blocksize = 4096
+        self.blocksize = 1024
         self.channels = 2
         self.max_payload_bytes = (self.blocksize * 2 + 1) * 2
 
