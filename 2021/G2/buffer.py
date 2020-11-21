@@ -42,7 +42,6 @@ class Buffering(minimal.Minimal):
     stream()
     run()
     """
-
     def __init__(self):
         ''' Initializes the buffer. '''
         super().__init__()
@@ -56,6 +55,7 @@ class Buffering(minimal.Minimal):
         for i in range(self.cells_in_buffer):
             self._buffer[i] = self.zero_chunk
         self.chunk_number = 0
+        self.played_chunk_number = 0
         if __debug__:
             print("chunks_to_buffer =", self.chunks_to_buffer)
 
@@ -201,7 +201,6 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         print("Press CTRL+c to quit")
         self.print_header()
         try:
-            self.played_chunk_number = 0
             with self.stream(self._record_send_and_play):
                 first_received_chunk_number = self.receive_and_buffer()
                 if __debug__:
