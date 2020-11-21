@@ -10,7 +10,7 @@ import socket
 import time
 import psutil
 try:
-    import argcomplete  # <tab> completion for argparse
+    import argcomplete  # <tab> completion for argparse.
 except ImportError:
     print("Unable to import argcomplete")
 
@@ -64,20 +64,18 @@ class Minimal:
     _stream()
     run()
     """
-    MAX_PAYLOAD_BYTES = 32768
-    SAMPLE_TYPE = np.int16
-    NUMBER_OF_CHANNELS = 2
-    #RECV_BUF_SIZE = 327680
+
+    # Some default values:
+    MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
+    SAMPLE_TYPE = np.int16    # The number of bits per sample.
+    NUMBER_OF_CHANNELS = 2    # The number of channels.
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
-        #self.sending_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        print("InterCom (Minimal) is running")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
-        #self.sock.settimeout(0)
-        #self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF, self.RECV_BUF_SIZE)
-        #print("buffer size =", self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         self.zero_chunk = self.generate_zero_chunk()
         if __debug__:
@@ -122,8 +120,9 @@ class Minimal:
 
             A chunk (a pointer to the socket's read-only buffer).
         '''
-           
-        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)  # We need to reshape a numpy array
+
+        # We need to reshape a numpy array.
+        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)
         chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk
     
@@ -138,7 +137,6 @@ class Minimal:
             A packet structure with the sequence of bytes to send.
 
         '''
-        #self.sending_socket.sendto(packed_chunk, (args.destination_address, args.destination_port))
         self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
         
 
@@ -156,11 +154,11 @@ class Minimal:
             packed_chunk, sender = self.sock.recvfrom(self.MAX_PAYLOAD_BYTES)
             return packed_chunk
         except socket.timeout:
-        #except Exception as e: #socket.timeout: #BlockingIOError:
             raise
 
     def generate_zero_chunk(self):
-        '''Generates a chunk with zeros that will be used when an inbound chunk is not available. '''
+        '''Generates a chunk with zeros that will be used when an inbound
+        chunk is not available.'''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
 
     def _record_io_and_play(self, indata, outdata, frames, time, status):
@@ -234,7 +232,7 @@ class Minimal:
         an enter-key pressing.'''
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
-        print("InterCom (minimal) running ... press enter-key to quit")
+        print("Press enter-key to quit")
         with self.stream(self._record_io_and_play):
             input()
 
@@ -275,8 +273,7 @@ class Minimal__verbose(Minimal):
         self.chunks_per_cycle = self.frames_per_cycle / args.frames_per_chunk
         # All average values are per cycle.
 
-        self.cycle = 1
-        # Infinite counter.
+        self.cycle = 1 # Infinite counter.
         
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
@@ -430,8 +427,6 @@ class Minimal__verbose(Minimal):
 
     def run(self):
         ''' Runs the verbose InterCom. '''
-        #self.old_time = time.time()
-        #self.old_CPU_time = psutil.Process().cpu_times()[0]
         self.sock.settimeout(0)
         print("Use CTRL+C to quit")
         self.print_header()
@@ -489,5 +484,3 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         parser.exit("\nInterrupted by user")
-    #except Exception as e:
-    #    parser.exit(type(e).__name__ + ": " + str(e))
