@@ -1,217 +1,235 @@
-#
-# Buffer
-#
-# The buffer class implements the mechanisms required to solve the jitter issues
-# The ADT used is a circular queue that stores the packed received by the other
-# interlocutor. The main purpose is to decrement the jitter effects by increasing
-# the latency. In order to ensure that the queue has enough chunks to mitigate
-# the jitter, the queue should be half filled. For that reason the initialisation
-# waits to fill the half of the queue. A blank chunk with silence is played as
-# a last resort in case to not have any chunk.
+#!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 
+''' Real-time Audio Intercommunicator (with buffering). '''
 
-# import numpy as np
-# Package to use several math functions
+import argparse
+import sounddevice as sd
+import numpy as np
+import socket
+import time
+import psutil
 import math
-
-# Package to performs conversions between Python values and C structs represented
-# as Python strings
 import struct
+import threading
 
-# Buffer is based by extending minimal class
-from minimal import *
-#import minimal
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
+import minimal
 
-class Buffer(Minimal):
+minimal.parser.add_argument("-b", "--buffering_time", type=int, default=100, help="Miliseconds to buffer")
+
+
+class Buffering(minimal.Minimal):
+    CHUNK_NUMBERS = 1 << 15  # Enought for most buffering times.
+
     """
-    Class that implements the buffer required to reduce the effect of the jitter.
-    Inherits from Minimal used in Milestone 5
+    Implements a random access buffer structure for hiding the jitter.
+
+    Class attributes
+    ----------------
+
+    Methods
+    -------
+    __init__()
+    pack(chunk)
+    send(packed_chunk)
+    receive()
+    unpack(packed_chunk)
+    generate_zero_chunk()
+    _record_io_and_play()
+    stream()
+    run()
     """
-
-    MAX_CHUNK = 65536
-    """(int) (static): Max chunk size"""
-
-    BUFFER_SIZE = 8
-    """(int) (static): Buffer size by default"""
 
     def __init__(self):
-        """
-        Class constructor
-
-        The constructor class requires several arguments that must be provided before
-        to get an buffer instance. The constructor calls the constructor of Minimal class
-        and also creates all variables needed, including the buffer array.
-        """
-
+        ''' Initializes the buffer. '''
         super().__init__()
+        if minimal.args.buffering_time <= 0:
+            minimal.args.buffering_time = 1  # ms
+        print(f"buffering_time = {minimal.args.buffering_time} miliseconds")
+        self.chunks_to_buffer = int(math.ceil(minimal.args.buffering_time / 1000 / self.chunk_time))
+        self.zero_chunk = self.generate_zero_chunk()
+        self.cells_in_buffer = self.chunks_to_buffer * 2
+        self._buffer = [None] * self.cells_in_buffer
+        for i in range(self.cells_in_buffer):
+            self._buffer[i] = self.zero_chunk
+        self.chunk_number = 0
+        if __debug__:
+            print("chunks_to_buffer =", self.chunks_to_buffer)
 
-        self.jitter_time = args.buffer_time
+    def pack(self, chunk_number, chunk):
+        ''' Concatenates a chunk number to the chunk.
 
-        self.jitter_to_chunk_time = math.ceil(args.buffer_time/ (self.chunk_time * 1000))
-        """(int) Result to convert jitter time to chunks size"""
-
-        self.buffer_size = 2 * self.jitter_to_chunk_time
-        """(int) Size of the buffer. It is the double of jitter_to_chunk_time"""
-
-        self.filled_cells = 0
-        """(int) Number of filled cells in the buffer"""
-
-        self.index_local_cell = np.uint16(0)
-        """(int) Index of the current chunk"""
-
-        self.index_remote_cell = np.uint16(0)
-        """(int) Index of the current chunk to send"""
-
-        self.buffer_head = np.uint16(0)
-        """(int) Index of the head of the buffer"""
-
-        # Print minimal information to visualize initialisation
-        print("Chunk time: ", self.chunk_time * 1000)
-        print("Jitter time: ", self.jitter_time)
-        print("Jitter to chunk: ", self.jitter_to_chunk_time)
-        print("Tamaño buffer: ", self.buffer_size)
-
-        self.current_cell = np.uint16(0)
-
-        self.to_u16 = lambda x : np.uint16(x)
-        """(lambda) Lambda function to cast to 16 bits unsigned integer"""
-
-        self.update_local_index = lambda: self.to_u16((self.index_local_cell + 1) % Buffer.MAX_CHUNK)
-        """(lambda) Lambda function to update (increase) the front of the queue"""
-
-        self.update_remote_index = lambda: self.to_u16((self.index_remote_cell + 1) % Buffer.MAX_CHUNK)
-        """(lambda) Lambda function to update (increase) the rearof the queue"""
-
-        self.index_package = lambda chunk_sequence: self.to_u16(chunk_sequence % self.buffer_size)
-        """(lambda) Lambda function to calculate the position of the package in the queue"""
-
-        self.increment_cells = lambda cells: cells + 1
-        """(lambda) Lambda function to increment variable"""
-
-        self.decrement_cells = lambda cells: cells - 1
-        """(lambda) Lambda function to decrement variable"""
-
-        self.update_head = lambda : (self.buffer_head + 1) % self.buffer_size
-        """(lambda) Lambda function to update the head of the buffer"""
-
-        self.pack_format = f"H{args.frames_per_chunk * self.NUMBER_OF_CHANNELS}h"
-        """(string) The format used in struct methods"""
-
-        # Create fixed empty array
-        self.buffer = [None] * self.buffer_size
-        """(list) A list that stores the buffer"""
-
-        for i in range(len(self.buffer)):
-            self.buffer[i] = self.zero_chunk
-
-        self.half_buffer = False
-        """(Boolean) Controls the initial state of the buffer that requires to be half-filled"""
-
-    # THIS IS THE CALLBACK
-    def record_send_and_play(self, indata, outdata, frames, time, status):
-        """ Callback function used by Sounddevice
-
-        In non blocking audio stream, a new thread is created
-        and periodically executes the callback method. Usually
-        the call occurs when new input data (indata) is available to
-        manipulate. Is recommended to manage output stream in the callback
-        method also.
-
-        The arguments are imposed to Sounndevice callback signature
-
-        """
-        self.send(indata)
-        self.play(outdata)
-
-    def play(self, outdata):
-        """ Places the next chunk of audio in output streams
-
-            Calculates the position of next cell in buffer an retrieves it
-            in order to assign to the outdata stream.
         Parameters
         ----------
-            outdata
-                Output stream used by Sounddevice
-        """
-        if not self.half_buffer:
-            to_play = self.zero_chunk
-        else:
-            #position = self.index_local_cell % self.buffer_size
-            to_play = self.buffer[self.buffer_head]
-            self.buffer[self.buffer_head] = self.zero_chunk
-            self.filled_cells = self.filled_cells - 1
-            self.buffer_head = self.update_head()
-            #self.index_local_cell = self.update_local_index()
-        outdata[:] = to_play
+        chunk : numpy.ndarray
+            A chunk of audio.
 
-    # EXECUTES IN MAIN THREAD
+        Returns
+        -------
+        bytes
+            A packed chunk.
+
+        '''
+        packed_chunk = struct.pack("!H", chunk_number) + chunk.tobytes()
+        return packed_chunk
+
+    def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+        ''' Splits the packed chunk into a chunk number and a chunk.
+
+        Parameters
+        ----------
+
+        packed_chunk : bytes
+
+            A packet.
+
+        Returns
+        -------
+
+        chunk_number : int
+        chunk : numpy.ndarray
+
+            A chunk (a pointer to the socket's read-only buffer).
+        '''
+        (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
+        chunk = packed_chunk[2:]
+        # Notice that struct.calcsize('H') = 2
+        chunk = np.frombuffer(chunk, dtype=dtype)
+        chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        return chunk_number, chunk
+
+    def buffer_chunk(self, chunk_number, chunk):
+        self._buffer[chunk_number % self.cells_in_buffer] = chunk
+
+    def unbuffer_next_chunk(self):
+        chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
+        return chunk
+
+    def play_chunk(self, DAC, chunk):
+        self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
+        DAC[:] = chunk
+
+    def receive(self):
+        packed_chunk, sender = self.sock.recvfrom(self.MAX_PAYLOAD_BYTES)
+        return packed_chunk
+
     def receive_and_buffer(self):
-        """ Receive data from the socket and stores it in the buffer
+        if __debug__:
+            print(next(minimal.spinner), end='\b', flush=True)
+        packed_chunk = self.receive()
+        chunk_number, chunk = self.unpack(packed_chunk)
+        self.buffer_chunk(chunk_number, chunk)
+        return chunk_number
 
-            This method is executed in the main thread in a loop. It tries to retrieve
-            data from the socket. If a packet is found in the buffer, the method
-            extracts the sequence number and the payload. Converts the payload in a
-            suitable numpy array an then stores it in the buffer uysing the sequence
-            number provided.
+    def _record_send_and_play(self, indata, outdata, frames, time, status):
+        self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
+        packed_chunk = self.pack(self.chunk_number, indata)
+        self.send(packed_chunk)
+        chunk = self.unbuffer_next_chunk()
+        self.play_chunk(outdata, chunk)
 
-            Raises
-            ------
-                socket.timeout
-                    Resource temporarily unavailable. Socket may be empty.
-                    In non-blocking UDP socket an exception of this type is raised.
-        """
+    def run(self):
+        '''Creates the stream, install the callback function, and waits for
+        an enter-key pressing.'''
+        print("Press CTRL+c to quit")
+        self.played_chunk_number = 0
+        with self.stream(self._record_send_and_play):
 
-        try:
-            packed_data = self.receive()
-            unpacked_data = struct.unpack(self.pack_format, packed_data)
-            chunk_index = self.to_u16(unpacked_data[0])
-            data = np.array(unpacked_data[1:])
-            data = data.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
-        except Exception as e:
-            pass
-        else :
-            # print("Recibiendo: ", chunk_index)
-            self.buffer[chunk_index % self.buffer_size] = data
-            self.filled_cells = self.filled_cells+1
-            # print("Filled cells: " , self.filled_cells)
-        if (self.filled_cells >= (len(self.buffer)/2)):
-            self.half_buffer = True
+            first_received_chunk_number = self.receive_and_buffer()
+            if __debug__:
+                print("first_received_chunk_number =", first_received_chunk_number)
 
-    def start(self):
-        self.sock.settimeout(0)
-        """Starts sounddevice audio stream via callback method"""
-        with sd.Stream(samplerate=args.frames_per_second, blocksize=args.frames_per_chunk, dtype=self.SAMPLE_TYPE, channels=self.NUMBER_OF_CHANNELS, callback=self.record_send_and_play):
+            self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
+            # The previous selects the first chunk to be played the
+            # one (probably emptty) that are in the buffer
+            # self.chunks_to_buffer position before
+            # first_received_chunk_number.
+
             while True:
                 self.receive_and_buffer()
 
-    def send(self, data):
-        """ Send data over sender socket
 
-            Uses the method of the parent to send data.
+class Buffering__verbose(Buffering, minimal.Minimal__verbose):
+    ''' Verbose version of Buffering.
 
-            Parameters
-            ----------
-                data
-                    Data to send over UDP socket. A numpy array is expected
-        """
-        chunk = struct.pack(self.pack_format, self.index_remote_cell, *(data.flatten()))
-        # print("Enviando: ", self.index_remote_cell)
-        self.index_remote_cell = self.update_remote_index()
-        super().send(chunk)
+    Methods
+    -------
+    __init__()
+    send(packed_chunk)
+    receive()
+    cycle_feedback()
+    run()
+    '''
+
+    def __init__(self):
+        super().__init__()
+        thread = threading.Thread(target=self.feedback)
+        thread.daemon = True  # To obey CTRL+C interruption.
+        thread.start()
+
+    def feedback(self):
+        while True:
+            time.sleep(self.SECONDS_PER_CYCLE)
+            self.cycle_feedback()
+
+    def send(self, packed_chunk):
+        ''' Computes the number of sent bytes and the number of sent packets. '''
+        Buffering.send(self, packed_chunk)
+        self.sent_bytes_count += len(packed_chunk)
+        self.sent_messages_count += 1
+
+    def receive(self):
+        ''' Computes the number of received bytes and the number of received packets. '''
+        packed_chunk = super().receive()
+        self.received_bytes_count += len(packed_chunk)
+        self.received_messages_count += 1
+        return packed_chunk
+
+    def _record_send_and_play(self, indata, outdata, frames, time, status):
+        if minimal.args.show_samples:
+            self.show_indata(indata)
+
+        super()._record_send_and_play(indata, outdata, frames, time, status)
+
+        if minimal.args.show_samples:
+            self.show_outdata(outdata)
+
+    def run(self):
+        '''.'''
+        print("Press CTRL+c to quit")
+        self.print_header()
+        try:
+            self.played_chunk_number = 0
+            with self.stream(self._record_send_and_play):
+                first_received_chunk_number = self.receive_and_buffer()
+                if __debug__:
+                    print("first_received_chunk_number =", first_received_chunk_number)
+                self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
+                while True:
+                    self.receive_and_buffer()
+        except KeyboardInterrupt:
+            self.print_final_averages()
+
 
 if __name__ == "__main__":
-    parser.description = __doc__
+    minimal.parser.description = __doc__
     try:
-        argcomplete.autocomplete(parser)
+        argcomplete.autocomplete(minimal.parser)
     except Exception:
-        print("argcomplete not working :-/")
-    args = parser.parse_known_args()[0]
-
-    if args.show_stats or args.show_samples:
-        intercom = Buffer()
+        if __debug__:
+            print("argcomplete not working :-/")
+        else:
+            pass
+    minimal.args = minimal.parser.parse_known_args()[0]
+    if minimal.args.show_stats or minimal.args.show_samples:
+        intercom = Buffering__verbose()
     else:
-        intercom = Buffer()
+        intercom = Buffering()
     try:
-        intercom.start()
+        intercom.run()
     except KeyboardInterrupt:
-        parser.exit("\nInterrupted by user")
+        minimal.parser.exit("\nInterrupted by user")
