@@ -14256,11 +14256,9 @@ José Francisco Castillo Berenguel<br>
 <h1 id="Introducci&#243;n">Introducci&#243;n<a class="anchor-link" href="#Introducci&#243;n">&#182;</a></h1><p>Se presentaron dos problemas fundamentales de la transmisión por internet: jitter y byte rate. En el hito 8 se resolvió el problema del jitter  por medio de un buffer circular. En este hito se atenuarán los efectos del byte rate mediante la compresión de los paquetes que se envíen.</p>
 <h1 id="Fundamentos">Fundamentos<a class="anchor-link" href="#Fundamentos">&#182;</a></h1><p>Para este hito se requirirá de un proceso de compresión. No obstante, dicho proceso de compresión puede mejorarse explotando la correlación estadística que existe dentro de cada canal. Para ello, se procederá con una serie de transformaciones que nos permitan dicho aprovechamiento.</p>
 <h2 id="Zlib">Zlib<a class="anchor-link" href="#Zlib">&#182;</a></h2><p>La compresión se realizará por medio de la libreria <code>Zlib</code>. Las funciones destacadas son: <code>compress</code> y <code>decompress</code>. La función <code>compress</code> requiere de los datos a comprimir, así como del nivel de compresión, el cual está comprendido entre 0 y 9 donde:</p>
-<ol>
-<li>El nivel 0 implica no compresión.</li>
-<li>El nivel 1 es el más rápido pero el que menos comprime. </li>
-<li>El nivel 9 es el que más comprime pero es el más lento. </li>
-</ol>
+<p>1. El nivel 0 implica no compresión.</p>
+<p>2. El nivel 1 es el más rápido pero el que menos comprime.</p>
+<p>3. El nivel 9 es el que más comprime pero es el más lento.</p>
 <h2 id="Buffers-auxiliares">Buffers auxiliares<a class="anchor-link" href="#Buffers-auxiliares">&#182;</a></h2><p>Dado que se van a realizar múltiples operaciones con vectores y con el propósito de obtener eficiencia, se sacrificará memoria, creando para ello dos matrices de numpy: una para el proceso de recepción y otra para el proceso de envío. El fundamiento de esta decisión, se basa en que los vectores de numpy son eficientes ya que tienen contiguas.</p>
 <h2 id="Slicing">Slicing<a class="anchor-link" href="#Slicing">&#182;</a></h2><p>Se trata de un proceso de indexación proporcionado por numpy que permite extraer varios elementos de una matriz de numpy sin recurrir a bucles, obteniendo como consecuencia eficiencia. El proceso de indexación es de la forma:</p>
 <div class="highlight"><pre><span></span><span class="n">vector</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">:</span><span class="n">step</span><span class="p">]</span>
@@ -14278,27 +14276,18 @@ José Francisco Castillo Berenguel<br>
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
 <p>&nbsp;</p>
 <p>La siguiente figura, explica el proceso de compresión (<code>pack</code>) de forma más detallada. El proceso de compresión se realiza de la siguiente forma:</p>
-<ol>
-<li>Se parte de una matriz de tantas columnas como canales y filas como frames. </li>
-<li><p>Se separan los canales mediante slicing. Partiendo de dos canales, la forma de hacerlo es:</p>
+<p>1. Se parte de una matriz de tantas columnas como canales y filas como frames.</p>
+<p>2. Se separan los canales mediante slicing. Partiendo de dos canales, la forma de hacerlo es:</p>
 <div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">sender_chunk_buffer</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sender_buf_size</span><span class="p">)</span><span class="o">//</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">sender_chunk_buffer</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sender_buf_size</span><span class="p">)</span><span class="o">//</span><span class="mi">2</span> <span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sender_chunk_buffer</span><span class="p">)]</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
 </pre></div>
-</li>
-<li><p>Se comprime el buffer de envio:</p>
-</li>
-</ol>
+<p>3. Se comprime el buffer de envio:</p>
 <div class="highlight"><pre><span></span><span class="n">packed_chunk</span> <span class="o">=</span> <span class="n">zlib</span><span class="o">.</span><span class="n">compress</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sender_chunk_buffer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression_level</span><span class="p">)</span>
-<span class="err">`</span>
 </pre></div>
-<ol>
-<li>Se concatena el número de chunk con el resultado de la compresión:</li>
-</ol>
+<p>4. Se concatena el número de chunk con el resultado de la compresión:</p>
 <div class="highlight"><pre><span></span><span class="n">packed_chunk</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;!H&quot;</span><span class="p">,</span> <span class="n">chunk_number</span><span class="p">)</span> <span class="o">+</span> <span class="n">packed_chunk</span>
 </pre></div>
-<ol>
-<li>Se devuelve el chunk:</li>
-</ol>
+<p>5. Se devuelve el chunk:</p>
 <div class="highlight"><pre><span></span><span class="k">return</span> <span class="n">packed_chunk</span>
 </pre></div>
 
