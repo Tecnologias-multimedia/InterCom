@@ -50,13 +50,13 @@ class InterCom():
             """
         # recorre los canales (normalmente 2 canales), podemos hacer esto porque transponemos la matriz
         compressed_channels = [zlib.compress(np.ascontiguousarray(channel), level=zlib.Z_BEST_COMPRESSION) for channel in chunk.transpose()]
-        size = 2*sum(len(channel) for channel in compressed_channels)
+        size = sum(len(channel) for channel in compressed_channels)
         print("size", size, "bytes, compression rate", "{:.2f}%".format(100*(1-size/4096)))
-        pack_format = f"HH{2*len(compressed_channels[0])}s{2*len(compressed_channels[1])}s"
+        pack_format = f"HH{len(compressed_channels[0])}s{len(compressed_channels[1])}s"
         return struct.pack(
             pack_format, 
             seq, 
-            2*len(compressed_channels[0]), # tamaño del primer canal comprimido
+            len(compressed_channels[0]), # tamaño del primer canal comprimido
             *compressed_channels, # * es para compressed_channel[0], [1], ... (expande el array)
         )
 
