@@ -3,14 +3,16 @@ import threading
 from udp_send import UdpSender
 from udp_receive import UdpReceiver
 from args import get_args, show_args
+#from stats import  print_final_averages
 import struct
 import heapq 
 from queue import PriorityQueue
-import numpy
-assert numpy
+import numpy as np
+assert np
+import zlib
 
 # Size of the sequence number in bytes
-SEQ_NO_SIZE = 8
+SEQ_NO_SIZE = 2
 
 class InterCom():
     def __init__(self, args):
@@ -39,69 +41,64 @@ class InterCom():
     
     def record(self, chunk_size, stream):
         """Record a chunk from the ```stream``` into a buffer.
-
-            Parameters
-            ----------
-            chunk_size : int
-                The number of frames to be read.
-
-            stream : buffer
-                Raw stream for playback and recording.
-
-            Returns
-            -------
-            chunk : sd.RawStream
-                A buffer of interleaved samples. The buffer contains
-                samples in the format specified by the *dtype* parameter
-                used to open the stream, and the number of channels
-                specified by *channels*.
             """
-
         chunk, _ = stream.read(chunk_size)
         return chunk
             
     def pack(self, seq, chunk):
         """TODO
             """
-        chunk_bytes = bytes(chunk)
-        return struct.pack(f"Q {len(chunk_bytes)}s", seq, chunk_bytes)
+        # recorre los canales (normalmente 2 canales), podemos hacer esto porque transponemos la matriz
+        compressed_channels = [zlib.compress(np.ascontiguousarray(channel), level=zlib.Z_BEST_COMPRESSION) for channel in chunk.transpose()]
+        size = 2*sum(len(channel) for channel in compressed_channels)
+        print("size", size, "bytes, compression rate", "{:.2f}%".format(100*(1-size/4096)))
+        pack_format = f"HH{2*len(compressed_channels[0])}s{2*len(compressed_channels[1])}s"
+        return struct.pack(
+            pack_format, 
+            seq, 
+            2*len(compressed_channels[0]), 
+            *compressed_channels, # * es para compressed_channel[0], [1], ... (expande el array)
+        )
 
     def unpack(self, packed_chunk):
         """TODO
             """
-        return struct.unpack(f"Q {len(packed_chunk) - SEQ_NO_SIZE}s", packed_chunk)
+        first_channel_size, = struct.unpack("H", packed_chunk[SEQ_NO_SIZE:2*SEQ_NO_SIZE])
+        second_channel_size = len(packed_chunk) - first_channel_size - 2*SEQ_NO_SIZE
+        # Eficiencia de compresión
+        #print("first channel size:", first_channel_size, "second channel size:", second_channel_size)
+        seq, _, first_channel_bytes, second_channel_bytes = struct.unpack(
+            f"HH{first_channel_size}s{second_channel_size}s",
+            packed_chunk,
+        )
+        first_channel = np.frombuffer(
+            zlib.decompress(first_channel_bytes), 
+            dtype='int16',
+        )
+        second_channel = np.frombuffer(
+            zlib.decompress(second_channel_bytes),
+            dtype='int16'
+        )
+        return seq, np.ascontiguousarray(np.concatenate((first_channel, second_channel)).reshape(2,-1).transpose())
 
     def play(self, chunk, stream):
         """Write samples to the stream.
-
-            Parameters
-            ----------
-            chunk : buffer
-                A buffer of interleaved samples. The buffer contains
-                samples in the format specified by the *dtype* parameter
-                used to open the stream, and the number of channels
-                specified by *channels*.
-
-            stream : sd.RawStream
-                Raw stream for playback and recording.
             """
         stream.write(chunk)
 
     def client(self):
         """ Receive a chunk from ```in_port``` and plays it.
             """
-        stream = sd.RawInputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16')
-        stream.start()
-
-        seq = 0
-        with UdpSender() as sender:
-            while True:
-                chunk = self.record(self.frames_per_chunk, stream)
-                if not chunk: 
-                    continue
-                packed_chunk = self.pack(seq, chunk)
-                sender.send(packed_chunk, self.out_port, self.address)
-                seq += 1
+        with sd.InputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16') as stream:
+            seq = 0
+            with UdpSender() as sender:
+                while True:
+                    chunk = self.record(self.frames_per_chunk, stream)
+                    if chunk.size == 0: 
+                        continue
+                    packed_chunk = self.pack(seq, chunk)
+                    sender.send(packed_chunk, self.out_port, self.address)
+                    seq += 1
 
     def server(self):
         """ Record a chunk with size ```frames_per_chunk``` and sends it through ```address``` and ```out_port```
@@ -123,18 +120,17 @@ class InterCom():
     def playback(self):
         """ Manage and play chunks in the buffer
             """
-        stream = sd.RawOutputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16')
-        stream.start()
-        while True:
-            # Wait until half of the buffer is full 
-            if self.buffer.qsize() <= self.n:
-                self.lock.acquire()
-            seq, chunk = self.buffer.get()
-            # ignore old chunks
-            if self.should_skip_chunk(seq):
-                continue
-            self.last_played = seq
-            self.play(chunk, stream)
+        with sd.OutputStream(samplerate=self.frames_per_second, channels=self.number_of_channels, dtype='int16') as stream:
+            while True:
+                # Wait until half of the buffer is full 
+                if self.buffer.qsize() <= self.n:
+                    self.lock.acquire()
+                seq, chunk = self.buffer.get()
+                # ignore old chunks
+                if self.should_skip_chunk(seq):
+                    continue
+                self.last_played = seq
+                self.play(chunk, stream)
 
     def should_skip_chunk(self, seq):
         """ Avoid inserting old chunks in the buffer according to their ```sequence``` number
@@ -165,6 +161,10 @@ if __name__ == "__main__":
     clientT = threading.Thread(target=intercom.client)
     serverT = threading.Thread(target=intercom.server)
     playbackT = threading.Thread(target=intercom.playback)
-    clientT.start()
-    serverT.start()
-    playbackT.start()
+    try:
+        clientT.start()
+        serverT.start()
+        playbackT.start()
+    except KeyboardInterrupt:
+        pass
+        #print_final_averages()
