@@ -48,36 +48,29 @@ class InterCom():
     def pack(self, seq, chunk):
         """TODO
             """
-        # recorre los canales (normalmente 2 canales), podemos hacer esto porque transponemos la matriz
-        compressed_channels = [zlib.compress(np.ascontiguousarray(channel), level=zlib.Z_BEST_COMPRESSION) for channel in chunk.transpose()]
-        size = 2*sum(len(channel) for channel in compressed_channels)
+        compressed_chunk = zlib.compress(chunk.transpose().reshape(-1)) # reshape(-1) deja en una línea el array
+        size = len(compressed_chunk)
         print("size", size, "bytes, compression rate", "{:.2f}%".format(100*(1-size/4096)))
-        pack_format = f"HH{2*len(compressed_channels[0])}s{2*len(compressed_channels[1])}s"
+
+
+        pack_format = f"H{len(compressed_chunk)}s"
         return struct.pack(
             pack_format, 
             seq, 
-            2*len(compressed_channels[0]), # tamaño del primer canal comprimido
-            *compressed_channels, # * es para compressed_channel[0], [1], ... (expande el array)
+            compressed_chunk,
         )
 
     def unpack(self, packed_chunk):
         """TODO
             """
-        first_channel_size, = struct.unpack("H", packed_chunk[SEQ_NO_SIZE:2*SEQ_NO_SIZE])
-        second_channel_size = len(packed_chunk) - first_channel_size - 2*SEQ_NO_SIZE
-        seq, _, first_channel_bytes, second_channel_bytes = struct.unpack(
-            f"HH{first_channel_size}s{second_channel_size}s",
-            packed_chunk,
-        )
-        first_channel = np.frombuffer(
-            zlib.decompress(first_channel_bytes), 
+        seq, compressed_chunk_bytes = struct.unpack(f"H {len(packed_chunk) - SEQ_NO_SIZE}s", packed_chunk)
+          
+        chunk = np.frombuffer(
+            zlib.decompress(compressed_chunk_bytes), 
             dtype='int16',
         )
-        second_channel = np.frombuffer(
-            zlib.decompress(second_channel_bytes),
-            dtype='int16'
-        )
-        return seq, np.ascontiguousarray(np.concatenate((first_channel, second_channel)).reshape(2,-1).transpose())
+
+        return seq, np.ascontiguousarray(chunk.reshape(2,-1).transpose())
 
     def play(self, chunk, stream):
         """Write samples to the stream.
