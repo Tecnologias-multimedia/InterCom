@@ -8,6 +8,13 @@ import socket
 import time
 import threading
 import psutil
+<<<<<<< HEAD
+=======
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
 
 def spinning_cursor():
     ''' https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor
@@ -58,6 +65,7 @@ class Minimal:
     _stream()
     run()
     """
+<<<<<<< HEAD
     MAX_PAYLOAD_BYTES = 32768
     SAMPLE_TYPE = np.int16
     NUMBER_OF_CHANNELS = 1
@@ -71,6 +79,21 @@ class Minimal:
         chunk_time = args.frames_per_chunk / args.frames_per_second
         print("chunk_time =", chunk_time, "seconds")
         #self.receiving_socket.settimeout(0)
+=======
+
+    # Some default values:
+    MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
+    SAMPLE_TYPE = np.int16    # The number of bits per sample.
+    NUMBER_OF_CHANNELS = 2    # The number of channels.
+
+    def __init__(self):
+        ''' Constructor. Basically initializes the sockets stuff. '''
+        print("InterCom (Minimal) is running")
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.listening_endpoint = ("0.0.0.0", args.listening_port)
+        self.sock.bind(self.listening_endpoint)
+        self.chunk_time = args.frames_per_chunk / args.frames_per_second
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
         self.zero_chunk = self.generate_zero_chunk()
 
     def pack(self, chunk):
@@ -86,6 +109,32 @@ class Minimal:
         '''
         return chunk  # In minimal, this method does not perform any work.
 
+<<<<<<< HEAD
+=======
+    def unpack(self, packed_chunk):
+        ''' Unpack a packed_chunk.
+
+        Parameters
+        ----------
+
+        packed_chunk : bytes
+
+            A chunk.
+
+        Returns
+        -------
+
+        numpy.ndarray
+
+            A chunk (a pointer to the socket's read-only buffer).
+        '''
+
+        # We need to reshape a numpy array.
+        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)
+        chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        return chunk
+    
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
     def send(self, packed_chunk):
         ''' Sends an UDP packet.
         Parameters
@@ -93,7 +142,12 @@ class Minimal:
         packed_chunk : bytes
             A packet structure with the sequence of bytes to send.
         '''
+<<<<<<< HEAD
         self.sending_socket.sendto(packed_chunk, (args.destination_address, args.destination_port))
+=======
+        self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
+        
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
 
     def receive(self):
         ''' Receives an UDP packet without blocking.
@@ -105,7 +159,11 @@ class Minimal:
         try:
             packed_chunk, sender = self.receiving_socket.recvfrom(self.MAX_PAYLOAD_BYTES)
             return packed_chunk
+<<<<<<< HEAD
         except BlockingIOError:
+=======
+        except socket.timeout:
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
             raise
 
     def unpack(self, packed_chunk):
@@ -125,7 +183,8 @@ class Minimal:
         return chunk
 
     def generate_zero_chunk(self):
-        '''Generates a chunk with zeros that will be used when an inbound chunk is not available. '''
+        '''Generates a chunk with zeros that will be used when an inbound
+        chunk is not available.'''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
 
     def _record_io_and_play(self, indata, outdata, frames, time, status):
@@ -198,8 +257,15 @@ class Minimal:
     def run(self):
         '''Creates the stream, install the callback function, and waits for
         an enter-key pressing.'''
+<<<<<<< HEAD
         with self.stream():
             print("InterCom running ... press enter-key to quit")
+=======
+        #self.sock.settimeout(self.chunk_time)
+        self.sock.settimeout(0)
+        print("Press enter-key to quit")
+        with self.stream(self._record_io_and_play):
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
             input()
 
 class Minimal__verbose(Minimal):
@@ -210,6 +276,7 @@ class Minimal__verbose(Minimal):
         print("\nInterCom parameters:\n")
         print(args)
         super().__init__()
+<<<<<<< HEAD
         print("\nUsing device:\n")
         print(sd.query_devices(args.input_device))
         self.CPU_accumulated_usage = 0
@@ -221,6 +288,34 @@ class Minimal__verbose(Minimal):
         self.received_bytes_counter = 0
         self.sent_messages_counter = 0
         self.received_messages_counter = 0
+=======
+
+        self.sent_bytes_count = 0
+        self.received_bytes_count = 0
+        self.sent_messages_count = 0
+        self.received_messages_count = 0
+        self.sent_kbps = 0
+        self.received_kbps = 0
+        # All counters are reset at the end of each cycle.
+
+        self.average_CPU_usage = 0
+        self.average_global_CPU_usage = 0
+        self.average_sent_kbps = 0
+        self.average_received_kbps = 0
+        self.frames_per_cycle = self.SECONDS_PER_CYCLE * args.frames_per_second
+        self.chunks_per_cycle = self.frames_per_cycle / args.frames_per_chunk
+        # All average values are per cycle.
+
+        self.cycle = 1 # Infinite counter.
+        
+        self.old_time = time.time()
+        self.old_CPU_time = psutil.Process().cpu_times()[0]
+
+        if __debug__:
+            print("SECONDS_PER_CYCLE =", self.SECONDS_PER_CYCLE)            
+            print("chunks_per_cycle =", self.chunks_per_cycle)
+            print("frames_per_cycle =", self.frames_per_cycle)
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
 
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
@@ -276,11 +371,15 @@ class Minimal__verbose(Minimal):
 
     def run(self):
         ''' Runs the verbose InterCom. '''
+<<<<<<< HEAD
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
         self.sent_total = 0
         self.received_total = 0
         print()
+=======
+        self.sock.settimeout(0)
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
         print("Use CTRL+C to quit")
         print(f"{'':>10s}{'':>10s}{'':>10s}{'':>10s}{'Avg.':>10s}{'Avg.':>10s}{'':>10s}{'Global':>10s}");
         print(f"{'sent':>10s}{'received':>10s}{'sent':>10s}{'received':>10s}{'sent':>10s}{'received':>10s}{'':>5s}{'Avg.':>5s}{'':>5s}{'Avg.':>5s}");
@@ -307,5 +406,8 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         parser.exit("\nInterrupted by user")
+<<<<<<< HEAD
     except Exception as e:
         parser.exit(type(e).__name__ + ": " + str(e))
+=======
+>>>>>>> 975ad4b0e61a0c5da68ebee32e8fb4f619adbbfc
