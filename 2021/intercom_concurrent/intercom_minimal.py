@@ -56,7 +56,7 @@ class InterCom():
         return struct.pack(
             pack_format, 
             seq, 
-            2*len(compressed_channels[0]), 
+            2*len(compressed_channels[0]), # tamaño del primer canal comprimido
             *compressed_channels, # * es para compressed_channel[0], [1], ... (expande el array)
         )
 
@@ -65,8 +65,6 @@ class InterCom():
             """
         first_channel_size, = struct.unpack("H", packed_chunk[SEQ_NO_SIZE:2*SEQ_NO_SIZE])
         second_channel_size = len(packed_chunk) - first_channel_size - 2*SEQ_NO_SIZE
-        # Eficiencia de compresión
-        #print("first channel size:", first_channel_size, "second channel size:", second_channel_size)
         seq, _, first_channel_bytes, second_channel_bytes = struct.unpack(
             f"HH{first_channel_size}s{second_channel_size}s",
             packed_chunk,
