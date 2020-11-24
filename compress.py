@@ -1,33 +1,60 @@
 import zlib
 
 import buffer
+from buffer import minimal as mini
+
 import minimal
 
 import struct
 import numpy as np
 
-import sys
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
+import minimal
+
+mini.parser.add_argument("-cl", "--compression_level", type=int, default=1, help="Compression level")
+mini.parser.add_argument("-ndc", "--dual_channel", type=int, default=1, help="Dual channel")
 
 class Compression(buffer.Buffering):
 
     def __init__(self):
         super().__init__()
+        if ((buffer.minimal.args.compression_level < 0) or (buffer.minimal.args.compression_level > 9)):
+            mini.args.compression_level = 1
+        self.compression_level = mini.args.compression_level
 
-    # Meter nivel de compresion
+        print("Compression level: ", mini.args.compression_level)
+
+        #self.sender_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk, mini.Minimal.NUMBER_OF_CHANNELS], dtype = np.int16)
+        self.sender_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk * mini.Minimal.NUMBER_OF_CHANNELS], dtype=np.int16)
+        self.receiver_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk, mini.Minimal.NUMBER_OF_CHANNELS], dtype = np.int16)
+        self.sender_buf_size = len(self.sender_chunk_buffer)
+        self.receiver_buf_size = len(self.receiver_chunk_buffer)
+        self.channel_size = buffer.minimal.args.frames_per_chunk
 
 
     def pack(self, chunk_number, chunk):
         # Unimos todos los frames en unico vector
-        packed_chunk = np.concatenate([chunk[:,0] , chunk[:,1]])
+
+        if(buffer.minimal.args.dual_channel==1):
+            self.sender_chunk_buffer[0: self.sender_buf_size // 2] = chunk[:, 0]
+            self.sender_chunk_buffer[self.sender_buf_size // 2 : self.sender_buf_size] = chunk[:, 1]
+        else:
+            for i in range(0, mini.Minimal.NUMBER_OF_CHANNELS):
+                self.sender_chunk_buffer[i * self.channel_size : (i + 1) * self.channel_size] = chunk[:, i]
+
+        #packed_chunk = np.concatenate([chunk[:,0] , chunk[:,1]])
 
         #Comprimimos el chunk unido
-        packed_chunk = zlib.compress(packed_chunk,1)
+        packed_chunk = zlib.compress(self.sender_chunk_buffer, self.compression_level)
 
         #Unimos todo con struct
         packed_chunk = struct.pack("!H", chunk_number) + packed_chunk
 
         #Devolvemos el chunk
-        return(packed_chunk)
+        return packed_chunk
 
 
     def unpack(self, packed_chunk, dtype=buffer.minimal.Minimal.SAMPLE_TYPE):
@@ -38,17 +65,28 @@ class Compression(buffer.Buffering):
         unpacked_chunk = packed_chunk[2:]
 
         #Descomprimimos el chunk
-        unpacked_chunk = zlib.decompress(bytearray(unpacked_chunk))
+        unpacked_chunk = zlib.decompress(unpacked_chunk)
 
         #Ajustamos el chunk a numpy
         decompressed = np.frombuffer(unpacked_chunk, dtype=np.int16)
 
-        index1 = 0
-        index2 = int(len(decompressed)/2)
-        index3 = int(len(decompressed))
-        chunk = np.column_stack((decompressed[0 : int(len(decompressed)/2)], decompressed[int(len(decompressed)/2) : int(len(decompressed))]))
+        #print("Size buffer:", len(self.receiver_chunk_buffer))
+        #print("Decompressed buffer:", len(decompressed))
 
-        return chunk_number, chunk
+        if(buffer.minimal.args.dual_channel):
+        #    print("Dentro")
+            self.receiver_chunk_buffer[: , 0] = decompressed[0 : len(decompressed) // 2]
+            self.receiver_chunk_buffer[: , 1] = decompressed[(len(decompressed) // 2) : len(decompressed)]
+        else:
+            for i in range(0, mini.Minimal.NUMBER_OF_CHANNELS):
+                self.receiver_chunk_buffer[: , i] = decompressed[i * self.channel_size  : (i+1) * self.channel_size ]
+
+        # index1 = 0
+        # index2 = int(len(decompressed)/2)
+        # index3 = int(len(decompressed))
+        # chunk = np.column_stack((decompressed[0 : int(len(decompressed)/2)], decompressed[int(len(decompressed)/2) : int(len(decompressed))]))
+
+        return chunk_number, self.receiver_chunk_buffer
 
 class Compression__verbose(Compression, buffer.Buffering__verbose):
     def __init__(self):
