@@ -35,7 +35,6 @@ class Compression(buffer.Buffering):
     in order to reduce the bitrate effect.
     """
 
-
     def __init__(self):
         """ Class constructor.
 
