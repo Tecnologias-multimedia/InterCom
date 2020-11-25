@@ -90,7 +90,7 @@ class Compression(buffer.Buffering):
             self.sender_chunk_buffer[self.sender_buf_size // 2 : self.sender_buf_size] = chunk[:, 1]
         else:
             for i in range(0, mini.Minimal.NUMBER_OF_CHANNELS):
-                self.sender_chunk_buffer[i * self.channel_size : (i + 1) * self.channel_size] = chunk[:, i]
+                self.sender_chunk_buffer[i * self.channel_size : (i+1) * self.channel_size] = chunk[:, i]
 
         # Compress the arranged chunk
         packed_chunk = zlib.compress(self.sender_chunk_buffer, self.compression_level)
@@ -131,11 +131,11 @@ class Compression(buffer.Buffering):
 
         # Rearrange the chunk
         if(buffer.minimal.args.dual_channel):
-            self.receiver_chunk_buffer[:, 0] = decompressed[0 : len(decompressed) // 2]
-            self.receiver_chunk_buffer[:, 1] = decompressed[(len(decompressed) // 2): len(decompressed)]
+            self.receiver_chunk_buffer[:, 0] = decompressed[0 : self.sender_buf_size // 2]
+            self.receiver_chunk_buffer[:, 1] = decompressed[(self.sender_buf_size // 2): self.sender_buf_size]
         else:
             for i in range(0, mini.Minimal.NUMBER_OF_CHANNELS):
-                self.receiver_chunk_buffer[:, i] = decompressed[i * self.channel_size: (i+1) * self.channel_size ]
+                self.receiver_chunk_buffer[:, i] = decompressed[i * self.channel_size: (i+1) * self.channel_size]
 
         # Other way to rearrange the chunk by joining columns. Estimated to be less inefficient
         # than using numpy slices
