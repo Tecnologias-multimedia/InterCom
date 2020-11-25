@@ -63,14 +63,21 @@ class InterCom():
     def unpack(self, packed_chunk):
         """TODO
             """
-        seq, compressed_chunk_bytes = struct.unpack(f"H {len(packed_chunk) - SEQ_NO_SIZE}s", packed_chunk)
-          
-        chunk = np.frombuffer(
-            zlib.decompress(compressed_chunk_bytes), 
+        first_channel_size, = struct.unpack("H", packed_chunk[SEQ_NO_SIZE:2*SEQ_NO_SIZE])
+        second_channel_size = len(packed_chunk) - first_channel_size - 2*SEQ_NO_SIZE
+        seq, _, first_channel_bytes, second_channel_bytes = struct.unpack(
+            f"HH{first_channel_size}s{second_channel_size}s",
+            packed_chunk,
+        )
+        first_channel = np.frombuffer(
+            zlib.decompress(first_channel_bytes), 
             dtype='int16',
         )
-
-        return seq, np.ascontiguousarray(chunk.reshape(2,-1).transpose())
+        second_channel = np.frombuffer(
+            zlib.decompress(second_channel_bytes),
+            dtype='int16'
+        )
+        return seq, np.ascontiguousarray(np.concatenate((first_channel, second_channel)).reshape(2,-1).transpose())
 
     def play(self, chunk, stream):
         """Write samples to the stream.
