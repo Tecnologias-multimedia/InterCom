@@ -26,7 +26,7 @@
 <p>Buffered intercom with compression.</p>
 <p>Compression class tries to reduce bitrate impact by compressing audio
 chunk. The compression reduces de size of the payload sent over the
-network</p>
+network.</p>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -38,7 +38,7 @@ network</p>
 
     Compression class tries to reduce bitrate impact by compressing audio
     chunk. The compression reduces de size of the payload sent over the
-    network
+    network.
 &#34;&#34;&#34;
 
 # Used to compress and decompress using DEFLATE
@@ -65,12 +65,12 @@ mini.parser.add_argument(&#34;-ndc&#34;, &#34;--dual_channel&#34;, type=int, def
 class Compression(buffer.Buffering):
     &#34;&#34;&#34;
     Class that implements a new buffered intercom with compression capabilities
-    in order to reduce the bitrate effect
+    in order to reduce the bitrate effect.
     &#34;&#34;&#34;
 
 
     def __init__(self):
-        &#34;&#34;&#34; Class constructor
+        &#34;&#34;&#34; Class constructor.
 
         The constructor class requires several arguments that must be provided before
         to get a compression instance. The constructor calls the constructor of Buffer class
@@ -81,24 +81,24 @@ class Compression(buffer.Buffering):
             mini.args.compression_level = 1
 
         self.compression_level = mini.args.compression_level
-        &#34;&#34;&#34;(int) Level used by zlib to determinate compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Level used by zlib to determinate compression.&#34;&#34;&#34;
 
         print(&#34;Compression level: &#34;, mini.args.compression_level)
 
         self.sender_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk * mini.Minimal.NUMBER_OF_CHANNELS], dtype=np.int16)
-        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk before compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk before compression.&#34;&#34;&#34;
 
         self.receiver_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk, mini.Minimal.NUMBER_OF_CHANNELS], dtype = np.int16)
-        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk after compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk after compression.&#34;&#34;&#34;
 
         self.sender_buf_size = len(self.sender_chunk_buffer)
-        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer.&#34;&#34;&#34;
 
         self.receiver_buf_size = len(self.receiver_chunk_buffer)
-        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer.&#34;&#34;&#34;
 
         self.channel_size = buffer.minimal.args.frames_per_chunk
-        &#34;&#34;&#34;(int) Number of frames per chunk in each channel&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Number of frames per chunk in each channel.&#34;&#34;&#34;
 
 
     def pack(self, chunk_number, chunk):
@@ -112,9 +112,9 @@ class Compression(buffer.Buffering):
             Parameters
             ----------
                 chunk_number
-                    Sequence of the chunk to send
+                    Sequence of the chunk to send.
                 chunk
-                    Audio output to send
+                    Audio output to send.
         &#34;&#34;&#34;
 
         # Join all frames ordering by channel
@@ -145,10 +145,10 @@ class Compression(buffer.Buffering):
             Parameters
             ----------
                 packed_chunk
-                    The payload extracted from the UDP socket
+                    The payload extracted from the UDP socket.
                 dtype
                     The type used in sounddevice stream. Used to rearrange the
-                    retrieved chunk
+                    retrieved chunk.
         &#34;&#34;&#34;
         # Extract the sequence number of the chunk
         (chunk_number,) = struct.unpack(&#34;!H&#34;, packed_chunk[:2])
@@ -217,8 +217,8 @@ if __name__ == &#34;__main__&#34;:
 </code></dt>
 <dd>
 <div class="desc"><p>Class that implements a new buffered intercom with compression capabilities
-in order to reduce the bitrate effect</p>
-<p>Class constructor</p>
+in order to reduce the bitrate effect.</p>
+<p>Class constructor.</p>
 <p>The constructor class requires several arguments that must be provided before
 to get a compression instance. The constructor calls the constructor of Buffer class
 and also creates all variables needed, including the buffer array.</p></div>
@@ -229,12 +229,12 @@ and also creates all variables needed, including the buffer array.</p></div>
 <pre><code class="python">class Compression(buffer.Buffering):
     &#34;&#34;&#34;
     Class that implements a new buffered intercom with compression capabilities
-    in order to reduce the bitrate effect
+    in order to reduce the bitrate effect.
     &#34;&#34;&#34;
 
 
     def __init__(self):
-        &#34;&#34;&#34; Class constructor
+        &#34;&#34;&#34; Class constructor.
 
         The constructor class requires several arguments that must be provided before
         to get a compression instance. The constructor calls the constructor of Buffer class
@@ -245,24 +245,24 @@ and also creates all variables needed, including the buffer array.</p></div>
             mini.args.compression_level = 1
 
         self.compression_level = mini.args.compression_level
-        &#34;&#34;&#34;(int) Level used by zlib to determinate compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Level used by zlib to determinate compression.&#34;&#34;&#34;
 
         print(&#34;Compression level: &#34;, mini.args.compression_level)
 
         self.sender_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk * mini.Minimal.NUMBER_OF_CHANNELS], dtype=np.int16)
-        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk before compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk before compression.&#34;&#34;&#34;
 
         self.receiver_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk, mini.Minimal.NUMBER_OF_CHANNELS], dtype = np.int16)
-        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk after compression&#34;&#34;&#34;
+        &#34;&#34;&#34;(numpy array) Array used to store the arranged chunk after compression.&#34;&#34;&#34;
 
         self.sender_buf_size = len(self.sender_chunk_buffer)
-        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer.&#34;&#34;&#34;
 
         self.receiver_buf_size = len(self.receiver_chunk_buffer)
-        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Size of the sender_chunk_buffer.&#34;&#34;&#34;
 
         self.channel_size = buffer.minimal.args.frames_per_chunk
-        &#34;&#34;&#34;(int) Number of frames per chunk in each channel&#34;&#34;&#34;
+        &#34;&#34;&#34;(int) Number of frames per chunk in each channel.&#34;&#34;&#34;
 
 
     def pack(self, chunk_number, chunk):
@@ -276,9 +276,9 @@ and also creates all variables needed, including the buffer array.</p></div>
             Parameters
             ----------
                 chunk_number
-                    Sequence of the chunk to send
+                    Sequence of the chunk to send.
                 chunk
-                    Audio output to send
+                    Audio output to send.
         &#34;&#34;&#34;
 
         # Join all frames ordering by channel
@@ -309,10 +309,10 @@ and also creates all variables needed, including the buffer array.</p></div>
             Parameters
             ----------
                 packed_chunk
-                    The payload extracted from the UDP socket
+                    The payload extracted from the UDP socket.
                 dtype
                     The type used in sounddevice stream. Used to rearrange the
-                    retrieved chunk
+                    retrieved chunk.
         &#34;&#34;&#34;
         # Extract the sequence number of the chunk
         (chunk_number,) = struct.unpack(&#34;!H&#34;, packed_chunk[:2])
@@ -355,27 +355,27 @@ and also creates all variables needed, including the buffer array.</p></div>
 <dl>
 <dt id="compress.Compression.channel_size"><code class="name">var <span class="ident">channel_size</span></code></dt>
 <dd>
-<div class="desc"><p>(int) Number of frames per chunk in each channel</p></div>
+<div class="desc"><p>(int) Number of frames per chunk in each channel.</p></div>
 </dd>
 <dt id="compress.Compression.compression_level"><code class="name">var <span class="ident">compression_level</span></code></dt>
 <dd>
-<div class="desc"><p>(int) Level used by zlib to determinate compression</p></div>
+<div class="desc"><p>(int) Level used by zlib to determinate compression.</p></div>
 </dd>
 <dt id="compress.Compression.receiver_buf_size"><code class="name">var <span class="ident">receiver_buf_size</span></code></dt>
 <dd>
-<div class="desc"><p>(int) Size of the sender_chunk_buffer</p></div>
+<div class="desc"><p>(int) Size of the sender_chunk_buffer.</p></div>
 </dd>
 <dt id="compress.Compression.receiver_chunk_buffer"><code class="name">var <span class="ident">receiver_chunk_buffer</span></code></dt>
 <dd>
-<div class="desc"><p>(numpy array) Array used to store the arranged chunk after compression</p></div>
+<div class="desc"><p>(numpy array) Array used to store the arranged chunk after compression.</p></div>
 </dd>
 <dt id="compress.Compression.sender_buf_size"><code class="name">var <span class="ident">sender_buf_size</span></code></dt>
 <dd>
-<div class="desc"><p>(int) Size of the sender_chunk_buffer</p></div>
+<div class="desc"><p>(int) Size of the sender_chunk_buffer.</p></div>
 </dd>
 <dt id="compress.Compression.sender_chunk_buffer"><code class="name">var <span class="ident">sender_chunk_buffer</span></code></dt>
 <dd>
-<div class="desc"><p>(numpy array) Array used to store the arranged chunk before compression</p></div>
+<div class="desc"><p>(numpy array) Array used to store the arranged chunk before compression.</p></div>
 </dd>
 </dl>
 <h3>Methods</h3>
@@ -391,9 +391,9 @@ rate, the output is arranged by joining the cells into the same
 channel in a consecutive array.</p>
 <h2 id="parameters">Parameters</h2>
 <pre><code>chunk_number
-    Sequence of the chunk to send
+    Sequence of the chunk to send.
 chunk
-    Audio output to send
+    Audio output to send.
 </code></pre></div>
 <details class="source">
 <summary>
@@ -410,9 +410,9 @@ chunk
         Parameters
         ----------
             chunk_number
-                Sequence of the chunk to send
+                Sequence of the chunk to send.
             chunk
-                Audio output to send
+                Audio output to send.
     &#34;&#34;&#34;
 
     # Join all frames ordering by channel
@@ -443,10 +443,10 @@ the compressed payload. The decompressed chunk must be rearranged
 to retrieve the original oudio.</p>
 <h2 id="parameters">Parameters</h2>
 <pre><code>packed_chunk
-    The payload extracted from the UDP socket
+    The payload extracted from the UDP socket.
 dtype
     The type used in sounddevice stream. Used to rearrange the
-    retrieved chunk
+    retrieved chunk.
 </code></pre></div>
 <details class="source">
 <summary>
@@ -462,10 +462,10 @@ dtype
         Parameters
         ----------
             packed_chunk
-                The payload extracted from the UDP socket
+                The payload extracted from the UDP socket.
             dtype
                 The type used in sounddevice stream. Used to rearrange the
-                retrieved chunk
+                retrieved chunk.
     &#34;&#34;&#34;
     # Extract the sequence number of the chunk
     (chunk_number,) = struct.unpack(&#34;!H&#34;, packed_chunk[:2])
@@ -503,8 +503,8 @@ dtype
 </code></dt>
 <dd>
 <div class="desc"><p>Class that implements a new buffered intercom with compression capabilities
-in order to reduce the bitrate effect</p>
-<p>Class constructor</p>
+in order to reduce the bitrate effect.</p>
+<p>Class constructor.</p>
 <p>The constructor class requires several arguments that must be provided before
 to get a compression instance. The constructor calls the constructor of Buffer class
 and also creates all variables needed, including the buffer array.</p></div>

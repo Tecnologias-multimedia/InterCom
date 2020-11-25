@@ -5,7 +5,7 @@
 
     Compression class tries to reduce bitrate impact by compressing audio
     chunk. The compression reduces de size of the payload sent over the
-    network
+    network.
 """
 
 # Used to compress and decompress using DEFLATE
@@ -32,12 +32,12 @@ mini.parser.add_argument("-ndc", "--dual_channel", type=int, default=1, help="Du
 class Compression(buffer.Buffering):
     """
     Class that implements a new buffered intercom with compression capabilities
-    in order to reduce the bitrate effect
+    in order to reduce the bitrate effect.
     """
 
 
     def __init__(self):
-        """ Class constructor
+        """ Class constructor.
 
         The constructor class requires several arguments that must be provided before
         to get a compression instance. The constructor calls the constructor of Buffer class
@@ -48,24 +48,24 @@ class Compression(buffer.Buffering):
             mini.args.compression_level = 1
 
         self.compression_level = mini.args.compression_level
-        """(int) Level used by zlib to determinate compression"""
+        """(int) Level used by zlib to determinate compression."""
 
         print("Compression level: ", mini.args.compression_level)
 
         self.sender_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk * mini.Minimal.NUMBER_OF_CHANNELS], dtype=np.int16)
-        """(numpy array) Array used to store the arranged chunk before compression"""
+        """(numpy array) Array used to store the arranged chunk before compression."""
 
         self.receiver_chunk_buffer = np.zeros([buffer.minimal.args.frames_per_chunk, mini.Minimal.NUMBER_OF_CHANNELS], dtype = np.int16)
-        """(numpy array) Array used to store the arranged chunk after compression"""
+        """(numpy array) Array used to store the arranged chunk after compression."""
 
         self.sender_buf_size = len(self.sender_chunk_buffer)
-        """(int) Size of the sender_chunk_buffer"""
+        """(int) Size of the sender_chunk_buffer."""
 
         self.receiver_buf_size = len(self.receiver_chunk_buffer)
-        """(int) Size of the sender_chunk_buffer"""
+        """(int) Size of the sender_chunk_buffer."""
 
         self.channel_size = buffer.minimal.args.frames_per_chunk
-        """(int) Number of frames per chunk in each channel"""
+        """(int) Number of frames per chunk in each channel."""
 
 
     def pack(self, chunk_number, chunk):
@@ -79,9 +79,9 @@ class Compression(buffer.Buffering):
             Parameters
             ----------
                 chunk_number
-                    Sequence of the chunk to send
+                    Sequence of the chunk to send.
                 chunk
-                    Audio output to send
+                    Audio output to send.
         """
 
         # Join all frames ordering by channel
@@ -112,10 +112,10 @@ class Compression(buffer.Buffering):
             Parameters
             ----------
                 packed_chunk
-                    The payload extracted from the UDP socket
+                    The payload extracted from the UDP socket.
                 dtype
                     The type used in sounddevice stream. Used to rearrange the
-                    retrieved chunk
+                    retrieved chunk.
         """
         # Extract the sequence number of the chunk
         (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
