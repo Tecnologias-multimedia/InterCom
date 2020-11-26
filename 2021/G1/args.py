@@ -5,17 +5,18 @@ def get_args():
     # 1 = mono, 2 = stereo
     NUMBER_OF_CHANNELS = 2
     FRAMES_PER_SECOND  = 44100
-    FRAMES_PER_CHUNK   = 1000
+    FRAMES_PER_CHUNK   = 1024
     
     # Network defaults
     PAYLOAD_SIZE = 10240
     IN_PORT     = 4444
     OUT_PORT    = 4444
     ADDRESS     = 'localhost'
+    N           = 41
 
     parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-s", "--frames_per_chunk",
+    parser.add_argument("-f", "--frames_per_chunk",
                         help="Number of frames (stereo samples) per chunk.",
                         type=int, default=FRAMES_PER_CHUNK)
     parser.add_argument("-r", "--frames_per_second",
@@ -35,7 +36,11 @@ def get_args():
                         type=str, default=ADDRESS)
     parser.add_argument("-l", "--payload_size",
                         help="Paiload size.",
-                        type=str, default=PAYLOAD_SIZE)                    
+                        type=int, default=PAYLOAD_SIZE)
+    parser.add_argument("-n", "--buffer_size",
+                        help="Buffer size.",
+                        type=int, default=N)
+                                       
     return parser
 
 
@@ -47,3 +52,4 @@ def show_args(args):
     print("IN PORT:", args.in_port)
     print("OUT PORT:", args.out_port)
     print("ADDRESS:", args.address)
+    print("N:", args.buffer_size)
