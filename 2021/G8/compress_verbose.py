@@ -87,7 +87,7 @@ class Compress(buffer.Buffering__verbose):
             # if so, show the results
             end = (next_index >= self.sampleframes)
 
-            frames_copied = self.sampleframes % 1024 if end else 1024
+            frames_copied = self.sampleframes % frames if end else frames
             chunk[0:frames_copied] = self.sampledata[index:next_index]
             chunk[frames_copied:] = 0
             self.chunk_index += 1
