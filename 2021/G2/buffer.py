@@ -42,11 +42,8 @@ class Buffering(minimal.Minimal):
     stream()
     run()
     """
-
     def __init__(self):
         ''' Initializes the buffer. '''
-        if __debug__:
-            print("Running Buffering.__init__")
         super().__init__()
         if minimal.args.buffering_time <= 0:
             minimal.args.buffering_time = 1 # ms
@@ -58,6 +55,7 @@ class Buffering(minimal.Minimal):
         for i in range(self.cells_in_buffer):
             self._buffer[i] = self.zero_chunk
         self.chunk_number = 0
+        self.played_chunk_number = 0
         if __debug__:
             print("chunks_to_buffer =", self.chunks_to_buffer)
 
@@ -154,12 +152,19 @@ class Buffering(minimal.Minimal):
                 self.receive_and_buffer()
 
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
-    
-    def __init__(self):
-        if __debug__:
-            print("Running Buffering__verbose.__init__")
-        super().__init__()
+    ''' Verbose version of Buffering.
 
+    Methods
+    -------
+    __init__()
+    send(packed_chunk)
+    receive()
+    cycle_feedback()
+    run()
+    '''
+
+    def __init__(self):
+        super().__init__()
         thread = threading.Thread(target=self.feedback)
         thread.daemon = True # To obey CTRL+C interruption.
         thread.start()
@@ -170,16 +175,14 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             self.cycle_feedback()
 
     def send(self, packed_chunk):
-        '''Computes the number of sent bytes and the number of sent
-        packets.'''
+        ''' Computes the number of sent bytes and the number of sent packets. '''
         Buffering.send(self, packed_chunk)
         self.sent_bytes_count += len(packed_chunk)
         self.sent_messages_count += 1
 
     def receive(self):
-        '''Computes the number of received bytes and the number of received
-        packets.'''
-        packed_chunk = Buffering.receive(self)
+        ''' Computes the number of received bytes and the number of received packets. '''
+        packed_chunk = super().receive()
         self.received_bytes_count += len(packed_chunk)
         self.received_messages_count += 1
         return packed_chunk
@@ -194,11 +197,10 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             self.show_outdata(outdata)
 
     def run(self):
-        '''Run the verbose Buffering.'''
-        self.print_running_info()
-        super().print_header()
+        '''.'''
+        print("Press CTRL+c to quit")
+        self.print_header()
         try:
-            self.played_chunk_number = 0
             with self.stream(self._record_send_and_play):
                 first_received_chunk_number = self.receive_and_buffer()
                 if __debug__:

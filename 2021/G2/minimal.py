@@ -9,9 +9,8 @@ import numpy as np
 import socket
 import time
 import psutil
-import logging
 try:
-    import argcomplete  # <tab> completion for argparse.
+    import argcomplete  # <tab> completion for argparse
 except ImportError:
     print("Unable to import argcomplete")
 
@@ -34,12 +33,13 @@ def int_or_str(text):
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("-i", "--input-device", type=int_or_str, help="Input device ID or substring")
 parser.add_argument("-o", "--output-device", type=int_or_str, help="Output device ID or substring")
-parser.add_argument("-d", "--list-devices", action="store_true", help="Print the available audio devices and quit")
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
+
+args = parser.parse_args()
 
 class Minimal:
     """
@@ -66,22 +66,30 @@ class Minimal:
     _stream()
     run()
     """
-
-    # Some default values:
-    MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
-    SAMPLE_TYPE = np.int16    # The number of bits per sample.
-    NUMBER_OF_CHANNELS = 2    # The number of channels.
+    MAX_PAYLOAD_BYTES = 32768
+    SAMPLE_TYPE = np.int16
+    NUMBER_OF_CHANNELS = 2
+    #RECV_BUF_SIZE = 327680
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
-        #print("InterCom (Minimal) is running")
-        if __debug__:
-            print("Running Minimal.__init__")
+        #self.sending_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
+        #self.sock.settimeout(0)
+        #self.sock.setsockopt(socket.SOL_SOCKET,socket.SO_RCVBUF, self.RECV_BUF_SIZE)
+        #print("buffer size =", self.sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF))
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         self.zero_chunk = self.generate_zero_chunk()
+        if __debug__:
+            print("\nInterCom parameters:\n")
+            print(args)
+            print("\nUsing device:\n")
+            print(sd.query_devices(args.input_device))
+            print()
+            print("chunk_time =", self.chunk_time, "seconds")
+            print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
 
     def pack(self, chunk):
         ''' Builds a packet's payloads with a chunk.
@@ -116,9 +124,8 @@ class Minimal:
 
             A chunk (a pointer to the socket's read-only buffer).
         '''
-
-        # We need to reshape a numpy array.
-        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)
+           
+        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)  # We need to reshape a numpy array
         chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk
     
@@ -133,6 +140,7 @@ class Minimal:
             A packet structure with the sequence of bytes to send.
 
         '''
+        #self.sending_socket.sendto(packed_chunk, (args.destination_address, args.destination_port))
         self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
         
 
@@ -150,11 +158,11 @@ class Minimal:
             packed_chunk, sender = self.sock.recvfrom(self.MAX_PAYLOAD_BYTES)
             return packed_chunk
         except socket.timeout:
+        #except Exception as e: #socket.timeout: #BlockingIOError:
             raise
 
     def generate_zero_chunk(self):
-        '''Generates a chunk with zeros that will be used when an inbound
-        chunk is not available.'''
+        '''Generates a chunk with zeros that will be used when an inbound chunk is not available. '''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
 
     def _record_io_and_play(self, indata, outdata, frames, time, status):
@@ -228,7 +236,7 @@ class Minimal:
         an enter-key pressing.'''
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
-        print("Press enter-key to quit")
+        print("InterCom (minimal) running ... press enter-key to quit")
         with self.stream(self._record_io_and_play):
             input()
 
@@ -251,11 +259,7 @@ class Minimal__verbose(Minimal):
     
     def __init__(self):
         ''' Defines the stuff for providing the running information. '''
-        if __debug__:
-            print("Running Minimal__verbose.__init__")
         super().__init__()
-
-        self.cycle = 1 # An infinite cycle's counter.
 
         self.sent_bytes_count = 0
         self.received_bytes_count = 0
@@ -265,17 +269,17 @@ class Minimal__verbose(Minimal):
         self.received_kbps = 0
         # All counters are reset at the end of each cycle.
 
-        self.average_sent_messages = 0
-        self.average_received_messages = 0
         self.average_CPU_usage = 0
         self.average_global_CPU_usage = 0
         self.average_sent_kbps = 0
         self.average_received_kbps = 0
-        # All average values are per cycle.
-        
         self.frames_per_cycle = self.SECONDS_PER_CYCLE * args.frames_per_second
         self.chunks_per_cycle = self.frames_per_cycle / args.frames_per_chunk
+        # All average values are per cycle.
 
+        self.cycle = 1
+        # Infinite counter.
+        
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
 
@@ -301,106 +305,115 @@ class Minimal__verbose(Minimal):
         except Exception:
             raise
 
-    def stats(self):
+    def stats_format(self):
         string = ""
         string += "{:5d}".format(self.cycle)
         string += "{:8d}".format(self.sent_messages_count)
         string += "{:8d}".format(self.received_messages_count)
         string += "{:8d}".format(self.sent_kbps)
         string += "{:8d}".format(self.received_kbps)
+        string += "{:8d}".format(int(self.average_sent_kbps))
+        string += "{:8d}".format(int(self.average_received_kbps))
         string += "{:5d}".format(int(self.CPU_usage))
+        string += "{:5d}".format(int(self.average_CPU_usage))
         string += "{:5d}".format(int(self.global_CPU_usage))
+        string += "{:5d}".format(int(self.average_global_CPU_usage))
         return string
 
     def print_stats(self):
-        print(self.stats())
+        print(self.stats_format())
 
-    def first_line(self):
+    def first_line_format(self):
+        string = ""
+        string += "{:5s}".format('') # cycle
+        string += "{:8s}".format('') # sent_messages_count
+        string += "{:8s}".format('') # received_messages_count
+        string += "{:8s}".format('') # sent_kbps
+        string += "{:8s}".format('') # received_kbps
+        string += "{:>8s}".format("Avg.") # average_sent_kbps
+        string += "{:>8s}".format("Avg.") # average_received_kbps
+        string += "{:5s}".format('') # CPU_usage
+        string += "{:5s}".format('') # average_CPU_usage
+        string += "{:4s}".format('') # global_CPU_usage
+        string += "{:>5s}".format("Global") # average_global_CPU_usage
+        return string
+
+    def print_first_line(self):
+        print(self.first_line_format())
+
+    def second_line_format(self):
         string = ""
         string += "{:5s}".format('') # cycle
         string += "{:>8s}".format("sent") # sent_messages_count
         string += "{:>8s}".format("recv.") # received_messages_count
         string += "{:>8s}".format("sent") # sent_kbps
         string += "{:>8s}".format("recv.") # received_kbps
-        string += "{:4s}".format('') # CPU_usage
-        string += "{:>6s}".format("Global") # average_global_CPU_usage
+        string += "{:>8s}".format("sent") # average_sent_kbps
+        string += "{:>8s}".format("recv.") # average_received_kbps
+        string += "{:5s}".format('') # CPU_usage
+        string += "{:>5s}".format("Avg.") # average_CPU_usage
+        string += "{:5s}".format('') # global_CPU_usage
+        string += "{:>5s}".format("Avg.") # average_global_CPU_usage
         return string
 
-    def print_first_line(self):
-        print(self.first_line())
+    def print_second_line(self):
+        print(self.second_line_format())
 
-    def second_line(self):
+    def third_line_format(self):
         string = ""
         string += "{:5s}".format("cycle") # cycle
         string += "{:>8s}".format("mesgs.") # sent_messages_count
         string += "{:>8s}".format("mesgs.") # received_messages_count
         string += "{:>8s}".format("kbps") # sent_kbps
         string += "{:>8s}".format("kbps") # received_kbps
+        string += "{:>8s}".format("kbps") # average_sent_kbps
+        string += "{:>8s}".format("kbps") # average_received_kbps
         string += "{:>5s}".format("%CPU") # CPU_usage
+        string += "{:>5s}".format("%CPU") # average_CPU_usage
         string += "{:>5s}".format("%CPU") # global_CPU_usage
+        string += "{:>5s}".format("%CPU") # average_global_CPU_usage
         return string
 
-    def print_second_line(self):
-        print(self.second_line())
+    def print_third_line(self):
+        print(self.third_line_format())
 
-    def averages(self):
-        string = ""
-        string += "{:5s}".format("Avgs:") # cycle
-        string += "{:8d}".format(int(self.average_sent_messages))
-        string += "{:8d}".format(int(self.average_received_messages))
-        string += "{:>8d}".format(int(self.average_sent_kbps))
-        string += "{:>8d}".format(int(self.average_received_kbps))
-        string += "{:>5d}".format(int(self.average_CPU_usage))
-        string += "{:>5d}".format(int(self.average_global_CPU_usage))
-        return string
-
-    def print_averages(self):
-        print("\033[7m" + self.averages() + "\033[m")
-        
-    def separator(self):
-        string = ""
-        string += f"{'='*(5*3+8*4)}"
-        return string
-
-    def print_separator(self):
-        print(self.separator())
+    def print_fourth_line(self):
+        print(f"{'='*73}")
 
     def print_header(self):
         self.print_first_line()
         self.print_second_line()
-        self.print_separator()
+        self.print_third_line();
+        self.print_fourth_line()
 
     def print_trailer(self):
+        self.print_fourth_line()
+        self.print_third_line()
         self.print_second_line()
         self.print_first_line()
         
-    # https://en.wikipedia.org/wiki/Moving_average
-    def moving_average(self, average, new_sample, number_of_samples):
-        return average + (new_sample - average) / number_of_samples
-
     def cycle_feedback(self):
         ''' Computes and shows the statistics. '''
+
+        # https://en.wikipedia.org/wiki/Moving_average
+        def moving_average(average, new_sample, number_of_samples):
+            return average + (new_sample - average) / number_of_samples
 
         elapsed_time = time.time() - self.old_time
         elapsed_CPU_time = psutil.Process().cpu_times()[0] - self.old_CPU_time
         self.CPU_usage = 100 * elapsed_CPU_time / elapsed_time
         self.global_CPU_usage = psutil.cpu_percent()
-        self.average_CPU_usage = self.moving_average(self.average_CPU_usage, self.CPU_usage, self.cycle)
-        self.average_global_CPU_usage = self.moving_average(self.average_global_CPU_usage, self.global_CPU_usage, self.cycle)
+        self.average_CPU_usage = moving_average(self.average_CPU_usage, self.CPU_usage, self.cycle)
+        self.average_global_CPU_usage = moving_average(self.average_global_CPU_usage, self.global_CPU_usage, self.cycle)
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
 
-        self.average_sent_messages = self.moving_average(self.average_sent_messages, self.sent_messages_count, self.cycle)
-        self.average_received_messages = self.moving_average(self.average_received_messages, self.received_messages_count, self.cycle)
-
         self.sent_kbps = int(self.sent_bytes_count * 8 / 1000 / elapsed_time)
         self.received_kbps = int(self.received_bytes_count * 8 / 1000 / elapsed_time)
-        self.average_sent_kbps = self.moving_average(self.average_sent_kbps, self.sent_kbps, self.cycle)
-        self.average_received_kbps = self.moving_average(self.average_received_kbps, self.received_kbps, self.cycle)
+        self.average_sent_kbps = moving_average(self.average_sent_kbps, self.sent_kbps, self.cycle)
+        self.average_received_kbps = moving_average(self.average_received_kbps, self.received_kbps, self.cycle)
 
         self.print_stats()
-        self.print_averages()
-        self.print_separator()        
         self.print_trailer()
         print("\033[5A")
         
@@ -417,20 +430,12 @@ class Minimal__verbose(Minimal):
         print(f"Payload sent average = {self.average_sent_kbps} kilo bits per second")
         print(f"Payload received average = {self.average_received_kbps} kilo bits per second")
 
-    def print_running_info(self):
-        print("\nInterCom parameters:\n")
-        print(args)
-        print("\nUsing device:\n")
-        print(sd.query_devices(args.input_device))
-        print()
-        print("chunk_time =", self.chunk_time, "seconds")
-        print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
-        print("Use CTRL+C to quit")
-        
     def run(self):
         ''' Runs the verbose InterCom. '''
+        #self.old_time = time.time()
+        #self.old_CPU_time = psutil.Process().cpu_times()[0]
         self.sock.settimeout(0)
-        self.print_running_info()
+        print("Use CTRL+C to quit")
         self.print_header()
         try:
             with self.stream(self._record_io_and_play):
@@ -478,12 +483,6 @@ if __name__ == "__main__":
     except Exception:
         print("argcomplete not working :-/")
     args = parser.parse_known_args()[0]
-
-    if args.list_devices:
-        print("Available devices:")
-        print(sd.query_devices())
-        quit()
-
     if args.show_stats or args.show_samples:
         intercom = Minimal__verbose()
     else:
@@ -492,4 +491,5 @@ if __name__ == "__main__":
         intercom.run()
     except KeyboardInterrupt:
         parser.exit("\nInterrupted by user")
-
+    #except Exception as e:
+    #    parser.exit(type(e).__name__ + ": " + str(e))
