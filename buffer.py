@@ -108,7 +108,6 @@ class Buffering(minimal.Minimal):
 
     def unbuffer_next_chunk(self):
         chunk = self._buffer[self.played_chunk_number % self.cells_in_buffer]
-        if chunk.all() == self.emtp
         return chunk
 
     def play_chunk(self, DAC, chunk):
