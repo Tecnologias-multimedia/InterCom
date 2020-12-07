@@ -1,4 +1,4 @@
-!/usr/bin/env python
+#!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
 ''' Real-time Audio Intercommunicator (lossless compression of the chunks). '''
