@@ -68,7 +68,7 @@ class Minimal:
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
     SAMPLE_TYPE = np.int16    # The number of bits per sample.
-    NUMBER_OF_CHANNELS = 2    # The number of channels.
+    NUMBER_OF_CHANNELS = 1    # The number of channels.
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
