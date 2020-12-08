@@ -50,14 +50,14 @@ class BR_Control(compress.Compression):
         ##self.br = self.entropy_in_bits_per_symbol(quantized_chunk)
         #print(self.br, self.quantization_step)
         
-        #Compression.pack()
-        packed_chunk = buffer.Buffering.pack(self,chunk_number,chunk)
+        #Bufferin.pack()
+        packed_chunk = buffer.Buffering.pack(self,chunk_number,quantized_chunk)
         #self.braux = psutil.net_io_counters().bytes_sent + psutil.net_io_counters().bytes_recv
         return packed_chunk
     
     def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        #Compression.unpack()
-        chunk_number,quantized_chunk = buffer.Buffering.unpack(self,packed_chunk, dtype)
+        #Buffering.unpack()
+        chunk_number,quantized_chunk = buffer.Buffering.unpack(self,packed_chunk)
         #dequantize(quantized_chunk)
         chunk = self.dequantize(quantized_chunk)
         return chunk_number, chunk
