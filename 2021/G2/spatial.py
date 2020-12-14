@@ -19,26 +19,27 @@ class Spatial_decorrelation(br_control.BR_Control):
         super().__init__()
     
     def pack(self, chunk_number, chunk):
-        analyzed_chunk = self.KLT_analyze(chunk)
+        analyzed_chunk = self.MST_analyze(chunk)
         packed_chunk = super().pack(chunk_number, analyzed_chunk)
         print("SP:", len(chunk)/len(packed_chunk))
-        return analyzed_chunk
+        return packed_chunk
     
     def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
         chunk_number, analyzed_chunk = super().unpack(packed_chunk, dtype)
-        chunk = self.KLT_synthesize(analyzed_chunk)
+        chunk = self.MST_synthesize(analyzed_chunk)
         return chunk_number, chunk
     
-    def KLT_analyze(self,chunk):
+    def MST_analyze(self,chunk):
         analyzed_chunk = np.empty_like(chunk, dtype=np.int32)
-        analyzed_chunk[:, 0] = np.rint((chunk[:, 0].astype(np.int32) + chunk[:, 1]) / math.sqrt(2)) # L
-        analyzed_chunk[:, 1] = np.rint((chunk[:, 0].astype(np.int32) - chunk[:, 1]) / math.sqrt(2)) # H
+        analyzed_chunk[:, 0] = chunk[:, 0].astype(np.int32) + chunk[:, 1] # L(ow frequency subband)
+        analyzed_chunk[:, 1] = chunk[:, 0].astype(np.int32) - chunk[:, 1] # H(igh frequency subband)
         return analyzed_chunk
     
-    def KLT_synthesize(self,analyzed_chunk):
+    def MST_synthesize(self,analyzed_chunk):
         chunk = np.empty_like(analyzed_chunk, dtype=np.int16)
-        chunk[:, :] = self.KLT_analyze(analyzed_chunk)
-        return x
+        chunk[:, 0] = (analyzed_chunk[:, 0] + analyzed_chunk[:, 1])/2 # L(ow frequency subband)
+        chunk[:, 1] = (analyzed_chunk[:, 0] - analyzed_chunk[:, 1])/2 # H(igh frequency subband)
+        return chunk
     
 if __name__ == "__main__":
     minimal.parser.description = __doc__
