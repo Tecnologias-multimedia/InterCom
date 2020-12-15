@@ -17,23 +17,18 @@ import buffer
 class Compression(buffer.Buffering):
     '''Compress the chunks. Reorder the samples into channels and compress
     them using zlib. Each channel is compressed independently.
-
     Methods
     -------
     pack(chunk)
     unpack(chunk)
-
     '''
     def __init__(self):
         '''Constructor. Configures the audio sample type.
-
         Parameters
         ----------
         dtype : type
-
             The type used for the audio samples during the
             compression/decompression.
-
         '''
         if __debug__:
             print("Running Compression.__init__")
@@ -43,20 +38,15 @@ class Compression(buffer.Buffering):
 
     def pack(self, chunk_number, chunk):
         '''Builds a packed packet with a compressed chunk and a chunk_number.
-
         Parameters
         ----------
         chunk : numpy.ndarray
-
             A chunk of audio.
-
         Returns
         -------
         bytes
-
             A packed chunk where only the audio (not the chunk number)
             has been compressed with DEFLATE.
-
         '''
         channel_0 = chunk[:, 0].copy()
         channel_1 = chunk[:, 1].copy()
@@ -73,24 +63,17 @@ class Compression(buffer.Buffering):
 
     def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
         '''Gets the chunk number and the chunk audio from packed_chunk.
-
         Parameters
         ----------
         packed_chunk : bytes
-
             The (chunk number, compressed chunk) structure, where
             chunk has been compressed with DEFLATE.
-
         Returns
         -------
         chunk_number : int
-
             The number of the unpacked chunk.
-
         chunk : numpy.ndarray
-
             The decompressed chunk audio.
-
         '''
         (chunk_number, len_compressed_channel_0) = struct.unpack("!HH", packed_chunk[:4])
 
