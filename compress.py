@@ -64,6 +64,7 @@ class Compression(buffer.Buffering):
         compressed_channel_1 = zlib.compress(channel_1)
         packed_chunk = struct.pack("!HH", chunk_number, len(compressed_channel_0)) + compressed_channel_0 + compressed_channel_1
         return packed_chunk
+
     def _pack(self, chunk_number, chunk):
         '''Only for testing purposes. Both channels are compressed at one.'''
         chunk = np.stack([chunk[:, 0], chunk[:, 1]]) # Reorder and copy audio data in a different object.
@@ -106,6 +107,7 @@ class Compression(buffer.Buffering):
         chunk[:, 1] = channel_1[:]
 
         return chunk_number, chunk
+    
     def _unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
         (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
         compressed_chunk = packed_chunk[2:]
