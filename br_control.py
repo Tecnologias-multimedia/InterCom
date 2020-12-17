@@ -66,8 +66,11 @@ class BR_Control(compress.Compression):
     def data_flow_control(self):
         '''Performs the BR control, with a cadence of 1 Hz.'''
         while True:
-            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
-            self.quantization_step += self.number_of_lost_packets
+            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks# - 1
+            #self.quantization_step += 2*self.number_of_lost_packets
+            if self.number_of_lost_packets > 2:
+                self.quantization_step *= 2
+            self.quantization_step = int(self.quantization_step / 1.1)
             if self.quantization_step < minimal.args.minimal_quantization_step:
                 self.quantization_step = minimal.args.minimal_quantization_step
             self.number_of_sent_chunks = 0
