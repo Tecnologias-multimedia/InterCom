@@ -6,6 +6,7 @@ from udp_send import UdpSender
 import heapq 
 import numpy as np
 assert np
+import os
 import psutil
 import sounddevice as sd
 import struct
@@ -16,8 +17,13 @@ import zlib
 # Size of the sequence number in bytes
 SEQ_NO_SIZE = 2
 
+
+
+
 class InterCom():
     def __init__(self, args):
+
+        os.environ['SDL_AUDIODRIVER'] = 'dsp'
         # audio args
         self.number_of_channels = args.number_of_channels
         self.frames_per_second  = args.frames_per_second
@@ -30,7 +36,7 @@ class InterCom():
         self.address      = args.address
         self.n            = args.buffer_size
         # quantization step used for compressing
-        self.quantization_step = 50
+        self.quantization_step = 1
 
         self.buffer = PriorityQueue(maxsize=self.n * 2)
         # mutex for waiting until the buffer has a large enough number
@@ -75,19 +81,28 @@ class InterCom():
             """
         return (chunk/self.quantization_step).astype(np.uint16)
 
+    def MST_analyze(self, x):
+        w = np.empty_like(x, dtype=np.int32)
+        w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])//2 # L(ow frequency subband)
+        w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])//2 # H(igh frequency subband)
+        return w.astype(np.int16) # Lo convertimos a int16
+
     def pack(self, seq, chunk):
         """Compress and pack the ```chunk``` before sending
             """
         # recorre los canales (normalmente 2 canales), podemos hacer esto porque transponemos la matriz
-        compressed_channels = [zlib.compress(self.quantize(np.ascontiguousarray(channel))) for channel in chunk.transpose()]
-        size = sum(len(channel) for channel in compressed_channels)
-        pack_format = f"HHB{len(compressed_channels[0])}s{len(compressed_channels[1])}s"
+        #print("Antes de decorrelacion -> ", chunk)
+        chunk = self.quantize(chunk)
+        chunk = self.MST_analyze(chunk)
+        #print("Despues de decorrelación -> ", chunk)
+        compressed_chunk = zlib.compress(chunk.transpose().reshape(-1)) # reshape(-1) deja en una línea el array
+        size = len(compressed_chunk)
+        pack_format = f"HH{len(compressed_chunk)}s"
         packed_chunk =  struct.pack(
             pack_format,
             seq % (1 << 16),
-            len(compressed_channels[0]), # tamaño del primer canal comprimido
             self.quantization_step,
-            *compressed_channels, # * es para compressed_channel[0], [1], ... (expande el array)
+            compressed_chunk, # * es para compressed_channel[0], [1], ... (expande el array)
         )
         self.stats_lock.acquire()
         self.compression_pct += 100*(1-size/4096)
@@ -100,26 +115,28 @@ class InterCom():
             """
         return chunk*dequantization_step
 
+    def MST_synthesize(self, w):
+        x = np.empty_like(w, dtype=np.int16)
+        x[:, 0] = w[:, 0] + w[:, 1] # L(ow frequency subband)
+        x[:, 1] = w[:, 0] - w[:, 1] # H(igh frequency subband)
+        return x
+
     def unpack(self, packed_chunk):
         """Unpack, rebuild and decompress ```chunk``` after reception
             """
         self.chunks_received += 1
         self.bytes_received = len(packed_chunk)
-        first_channel_size, = struct.unpack("H", packed_chunk[SEQ_NO_SIZE:2*SEQ_NO_SIZE])
-        second_channel_size = len(packed_chunk) - first_channel_size - 2*SEQ_NO_SIZE - 1
-        seq, _, dequantization_step, first_channel_bytes, second_channel_bytes = struct.unpack(
-            f"HHB{first_channel_size}s{second_channel_size}s",
-            packed_chunk,
-        )
-        first_channel = np.frombuffer(
-            zlib.decompress(first_channel_bytes), 
+
+        seq, dequantization_step, compressed_chunk_bytes = struct.unpack(f"HH{len(packed_chunk) - 2*SEQ_NO_SIZE}s", packed_chunk)
+        
+        chunk = np.frombuffer(
+            zlib.decompress(compressed_chunk_bytes), 
             dtype='int16',
         )
-        second_channel = np.frombuffer(
-            zlib.decompress(second_channel_bytes),
-            dtype='int16'
-        )
-        return seq, self.dequantize(np.ascontiguousarray(np.concatenate((first_channel, second_channel)).reshape(2,-1).transpose()), dequantization_step)
+        reshaped_chunk = np.ascontiguousarray(chunk.reshape(2,-1).transpose())
+        synthesized_chunk = self.MST_synthesize(reshaped_chunk)
+        dequantized_chunk = self.dequantize(synthesized_chunk, dequantization_step)
+        return seq, dequantized_chunk
 
     def play(self, chunk, stream):
         """Write samples to the stream.
@@ -245,13 +262,17 @@ class InterCom():
         self.total_chunks_received += chunks_received
         self.total_avg_compression += avg_compression
 
+        # 1000 max con qs=1
+        # 100 minb con qs=250
         chunks_per_second = chunks_received / elapsed
-        if chunks_per_second <= 37:
-            self.quantization_step = min(250, 1 + int(self.quantization_step * 1.2))
+        if chunks_per_second <= 39:
+            self.quantization_step = min(250, int(self.quantization_step * 1.2))
         elif chunks_per_second >= 43:
             self.quantization_step = max(1, int(self.quantization_step * 0.8))
 
     def final_averages(self):
+        threading.Timer(5, self.final_averages).start()
+        
         avg_elapsed = self.total_elapsed / self.total_times
         avg_elapsed_client = self.total_elapsed_client / self.total_times
         avg_client_pct = self.total_client_pct / self.total_times
@@ -261,8 +282,9 @@ class InterCom():
         avg_chunks_received = self.total_chunks_received / self.total_times
         avg_avg_compression = self.total_avg_compression / self.total_times
 
-        print(f"------- AVERAGE STATS -------")
+        print(f"\n------- AVERAGE STATS OF {self.total_times} -------\n")
         self.verbose(avg_elapsed, avg_elapsed_client, avg_client_pct, avg_elapsed_server, avg_server_pct, avg_throughput, avg_chunks_received, avg_avg_compression)
+        print(f"\n------- END AVERAGE STATS -----\n")
     
     def verbose(self, elapsed, elapsed_client, client_pct, elapsed_server, server_pct, throughput, chunks_received, avg_compression):
         print(f"stats from the last {elapsed:.3f} seconds:")
@@ -270,7 +292,7 @@ class InterCom():
         print(f"\t> server CPU usage: {elapsed_server:.3f} seconds, {server_pct:.2f}%")
         print(f"\t> total CPU usage: {elapsed_client + elapsed_server:.3f} seconds, {server_pct + client_pct:.2f}%")
         print(f"\t> system CPU usage: {psutil.cpu_percent():.2f}%")
-        print(f"\t> {chunks_received} messages received, {throughput:.1f} Kbps")
+        print(f"\t> {int(chunks_received)} messages received, {throughput:.2f} Kbps")
         print(f"\t> average compression: {avg_compression:.1f}%")
         print(f"\t> quantization step: {self.quantization_step}")
 
@@ -280,6 +302,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # Start the program
     intercom = InterCom(args)
+
+    # test = np.array([
+    #     [1000, 2000],
+    #     [3000, 4000],
+    #     [5000, 6000],
+    # ], dtype=np.int16)
+    # print(intercom.quantize(test))
+    # print(intercom.unpack(intercom.pack(0, test)))
+
+    # exit(0)
     # Threads
     clientT = threading.Thread(target=intercom.client)
     serverT = threading.Thread(target=intercom.server)
@@ -289,5 +321,8 @@ if __name__ == "__main__":
         serverT.start()
         playbackT.start()
         intercom.stats()
-    except KeyboardInterrupt:
+        time.sleep(5)
         intercom.final_averages()
+    except KeyboardInterrupt:
+        pass
+

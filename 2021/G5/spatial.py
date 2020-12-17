@@ -14,131 +14,48 @@ except ImportError:
 import minimal
 import buffer
 import compress
+import br_control
 
-minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
-
-class BR_Control(compress.Compression):
-    '''Bit-rate control through controlling the quantization step. Both
-    channels are quantized using the same step. To control the
-    quantization step, the number of lost chunks is added to
-    it. Otherwise, the quantization step is decremented by 1 each
-    second.
-
-    This implementation of the BR control supposes that the
-    communication link is symmetric, or at least, the quality of the
-    audio for both interlocutors should be the same. This last
-    supposition responds to the idea (used in some transmission
-    protocols such as Bittorrent) that is "Why I should send more data
-    than I'm receiving?"
-
-    Moreover, notice that we don't need to send any extra data to
-    perform the BR control.
-
-    '''
+class Spatial_decorrelation(br_control.BR_Control):
 
     def __init__(self):
-        '''Initializes the BR control variables (basically, to count the
-        number of lost chunks), and creates a thread to perfom the
-        control.
-
-        '''
         if __debug__:
-            print("Running BR_Control.__init__")
+            print("Running Spatial_decorrelation.__init__")
         super().__init__()
-        self.quantization_step = minimal.args.minimal_quantization_step
-        print("(minimum) quantization_step =", minimal.args.minimal_quantization_step)
-        self.number_of_sent_chunks = 0
-        self.number_of_received_chunks = 0
-        data_flow_control_thread = threading.Thread(target=self.data_flow_control)
-        data_flow_control_thread.daemon = True
-        data_flow_control_thread.start()
+        
+    # Analysis transform:
+    #
+    #  [w[0]] = [1  1] [x[0]]
+    #  [w[1]] = [1 -1] [x[1]]
+    def MST_analyze(self, x):
+        w = np.empty_like(x, dtype=np.int32)
+        w[:, 0] = x[:, 0].astype(np.int32) + x[:, 1] # L(ow frequency subband)
+        w[:, 1] = x[:, 0].astype(np.int32) - x[:, 1] # H(igh frequency subband)
+        return w
 
-    def data_flow_control_2(self):
-        while True:
-            self.quantization_step += self.number_of_lost_packets
-            if self.quantization_step < minimal.args.minimal_quantization_step:
-                self.quantization_step = minimal.args.minimal_quantization_step
-            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
-            self.number_of_sent_chunks = 0
-            self.number_of_received_chunks = 0
-            time.sleep(1)
+    # Inverse transform:
+    #
+    #  [x[0]] = 1/2 [1  1] [w[0]]
+    #  [x[1]] = 1/2 [1 -1] [w[1]]
 
-    def data_flow_control(self):
-        '''Performs the BR control, with a cadence of 1 Hz.'''
-        while True:
-            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
-            self.quantization_step += self.number_of_lost_packets
-            if self.quantization_step < minimal.args.minimal_quantization_step:
-                self.quantization_step = minimal.args.minimal_quantization_step
-            self.number_of_sent_chunks = 0
-            self.number_of_received_chunks = 0
-            time.sleep(1)
-
-    def send(self, packed_chunk):
-        '''Sends the packet, counting the number of sent packets.'''
-        super().send(packed_chunk)
-        self.number_of_sent_chunks += 1
-
-    def receive(self):
-        '''Receives a packet, counting the number of received packets.'''
-        packed_chunk = super().receive()
-        self.number_of_received_chunks += 1
-        return packed_chunk
-
-    def quantize(self, chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Dead-zone quantize a chunk. The quantization step is a instance
-        variable.
-
-        Parameters
-        ----------
-        chunk : numpy.ndarray
-            The chunk to quantize.
-
-        dtype : numpy data type.
-            The type used for representing the quantization indexes.
-
-        Returns
-        -------
-        numpy.ndarray
-            The quantized chunk.
-
-        '''
-        quantized_chunk = np.round(chunk / self.quantization_step).astype(dtype)
-        return quantized_chunk
-    
-    def dequantize(self, quantized_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Restores the original dynamic range of the chunk.
-
-        Parameters
-        ----------
-        quantized_chunk : numpy.ndarray
-            The chunk to restore.
-
-        dtype : numpy data type.
-            The type used for representing the dequantized samples.
-
-        Returns
-        -------
-        numpy.ndarray
-            The "restored" chunk.
-
-        '''
-        chunk = (quantized_chunk * self.quantization_step).astype(dtype)
-        return chunk
-
+    def MST_synthesize(self,w):
+        x = np.empty_like(w, dtype=np.int16)
+        x[:, 0] = (w[:, 0] + w[:, 1])/2 # L(ow frequency subband)
+        x[:, 1] = (w[:, 0] - w[:, 1])/2 # H(igh frequency subband)
+        return x
+        
     def pack(self, chunk_number, chunk):
-        '''Quantize and packs a chunk.'''
-        quantized_chunk = self.quantize(chunk)
-        packed_chunk = super().pack(chunk_number, quantized_chunk)
+        analyze = self.MST_analyze(chunk)
+        packed_chunk = super().pack(chunk_number, analyze)
         return packed_chunk
 
     def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Dequantizes and unpacks a chunk.'''
         chunk_number, quantized_chunk = super().unpack(packed_chunk, dtype)
-        chunk = self.dequantize(quantized_chunk, dtype)
+        synthesize = self.MST_synthesize(quantized_chunk)
+        chunk = synthesize.astype(dtype)
         return chunk_number, chunk
 
-class BR_Control__verbose(BR_Control, compress.Compression__verbose):
+class Spatial_decorrelation__verbose(Spatial_decorrelation, br_control.BR_Control__verbose):
     
     def __init__(self):
         if __debug__:
@@ -286,9 +203,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_args()
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = BR_Control__verbose()
+        intercom = Spatial_decorrelation__verbose()
     else:
-        intercom = BR_Control()
+        intercom = Spatial_decorrelation()
     try:
         intercom.run()
     except KeyboardInterrupt:
