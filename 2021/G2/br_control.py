@@ -130,6 +130,7 @@ class BR_Control(compress.Compression):
         '''Quantize and packs a chunk.'''
         quantized_chunk = self.quantize(chunk)
         packed_chunk = super().pack(chunk_number, quantized_chunk)
+        print("BR:", len(chunk)/len(packed_chunk))
         return packed_chunk
 
     def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
