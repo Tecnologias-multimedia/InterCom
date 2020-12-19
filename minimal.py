@@ -133,7 +133,10 @@ class Minimal:
             A packet structure with the sequence of bytes to send.
 
         '''
-        self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
+        try:
+            self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
+        except BlockingIOError:
+            pass
         
 
     def receive(self):
