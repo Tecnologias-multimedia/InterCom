@@ -15,6 +15,7 @@ echo "default-source = virtmic" > $HOME/.config/pulse/client.conf
 
 # Write the audio file to the named pipe virtmic. This will block until the named pipe is read.
 echo "Writing audio file to virtual microphone."
+#cat $1 > /tmp/virtmic
 while true; do
     echo -n "."
     cat $1 > /tmp/virtmic
