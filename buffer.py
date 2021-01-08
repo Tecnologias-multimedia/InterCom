@@ -57,6 +57,8 @@ class Buffering(minimal.Minimal):
         self._buffer = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
             self._buffer[i] = self.zero_chunk
+        #self.sock.settimeout(self.chunk_time)
+        #self.sock.settimeout(0)
         self.chunk_number = 0
         if __debug__:
             print("chunks_to_buffer =", self.chunks_to_buffer)
