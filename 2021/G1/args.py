@@ -13,6 +13,8 @@ def get_args():
     OUT_PORT    = 4444
     ADDRESS     = 'localhost'
     N           = 41
+    WAVELET     = "db20"
+    LEVELS       = 5
 
     parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -34,12 +36,18 @@ def get_args():
     parser.add_argument("-a", "--address",
                         help="Interlocutor's IP address or name.",
                         type=str, default=ADDRESS)
-    parser.add_argument("-l", "--payload_size",
+    parser.add_argument("-o", "--payload_size",
                         help="Paiload size.",
                         type=int, default=PAYLOAD_SIZE)
     parser.add_argument("-n", "--buffer_size",
                         help="Buffer size.",
                         type=int, default=N)
+    parser.add_argument("-w", "--wavelet_name",
+                        help="Wavelet name.",
+                        type=str, default=WAVELET)
+    parser.add_argument("-l", "--levels",
+                        help="Level.",
+                        type=int, default=LEVELS)
                                        
     return parser
 
