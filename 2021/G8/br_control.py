@@ -123,6 +123,8 @@ class BR_Control(compress.Compression):
             The "restored" chunk.
 
         '''
+        # In our case this is necessary
+        quantized_chunk = quantized_chunk.astype(dtype)
         chunk = (quantized_chunk * self.quantization_step).astype(dtype)
         return chunk
 
