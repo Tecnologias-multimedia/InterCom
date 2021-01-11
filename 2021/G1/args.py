@@ -13,7 +13,7 @@ def get_args():
     OUT_PORT    = 4444
     ADDRESS     = 'localhost'
     N           = 41
-    WAVELET     = "db20"
+    WAVELET     = "db19"
     LEVELS       = 5
 
     parser = argparse.ArgumentParser(description="Real-Time Audio Intercommunicator",
@@ -61,3 +61,5 @@ def show_args(args):
     print("OUT PORT:", args.out_port)
     print("ADDRESS:", args.address)
     print("N:", args.buffer_size)
+    print("WAVELET NAME", args.wavelet_name)
+    print("WAVELET LEVELS", args.levels)
