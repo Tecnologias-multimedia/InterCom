@@ -3,6 +3,7 @@ from args import get_args, show_args
 from queue import PriorityQueue
 from udp_receive import UdpReceiver
 from udp_send import UdpSender
+from temporal_decorrelate import Temporal_decorrelation as temp_dec
 import heapq 
 import numpy as np
 assert np
@@ -16,9 +17,6 @@ import zlib
 
 # Size of the sequence number in bytes
 SEQ_NO_SIZE = 2
-
-
-
 
 class InterCom():
     def __init__(self, args):
@@ -35,6 +33,12 @@ class InterCom():
         self.out_port     = args.out_port
         self.address      = args.address
         self.n            = args.buffer_size
+        self.wavelet      = args.wavelet_name
+        self.level        = args.levels
+
+        # using temporal decorrelate and stereo decorrelate
+        self.temp_dec = temp_dec(self.wavelet, self.level)
+        
         # quantization step used for compressing
         self.quantization_step = 1
 
@@ -75,51 +79,31 @@ class InterCom():
             """
         chunk, _ = stream.read(chunk_size)
         return chunk
-            
-    def quantize(self, chunk):
-        """Chunk quantification
-            """
-        return (chunk/self.quantization_step).astype(np.uint16)
-
-    def MST_analyze(self, x):
-        w = np.empty_like(x, dtype=np.int32)
-        w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])//2 # L(ow frequency subband)
-        w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])//2 # H(igh frequency subband)
-        return w.astype(np.int16) # Lo convertimos a int16
 
     def pack(self, seq, chunk):
         """Compress and pack the ```chunk``` before sending
             """
         # recorre los canales (normalmente 2 canales), podemos hacer esto porque transponemos la matriz
         #print("Antes de decorrelacion -> ", chunk)
-        chunk = self.quantize(chunk)
-        chunk = self.MST_analyze(chunk)
+        coefs = self.temp_dec.MST_analyze(chunk)
+        coefs = self.temp_dec.DWT_analyze(coefs)
+        k = self.temp_dec.quantize(coefs, self.quantization_step)
         #print("Despues de decorrelación -> ", chunk)
-        compressed_chunk = zlib.compress(chunk.transpose().reshape(-1)) # reshape(-1) deja en una línea el array
-        size = len(compressed_chunk)
-        pack_format = f"HH{len(compressed_chunk)}s"
+
+        compressed_chunk = zlib.compress(k) # reshape(-1) deja en una línea el array
+        size_chunk = len(compressed_chunk)
+        pack_format = f"HH{size_chunk}s"
         packed_chunk =  struct.pack(
             pack_format,
             seq % (1 << 16),
             self.quantization_step,
-            compressed_chunk, # * es para compressed_channel[0], [1], ... (expande el array)
+            compressed_chunk, 
         )
         self.stats_lock.acquire()
-        self.compression_pct += 100*(1-size/4096)
+        self.compression_pct += 100*(1-size_chunk/4096)
         self.compression_count += 1
         self.stats_lock.release()
         return packed_chunk
-
-    def dequantize(self, chunk, dequantization_step):
-        """Chunk dequantization
-            """
-        return chunk*dequantization_step
-
-    def MST_synthesize(self, w):
-        x = np.empty_like(w, dtype=np.int16)
-        x[:, 0] = w[:, 0] + w[:, 1] # L(ow frequency subband)
-        x[:, 1] = w[:, 0] - w[:, 1] # H(igh frequency subband)
-        return x
 
     def unpack(self, packed_chunk):
         """Unpack, rebuild and decompress ```chunk``` after reception
@@ -127,16 +111,16 @@ class InterCom():
         self.chunks_received += 1
         self.bytes_received = len(packed_chunk)
 
-        seq, dequantization_step, compressed_chunk_bytes = struct.unpack(f"HH{len(packed_chunk) - 2*SEQ_NO_SIZE}s", packed_chunk)
-        
-        chunk = np.frombuffer(
+        seq, dequantization_step, compressed_chunk_bytes = struct.unpack(f"HH{len(packed_chunk) - 2*SEQ_NO_SIZE}s", packed_chunk)        
+
+        k = np.frombuffer(
             zlib.decompress(compressed_chunk_bytes), 
-            dtype='int16',
+            dtype='int32',
         )
-        reshaped_chunk = np.ascontiguousarray(chunk.reshape(2,-1).transpose())
-        synthesized_chunk = self.MST_synthesize(reshaped_chunk)
-        dequantized_chunk = self.dequantize(synthesized_chunk, dequantization_step)
-        return seq, dequantized_chunk
+        dequantized_chunk = self.temp_dec.dequantize(k, dequantization_step)
+        synthesized_chunk = self.temp_dec.DWT_synthesize(dequantized_chunk)
+        synthesized_chunk = self.temp_dec.MST_synthesize(synthesized_chunk)
+        return seq, synthesized_chunk
 
     def play(self, chunk, stream):
         """Write samples to the stream.
@@ -240,6 +224,7 @@ class InterCom():
         self.server_cpu_time = 0
         elapsed_client = self.client_cpu_time
         self.client_cpu_time = 0
+        avg_compression = 0
         avg_compression = self.compression_pct / self.compression_count
         chunks_received = self.chunks_received
         bytes_received = self.bytes_received
@@ -303,15 +288,6 @@ if __name__ == "__main__":
     # Start the program
     intercom = InterCom(args)
 
-    # test = np.array([
-    #     [1000, 2000],
-    #     [3000, 4000],
-    #     [5000, 6000],
-    # ], dtype=np.int16)
-    # print(intercom.quantize(test))
-    # print(intercom.unpack(intercom.pack(0, test)))
-
-    # exit(0)
     # Threads
     clientT = threading.Thread(target=intercom.client)
     serverT = threading.Thread(target=intercom.server)
@@ -320,9 +296,9 @@ if __name__ == "__main__":
         clientT.start()
         serverT.start()
         playbackT.start()
+        time.sleep(2)
         intercom.stats()
         time.sleep(5)
         intercom.final_averages()
     except KeyboardInterrupt:
         pass
-
