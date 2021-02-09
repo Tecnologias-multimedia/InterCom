@@ -17,14 +17,16 @@ import minimal
 import buffer
 import compress
 import br_control
+from br_control import BR_Control as BR_Control
+from br_control import BR_Control__verbose as BR_Control__verbose
 
-class Stereo_coding(br_control.BR_Control):
+class Stereo_Coding(BR_Control):
     ''' Removes the inter-channel (spatial).
     '''
 
     def __init__(self):
         if __debug__:
-            print("Running Stereo_coding.__init__")
+            print("Running Stereo_Coding.__init__")
         super().__init__()
 
     def analyze(self, x):
@@ -51,7 +53,7 @@ class Stereo_coding(br_control.BR_Control):
         chunk = self.synthesize(analyzed_chunk)
         return chunk_number, chunk
 
-class Stereo_coding__verbose(Stereo_coding, br_control.BR_Control__verbose):
+class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
     def __init__(self):
         super().__init__()
         self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
@@ -114,9 +116,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Stereo_coding__verbose()
+        intercom = Stereo_Coding__verbose()
     else:
-        intercom = Stereo_coding()
+        intercom = Stereo_Coding()
     try:
         intercom.run()
     except KeyboardInterrupt:
