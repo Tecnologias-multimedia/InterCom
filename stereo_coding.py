@@ -18,13 +18,13 @@ import buffer
 import compress
 import br_control
 
-class Intra_frame_decorrelation(br_control.BR_Control):
+class Stereo_coding(br_control.BR_Control):
     ''' Removes the inter-channel (spatial).
     '''
 
     def __init__(self):
         if __debug__:
-            print("Running Intra_frame_decorrelation.__init__")
+            print("Running Stereo_coding.__init__")
         super().__init__()
 
     def analyze(self, x):
@@ -51,7 +51,7 @@ class Intra_frame_decorrelation(br_control.BR_Control):
         chunk = self.synthesize(analyzed_chunk)
         return chunk_number, chunk
 
-class Intra_frame_decorrelation__verbose(Intra_frame_decorrelation, br_control.BR_Control__verbose):
+class Stereo_coding__verbose(Stereo_coding, br_control.BR_Control__verbose):
     def __init__(self):
         super().__init__()
         self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
@@ -114,9 +114,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Intra_frame_decorrelation__verbose()
+        intercom = Stereo_coding__verbose()
     else:
-        intercom = Intra_frame_decorrelation()
+        intercom = Stereo_coding()
     try:
         intercom.run()
     except KeyboardInterrupt:
