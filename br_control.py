@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (quantization of the DWT coefficients). '''
+''' Real-time Audio Intercommunicator (br_control.py). '''
 
 import numpy as np
 import math
@@ -37,11 +37,6 @@ class BR_Control(compress.Compression):
     '''
 
     def __init__(self):
-        '''Initializes the BR control variables (basically, to count the
-        number of lost chunks), and creates a thread to perfom the
-        control.
-
-        '''
         if __debug__:
             print("Running BR_Control.__init__")
         super().__init__()
@@ -64,7 +59,6 @@ class BR_Control(compress.Compression):
             time.sleep(1)
 
     def data_flow_control_(self):
-        '''Performs the BR control, with a cadence of 1 Hz.'''
         while True:
             self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
             self.quantization_step += self.number_of_lost_packets
@@ -75,7 +69,6 @@ class BR_Control(compress.Compression):
             time.sleep(1)
 
     def data_flow_control(self):
-        '''Performs the BR control, with a cadence of 1 Hz.'''
         while True:
             self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks
             if self.number_of_lost_packets > 2:
@@ -88,55 +81,27 @@ class BR_Control(compress.Compression):
             time.sleep(1)
 
     def send(self, packed_chunk):
-        '''Sends the packet, counting the number of sent packets.'''
         super().send(packed_chunk)
         self.number_of_sent_chunks += 1
 
     def receive(self):
-        '''Receives a packet, counting the number of received packets.'''
         packed_chunk = super().receive()
         self.number_of_received_chunks += 1
         return packed_chunk
 
-    def quantize(self, chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Dead-zone quantize a chunk. The quantization step is a instance
-        variable.
-
-        Parameters
-        ----------
-        chunk : numpy.ndarray
-            The chunk to quantize.
-
-        dtype : numpy data type.
-            The type used for representing the quantization indexes.
-
-        Returns
-        -------
-        numpy.ndarray
-            The quantized chunk.
-
-        '''
-        quantized_chunk = np.round(chunk / self.quantization_step).astype(dtype)
+    #def quantize(self, chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    #def quantize(self, chunk, dtype=np.int16):
+    def quantize(self, chunk):
+        '''Dead-zone quantizer'''
+        #quantized_chunk = np.round(chunk / self.quantization_step).astype(dtype)
+        #quantized_chunk = np.round(chunk / self.quantization_step).astype(np.int16)
+        quantized_chunk = (chunk / self.quantization_step).astype(np.int16)
         return quantized_chunk
     
-    def dequantize(self, quantized_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Restores the original dynamic range of the chunk.
-
-        Parameters
-        ----------
-        quantized_chunk : numpy.ndarray
-            The chunk to restore.
-
-        dtype : numpy data type.
-            The type used for representing the dequantized samples.
-
-        Returns
-        -------
-        numpy.ndarray
-            The "restored" chunk.
-
-        '''
-        chunk = (quantized_chunk * self.quantization_step).astype(dtype)
+    #def dequantize(self, quantized_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    def dequantize(self, quantized_chunk):
+        '''Deadzone dequantizer'''
+        chunk = quantized_chunk * self.quantization_step
         return chunk
 
     def pack(self, chunk_number, chunk):
@@ -145,10 +110,13 @@ class BR_Control(compress.Compression):
         packed_chunk = super().pack(chunk_number, quantized_chunk)
         return packed_chunk
 
-    def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    def unpack(self, packed_chunk):
         '''Dequantizes and unpacks a chunk.'''
-        chunk_number, quantized_chunk = super().unpack(packed_chunk, dtype)
-        chunk = self.dequantize(quantized_chunk, dtype)
+        #chunk_number, quantized_chunk = super().unpack(packed_chunk, dtype)
+        chunk_number, quantized_chunk = super().unpack(packed_chunk)
+        #chunk = self.dequantize(quantized_chunk, dtype)
+        chunk = self.dequantize(quantized_chunk)
         return chunk_number, chunk
 
 class BR_Control__verbose(BR_Control, compress.Compression__verbose):

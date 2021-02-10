@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Real-time Audio Intercommunicator (removes inter-channel redundancy).
-'''
+'''Real-time Audio Intercommunicator (stereo_coding.py).'''
 
 import numpy as np
 import sounddevice as sd
@@ -21,36 +20,51 @@ from br_control import BR_Control as BR_Control
 from br_control import BR_Control__verbose as BR_Control__verbose
 
 class Stereo_Coding(BR_Control):
-    ''' Removes the inter-channel (spatial).
-    '''
+    ''' Removes the inter-channel (spatial) redundancy.'''
 
     def __init__(self):
         if __debug__:
             print("Running Stereo_Coding.__init__")
         super().__init__()
 
+    def _analyze(self, x):
+        #w = np.empty_like(x, dtype=np.int32)
+        w = np.empty_like(x, dtype=np.int16)
+        #w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])/2
+        w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])/2
+        #w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
+        w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
+        return w
     def analyze(self, x):
         w = np.empty_like(x, dtype=np.int32)
         w[:, 0] = x[:, 0].astype(np.int32) + x[:, 1]
         w[:, 1] = x[:, 0].astype(np.int32) - x[:, 1]
         return w
+ 
+    def _synthesize(self, w):
+        #x = np.empty_like(w, dtype=np.int32)
+        x = np.empty_like(w, dtype=np.int16)
+        x[:, 0] = w[:, 0] + w[:, 1]
+        x[:, 1] = w[:, 0] - w[:, 1]
+        return x
 
     def synthesize(self, w):
-        x = np.empty_like(w, dtype=np.int16)
+        x = np.empty_like(w)
         x[:, 0] = (w[:, 0] + w[:, 1])/2
         x[:, 1] = (w[:, 0] - w[:, 1])/2
         return x
 
     def pack(self, chunk_number, chunk):
-        '''Removes stereo redundancy.'''
         analyzed_chunk = self.analyze(chunk)
         packed_chunk = super().pack(chunk_number, analyzed_chunk)
         return packed_chunk
 
-    def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        '''Restores the original chunk representation.'''
-        chunk_number, analyzed_chunk = super().unpack(packed_chunk, dtype)
+    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    def unpack(self, packed_chunk):
+        #chunk_number, analyzed_chunk = super().unpack(packed_chunk, dtype)
+        chunk_number, analyzed_chunk = super().unpack(packed_chunk)
         chunk = self.synthesize(analyzed_chunk)
+
         return chunk_number, chunk
 
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):

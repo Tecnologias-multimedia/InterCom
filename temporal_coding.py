@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (removes intra-channel redundancy with a DWT (Discrete Wavelet Transform)). '''
+''' Real-time Audio Intercommunicator (temporal_coding.py)). '''
 
 import numpy as np
 import sounddevice as sd
@@ -24,25 +24,11 @@ minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", hel
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
 
 class Temporal_Coding(Stereo_Coding):
-    ''' Removes the intra-channel redundancy between the samples of the same channel of each chunk.
+    '''Removes the intra-channel redundancy between the samples of the
+    same channel of each chunk
 
-    Class atributes
-    ---------------
-    COEFFICIENT_TYPE : type
-        Data type used for representing the coefficients.
-
-    Metods
-    ------
-    __init__()
-    decorrelate(chunk)
-    correlate(chunk)
-    pack(chunk)
-    unpack(packed_chunk)
     '''
-    COEFFICIENT_TYPE = np.int32
-    
     def __init__(self):
-        ''' Constructor. Inits the DWT machinery. '''
         super().__init__()
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
@@ -65,61 +51,36 @@ class Temporal_Coding(Stereo_Coding):
             print("DWT levels =", self.dwt_levels)
 
     def analyze(self, chunk):
-        ''' Removes the redundancy in each channel using a DWT.
-
-        Parameters
-        ----------
-        chunk : numpy.ndarray
-            The chunk to decorrelate.
-
-        Returns
-        -------
-        numpy.ndarray
-            The decorrelated chunk.
-        '''
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=self.COEFFICIENT_TYPE)
+        '''Forward DWT.'''
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-            channel_DWT_chunk_float64 = pywt.coeffs_to_array(channel_coeffs)[0]
-            assert np.all( channel_DWT_chunk_float64 < (1<<31) )
-            DWT_chunk[:, c] = np.rint(channel_DWT_chunk_float64).astype(self.COEFFICIENT_TYPE)
+            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
+            #assert np.all( channel_DWT_chunk < (1<<31) )
+            assert np.all( abs(channel_DWT_chunk) < (1<<15) )
+            DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
         return DWT_chunk
     
-    def synthesize(self, chunk_DWT):
-        ''' Restores the original representation of the chunk.
-
-        Parameters
-        ----------
-        chunk_DWT : numpy.ndarray
-            The chunk to restore.
-
-        Returns
-        -------
-        numpy.ndarray
-            The restored chunk.
-        '''
-        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=self.SAMPLE_TYPE)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
-            chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(self.SAMPLE_TYPE)
-        return chunk
-
     def pack(self, chunk_number, chunk):
-        ''' I/O idem to Stereo_Coding.pack(). Redefines it to provide intra-channel redundancy removal. '''
-        Stereo_Coding.analyze(self, chunk)
-        chunk = chunk.astype(self.COEFFICIENT_TYPE)
+        #chunk = Stereo_Coding.analyze(self, chunk)
         chunk = self.analyze(chunk)
-        quantized_chunk = BR_Control.quantize(self, chunk, self.COEFFICIENT_TYPE)
+        quantized_chunk = BR_Control.quantize(self, chunk)
         compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
         return compressed_chunk
 
+    def synthesize(self, chunk_DWT):
+        '''Inverse DWT.'''
+        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
+            chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int16)
+        return chunk
+
     def unpack(self, compressed_chunk):
-        ''' I/O idem to IFD.unpack(). Redefines it to restore the original chunk representation. '''
-        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk, self.COEFFICIENT_TYPE)
-        chunk = BR_Control.dequantize(self, quantized_chunk, self.COEFFICIENT_TYPE)
+        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
+        chunk = BR_Control.dequantize(self, quantized_chunk)
         chunk = self.synthesize(chunk)
-        chunk = chunk.astype(minimal.Minimal.SAMPLE_TYPE)
-        Stereo_Coding.synthesize(self, chunk)
+        #chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk_number, chunk
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):

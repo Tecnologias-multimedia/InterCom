@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (with buffering). '''
+''' Real-time Audio Intercommunicator (buffer.py). '''
 
 import argparse
 import sounddevice as sd
@@ -24,24 +24,8 @@ class Buffering(minimal.Minimal):
 
     CHUNK_NUMBERS = 1 << 15 # Enought for most buffering times.
     
-    """
-    Implements a random access buffer structure for hiding the jitter.
-
-    Class attributes
-    ----------------
-
-    Methods
-    -------
-    __init__()
-    pack(chunk)
-    send(packed_chunk)
-    receive()
-    unpack(packed_chunk)
-    generate_zero_chunk()
-    _record_io_and_play()
-    stream()
-    run()
-    """
+    """Implements a random access buffer structure for hiding the
+jitter."""
 
     def __init__(self):
         ''' Initializes the buffer. '''
@@ -64,44 +48,18 @@ class Buffering(minimal.Minimal):
             print("chunks_to_buffer =", self.chunks_to_buffer)
 
     def pack(self, chunk_number, chunk):
-        ''' Concatenates a chunk number to the chunk.
-
-        Parameters
-        ----------
-        chunk : numpy.ndarray
-            A chunk of audio.
-
-        Returns
-        -------
-        bytes
-            A packed chunk.
-
-        '''
+        '''Concatenates a chunk number to the chunk.'''
         packed_chunk = struct.pack("!H", chunk_number) + chunk.tobytes()
         return packed_chunk
 
-    def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
-        ''' Splits the packed chunk into a chunk number and a chunk.
-
-        Parameters
-        ----------
-
-        packed_chunk : bytes
-
-            A packet.
-
-        Returns
-        -------
-
-        chunk_number : int
-        chunk : numpy.ndarray
-
-            A chunk (a pointer to the socket's read-only buffer).
-        '''
+    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    def unpack(self, packed_chunk):
+        '''Splits the packed chunk into a chunk number and a chunk.'''
         (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
-        chunk = np.frombuffer(chunk, dtype=dtype)
+        #chunk = np.frombuffer(chunk, dtype=dtype)
+        chunk = np.frombuffer(chunk, dtype=np.int16)
         chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk_number, chunk
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (minimal version). '''
+''' Real-time Audio Intercommunicator (minimal.py). '''
 
 import argparse
 import sounddevice as sd
@@ -14,18 +14,17 @@ try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
     print("Unable to import argcomplete")
+import soundfile as sf
 
 def spinning_cursor():
-    ''' https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor
-    '''
+    ''' https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor'''
     while True:
         for cursor in '|/-\\':
             yield cursor
 spinner = spinning_cursor()
 
 def int_or_str(text):
-    '''Helper function for argument parsing.
-    '''
+    '''Helper function for argument parsing.'''
     try:
         return int(text)
     except ValueError:
@@ -40,41 +39,22 @@ parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Nu
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
+parser.add_argument("-f", "--filename", type=str, help="Use a .wav file instead of the mic data")
 
 class Minimal:
-    """
-    Definition a minimal InterCom (no compression, no quantization, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks.
+    """A minimal InterCom (no compression, no quantization, no transform,
+... only provides a bidirectional (full-duplex) transmission of raw
+(playable) chunks.
 
-    Class attributes
-    ----------------
-    MAX_PAYLOAD_BYTES : int
-        Maximum length of the payload of a UDP packet. Each chunk is sent in a different packet.
-    SAMPLE_TYPE : type
-        Data type used for representing the audio samples.
-    NUMBER_OF_CHANNELS : int
-        Number of audio channels used.
-
-    Methods
-    -------
-    __init__()
-    pack(chunk)
-    send(packed_chunk)
-    receive()
-    unpack(packed_chunk)
-    generate_zero_chunk()
-    _record_io_and_play()
-    _stream()
-    run()
     """
 
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
-    SAMPLE_TYPE = np.int16    # The number of bits per sample.
+    #SAMPLE_TYPE = np.int16    # The number of bits per sample.
     NUMBER_OF_CHANNELS = 2    # The number of channels.
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
-        #print("InterCom (Minimal) is running")
         if __debug__:
             print("Running Minimal.__init__")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,73 +62,30 @@ class Minimal:
         self.sock.bind(self.listening_endpoint)
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         self.zero_chunk = self.generate_zero_chunk()
+        if args.filename:
+            self.wavfile = sf.SoundFile(args.filename, 'r')
 
     def pack(self, chunk):
-        ''' Builds a packet's payloads with a chunk.
-
-        Parameters
-        ----------
-        chunk : numpy.ndarray
-            A chunk of audio.
-
-        Returns
-        -------
-        bytes
-            A packed chunk.
-
-        '''
+        '''Builds a packet's payloads with a chunk.'''
         return chunk  # In minimal, this method does not perform any work.
 
     def unpack(self, packed_chunk):
-        ''' Unpack a packed_chunk.
+        '''Unpack a packed_chunk.'''
 
-        Parameters
-        ----------
-
-        packed_chunk : bytes
-
-            A chunk.
-
-        Returns
-        -------
-
-        numpy.ndarray
-
-            A chunk (a pointer to the socket's read-only buffer).
-        '''
-
-        # We need to reshape a numpy array.
-        chunk = np.frombuffer(packed_chunk, self.SAMPLE_TYPE)
+        # We need to reshape a numpy array, that comes without shape.
+        chunk = np.frombuffer(packed_chunk, np.int16)
         chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk
     
     def send(self, packed_chunk):
-        ''' Sends an UDP packet.
-
-        Parameters
-        ----------
-
-        packed_chunk : bytes
-
-            A packet structure with the sequence of bytes to send.
-
-        '''
+        '''Sends an UDP packet.'''
         try:
             self.sock.sendto(packed_chunk, (args.destination_address, args.destination_port))
         except BlockingIOError:
             pass
-        
 
     def receive(self):
-        ''' Receives an UDP packet without blocking.
-
-        Returns
-        -------
-
-        bytes
-
-           A packed chunk.
-        '''
+        '''Receives an UDP packet without blocking.'''
         try:
             packed_chunk, sender = self.sock.recvfrom(self.MAX_PAYLOAD_BYTES)
             return packed_chunk
@@ -157,8 +94,10 @@ class Minimal:
 
     def generate_zero_chunk(self):
         '''Generates a chunk with zeros that will be used when an inbound
-        chunk is not available.'''
-        return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
+        chunk is not available.
+
+        '''
+        return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
 
     def _record_io_and_play(self, indata, outdata, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
@@ -211,6 +150,42 @@ class Minimal:
             #    print("indata[0] =", indata[0], "outdata[0] =", outdata[0])
             print(next(spinner), end='\b', flush=True)
 
+    def _read_io_and_play(self, outdata, frames, time, status):
+        #assert frames == args.frames_per_chunk
+        #if status.output_underflow:
+        #    print('Output underflow: increase blocksize?', file=sys.stderr)
+        #    raise sd.CallbackAbort
+        #assert not status
+        if __debug__:
+            data = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
+            data = np.frombuffer(data, dtype=np.int16)
+            data = np.reshape(data, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+            packed_chunk = self.pack(data)
+        else:
+            packed_chunk = self.pack(indata)
+        self.send(packed_chunk)
+        try:
+            packed_chunk = self.receive()
+            chunk = self.unpack(packed_chunk)
+        except (socket.timeout, BlockingIOError):
+            #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
+            chunk = self.zero_chunk
+            if __debug__:
+                print("playing zero chunk")
+        outdata[:] = chunk
+        if __debug__:
+            print(next(spinner), end='\b', flush=True)
+
+#        data = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
+#        data = np.frombuffer(data, dtype=np.int16)
+#        data = np.reshape(data, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+#        if len(data) < len(outdata):
+#            outdata[:len(data)] = data
+#            outdata[len(data):] = b'\x00' * (len(outdata) - len(data))
+#            raise sd.CallbackStop
+#        else:
+#            outdata[:] = data
+
     def stream(self, callback_function):
         '''Creates the stream.
 
@@ -220,11 +195,28 @@ class Minimal:
            The object that records and plays audio represented in numpy arrays.
         '''
         return sd.Stream(device=(args.input_device, args.output_device),
-                         dtype=self.SAMPLE_TYPE,
+                         #dtype=self.SAMPLE_TYPE,
+                         dtype=np.int16,
                          samplerate=args.frames_per_second,
                          blocksize=args.frames_per_chunk,
                          channels=self.NUMBER_OF_CHANNELS,
                          callback=callback_function)
+
+    def filestream(self, callback_function):
+        '''Creates the stream.
+
+        Returns
+        -------
+        sounddevice.Stream
+           The object that records and plays audio represented in numpy arrays.
+        '''
+        return sd.OutputStream(
+            dtype=np.int16,
+            samplerate=args.frames_per_second,
+            blocksize=args.frames_per_chunk,
+            device=args.output_device,
+            channels=self.NUMBER_OF_CHANNELS,
+            callback=callback_function)
 
     def run(self):
         '''Creates the stream, install the callback function, and waits for
@@ -232,8 +224,13 @@ class Minimal:
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
         print("Press enter-key to quit")
-        with self.stream(self._record_io_and_play):
-            input()
+        #print(args.filename)
+        if args.filename:
+            with self.filestream(self._read_io_and_play):
+                input()
+        else:
+            with self.stream(self._record_io_and_play):
+                input()
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
@@ -436,10 +433,16 @@ class Minimal__verbose(Minimal):
         self.print_running_info()
         self.print_header()
         try:
-            with self.stream(self._record_io_and_play):
-                while True:
-                    time.sleep(self.SECONDS_PER_CYCLE)
-                    self.cycle_feedback()
+            if args.filename:
+                with self.filestream(self._read_io_and_play):
+                    while True:
+                        time.sleep(self.SECONDS_PER_CYCLE)
+                        self.cycle_feedback()
+            else:
+                with self.stream(self._record_io_and_play):
+                    while True:
+                        time.sleep(self.SECONDS_PER_CYCLE)
+                        self.cycle_feedback()
         except KeyboardInterrupt:
             self.print_final_averages()
 
@@ -470,6 +473,16 @@ class Minimal__verbose(Minimal):
             self.show_indata(indata)
 
         super()._record_io_and_play(indata, outdata, frames, time, status)
+
+        if args.show_samples:
+            self.show_outdata(outdata)
+
+    def _read_io_and_play(self, outdata, frames, time, status):
+        
+        if args.show_samples:
+            self.show_indata(indata)
+
+        super()._read_io_and_play(outdata, frames, time, status)
 
         if args.show_samples:
             self.show_outdata(outdata)
