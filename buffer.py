@@ -84,7 +84,7 @@ jitter."""
         self.buffer_chunk(chunk_number, chunk)
         return chunk_number
         
-    def _record_send_and_play(self, indata, outdata, frames, time, status):
+    def _record_io_and_play(self, indata, outdata, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
         packed_chunk = self.pack(self.chunk_number, indata)
         self.send(packed_chunk)
@@ -98,6 +98,7 @@ jitter."""
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(outdata, chunk)
+        return chunk
 
     def run(self):
         '''Creates the stream, install the callback function, and waits for
@@ -149,23 +150,24 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.received_messages_count += 1
         return packed_chunk
 
-    def _record_send_and_play(self, indata, outdata, frames, time, status):
+    def _record_io_and_play(self, indata, outdata, frames, time, status):
         if minimal.args.show_samples:
             self.show_indata(indata)
 
-        super()._record_send_and_play(indata, outdata, frames, time, status)
+        super()._record_io_and_play(indata, outdata, frames, time, status)
 
         if minimal.args.show_samples:
             self.show_outdata(outdata)
 
-    def _read_send_and_play(self, outdata, frames, time, status):
+    def _read_io_and_play(self, outdata, frames, time, status):
         if minimal.args.show_samples:
-            self.show_indata(indata)
+            self.show_indata(indata) # OJO, indata undefined
 
-        super()._read_send_and_play(outdata, frames, time, status)
+        chunk = super()._read_io_and_play(outdata, frames, time, status)
 
         if minimal.args.show_samples:
             self.show_outdata(outdata)
+        return chunk
 
     def run(self):
         '''Run the verbose Buffering.'''

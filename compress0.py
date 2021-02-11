@@ -13,8 +13,9 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
+import compress
 
-class Compression0(buffer.Buffering):
+class Compression0(compress.Compression):
     '''Compress the chunks (playing forma) with zlib.'''
     def __init__(self):
         if __debug__:
@@ -40,7 +41,7 @@ class Compression0(buffer.Buffering):
         chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
         return chunk_number, chunk
 
-class Compression0__verbose(Compression0, buffer.Buffering__verbose):
+class Compression0__verbose(Compression0, compress.Compression__verbose):
     def __init__(self):
         if __debug__:
             print("Running Compression__verbose.__init__")

@@ -70,7 +70,7 @@ class Minimal:
             self._handler = self._read_io_and_play
             self.stream = self.file_stream
         else:
-            self._handler = self._record_send_and_play
+            self._handler = self._record_io_and_play
             self.stream = self.mic_stream
 
     def pack(self, chunk):
@@ -217,6 +217,7 @@ class Minimal:
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
         print("Press enter-key to quit")
+
         with self.stream(self._handler):
             input()
 
@@ -467,6 +468,7 @@ class Minimal__verbose(Minimal):
         self.sock.settimeout(0)
         self.print_running_info()
         self.print_header()
+
         try:
             with self.stream(self._handler):
                 while self.total_number_of_sent_chunks < self.chunks_to_sent:

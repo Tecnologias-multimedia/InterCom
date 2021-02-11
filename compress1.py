@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress.py). '''
+''' Real-time Audio Intercommunicator (compress1.py). '''
 
 import zlib
 import numpy as np
@@ -13,8 +13,9 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
+import compress
 
-class Compression1(buffer.Buffering):
+class Compression1(compress.Compression):
     '''Compress the chunks (first channel 0, next channel 1) using only one zlib code-stream.'''
     def __init__(self):
         if __debug__:
@@ -41,7 +42,7 @@ class Compression1(buffer.Buffering):
         chunk = reordered_chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
         return chunk_number, chunk
 
-class Compression1__verbose(Compression1, buffer.Buffering__verbose):
+class Compression1__verbose(Compression1, compress.Compression__verbose):
     pass
 
 if __name__ == "__main__":
