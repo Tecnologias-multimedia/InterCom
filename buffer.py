@@ -91,26 +91,33 @@ jitter."""
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(outdata, chunk)
 
+    def _read_io_and_play(self, outdata, frames, time, status):
+        self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
+        chunk = self.read_chunk_from_file()
+        packed_chunk = self.pack(self.chunk_number, chunk)
+        self.send(packed_chunk)
+        chunk = self.unbuffer_next_chunk()
+        self.play_chunk(outdata, chunk)
+
     def run(self):
         '''Creates the stream, install the callback function, and waits for
         an enter-key pressing.'''
         print("Press CTRL+c to quit")
         self.played_chunk_number = 0
-        with self.stream(self._record_send_and_play):
-
+        with self.stream(self._handler):
             first_received_chunk_number = self.receive_and_buffer()
             if __debug__:
                 print("first_received_chunk_number =", first_received_chunk_number)
 
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             # The previous selects the first chunk to be played the
-            # one (probably emptty) that are in the buffer
-            # self.chunks_to_buffer position before
-            # first_received_chunk_number.
+            # one (probably empty) that are in the buffer
+            # <self.chunks_to_buffer> position before
+                # <first_received_chunk_number>.
 
             while True:
                 self.receive_and_buffer()
-
+            
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
@@ -151,13 +158,22 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_outdata(outdata)
 
+    def _read_send_and_play(self, outdata, frames, time, status):
+        if minimal.args.show_samples:
+            self.show_indata(indata)
+
+        super()._read_send_and_play(outdata, frames, time, status)
+
+        if minimal.args.show_samples:
+            self.show_outdata(outdata)
+
     def run(self):
         '''Run the verbose Buffering.'''
         self.print_running_info()
         super().print_header()
         try:
             self.played_chunk_number = 0
-            with self.stream(self._record_send_and_play):
+            with self.stream(self._handler):
                 first_received_chunk_number = self.receive_and_buffer()
                 if __debug__:
                     print("first_received_chunk_number =", first_received_chunk_number)

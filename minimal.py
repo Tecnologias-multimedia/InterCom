@@ -63,10 +63,13 @@ class Minimal:
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         self.zero_chunk = self.generate_zero_chunk()
         if args.filename:
+            print(f"Using \"{args.filename}\" as input")
             self.wavfile = sf.SoundFile(args.filename, 'r')
             self._handler = self._read_io_and_play
+            self.stream = self.file_stream
         else:
             self._handler = self._record_send_and_play
+            self.stream = self.mic_stream
 
     def pack(self, chunk):
         '''Builds a packet's payloads with a chunk.'''
@@ -174,7 +177,7 @@ class Minimal:
         if __debug__:
             print(next(spinner), end='\b', flush=True)
 
-    def stream(self, callback_function):
+    def mic_stream(self, callback_function):
         '''Creates the stream.
 
         Returns
@@ -190,7 +193,7 @@ class Minimal:
                          channels=self.NUMBER_OF_CHANNELS,
                          callback=callback_function)
 
-    def filestream(self, callback_function):
+    def file_stream(self, callback_function):
         '''Creates the stream.
 
         Returns
@@ -212,7 +215,7 @@ class Minimal:
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
         print("Press enter-key to quit")
-        with self.filestream(self._handler):
+        with self.stream(self._handler):
             input()
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
@@ -416,7 +419,7 @@ class Minimal__verbose(Minimal):
         self.print_running_info()
         self.print_header()
         try:
-            with self.filestream(self._handler):
+            with self.stream(self._handler):
                 while True:
                     time.sleep(self.SECONDS_PER_CYCLE)
                     self.cycle_feedback()
