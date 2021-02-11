@@ -13,11 +13,10 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
-import compress3
 
-class Compression4(compress3.Compression3):
+class Compression4(buffer.Buffering):
     '''Compress the chunks by byte-planes ([MSB], [LSB]), where the frames
-are interlaced [frame0, frame1](. Each byte-plane is compressed
+are interlaced [frame0, frame1]). Each byte-plane is compressed
 independently.
 
     '''
@@ -28,9 +27,24 @@ independently.
         if __debug__:
             print("InterCom (Compression4) is running")
 
-    # To write ...
+    def pack(self, chunk_number, chunk):
+        MSB = (chunk // 256).astype(np.int8)
+        LSB = (chunk % 256).astype(np.int8)
+        compressed_MSB = zlib.compress(MSB)
+        compressed_LSB = zlib.compress(LSB)
+        packed_chunk = struct.pack("!HH", chunk_number, len(compressed_MSB)) + compressed_MSB + compressed_LSB 
+        return packed_chunk
 
-class Compression3__verbose(Compression3, compress2.Compression2__verbose):
+    def unpack(self, packed_chunk):
+        (chunk_number, len_compressed_MSB) = struct.unpack("!HH", packed_chunk[:4])
+        compressed_MSB = packed_chunk[4:len_compressed_MSB+4]
+        compressed_LSB = packed_chunk[len_compressed_MSB+4:]
+        MSB = np.frombuffer(zlib.decompress(compressed_MSB), dtype=np.int8).reshape((minimal.args.frames_per_chunk, 2))
+        LSB = np.frombuffer(zlib.decompress(compressed_LSB), dtype=np.int8).reshape((minimal.args.frames_per_chunk, 2))
+        chunk = MSB*256 + LSB
+        return chunk_number, chunk
+
+class Compression4__verbose(Compression4, buffer.Buffering__verbose):
     pass
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ import minimal
 import buffer
 
 class Compression0(buffer.Buffering):
-    '''Compress the chunks with zlib.'''
+    '''Compress the chunks (playing forma) with zlib.'''
     def __init__(self):
         if __debug__:
             print("Running Compression0.__init__")

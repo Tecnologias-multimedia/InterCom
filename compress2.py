@@ -13,9 +13,8 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
-import compress1
 
-class Compression2(compress1.Compression1):
+class Compression2(buffer.Buffering):
     '''Compress the chunks zlib. Each channel is compressed independently (first channel 0, next channel 1).'''
     def __init__(self):
         if __debug__:
@@ -48,7 +47,7 @@ class Compression2(compress1.Compression1):
 
         return chunk_number, chunk
 
-class Compression2__verbose(Compression1, compression1.Compression1__verbose):
+class Compression2__verbose(Compression2, buffer.Buffering__verbose):
     pass
 
 if __name__ == "__main__":

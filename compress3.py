@@ -13,9 +13,8 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
-import compress2
 
-class Compression3(compress2.Compression3):
+class Compression3(buffer.Buffering):
     '''Compress the chunks by byte-planes ([MSB channel 0, MSB channel 1],
 [LSB_cannel0, LSB_cannel1]). Each byte-plane is compressed
 independently.'''
@@ -35,15 +34,11 @@ independently.'''
         LSB = np.concatenate([channel_0_LSB, channel_1_LSB])
         compressed_MSB = zlib.compress(MSB)
         compressed_LSB = zlib.compress(LSB)
-        packed_chunk = struct.pack("!HH", chunk_number,
-                                   len(compressed_MSB)) +
-                                   compressed_MSB + compressed_LSB
-        
+        packed_chunk = struct.pack("!HH", chunk_number, len(compressed_MSB)) + compressed_MSB + compressed_LSB 
         return packed_chunk
 
-
     def unpack(self, packed_chunk):
-        (chunk_number, len_compressed_MSB) = struct.unpack("!HH", packed_chunk[:8])
+        (chunk_number, len_compressed_MSB) = struct.unpack("!HH", packed_chunk[:4])
 
         compressed_MSB = packed_chunk[4:len_compressed_MSB+4]
         compressed_LSB = packed_chunk[len_compressed_MSB+4:]
@@ -52,11 +47,11 @@ independently.'''
         channel_MSB = np.frombuffer(buffer_MSB, dtype=np.int8)
         channel_LSB = np.frombuffer(buffer_LSB, dtype=np.int8)
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int16)
-        chunk[:, 0] = channel_MSB[:len(channel_MSB)/2]*256 + channel_LSB[:len(channel_MSB)/2]
-        chunk[:, 1] = channel_MSB[len(channel_MSB)/2:]*256 + channel_LSB[len(channel_MSB)/2:]
+        chunk[:, 0] = channel_MSB[:len(channel_MSB)//2]*256 + channel_LSB[:len(channel_MSB)//2]
+        chunk[:, 1] = channel_MSB[len(channel_MSB)//2:]*256 + channel_LSB[len(channel_MSB)//2:]
         return chunk_number, chunk
 
-class Compression3__verbose(Compression3, compress2.Compression2__verbose):
+class Compression3__verbose(Compression3, buffer.Buffering__verbose):
     pass
 
 if __name__ == "__main__":

@@ -13,9 +13,8 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
-import compress0
 
-class Compression1(compress0.Compression0):
+class Compression1(buffer.Buffering):
     '''Compress the chunks (first channel 0, next channel 1) using only one zlib code-stream.'''
     def __init__(self):
         if __debug__:
@@ -36,13 +35,13 @@ class Compression1(compress0.Compression0):
         chunk = zlib.decompress(compressed_chunk)
         chunk = np.frombuffer(chunk, dtype=np.int16)
         chunk = chunk.reshape((self.NUMBER_OF_CHANNELS, minimal.args.frames_per_chunk))
-        reordered_chunk = np.empty((minimal.args.frames_per_chunk*2, ), dtype=dtype)
+        reordered_chunk = np.empty((minimal.args.frames_per_chunk*2, ), dtype=np.int16)
         reordered_chunk[0::2] = chunk[0, :]
         reordered_chunk[1::2] = chunk[1, :]
         chunk = reordered_chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
         return chunk_number, chunk
 
-class Compression1__verbose(Compression1, compression0.Compression0__verbose):
+class Compression1__verbose(Compression1, buffer.Buffering__verbose):
     pass
 
 if __name__ == "__main__":
