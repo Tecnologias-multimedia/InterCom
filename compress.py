@@ -100,7 +100,6 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
             concatenated_chunks = np.vstack(self.chunks_in_the_cycle)
         except ValueError:
             concatenated_chunks = np.vstack([self.zero_chunk, self.zero_chunk])
-        print(len(self.chunks_in_the_cycle))
         self.variance = np.var(concatenated_chunks, axis=0)
         self.average_variance = self.moving_average(self.average_variance, self.variance, self.cycle)
 
@@ -114,24 +113,20 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
         self.chunks_in_the_cycle = []
         self.bps = np.zeros(self.NUMBER_OF_CHANNELS)
         
-    def _record_send_and_play(self, indata, outdata, frames, time, status):
-        print("Estoy")
-        super()._record_send_and_play(indata, outdata, frames, time, status)
+    def _record_io_and_play(self, indata, outdata, frames, time, status):
+        super()._record_io_and_play(indata, outdata, frames, time, status)
         self.chunks_in_the_cycle.append(indata)
         # Remember: indata contains the recorded chunk and outdata,
         # the played chunk.
 
-    def _read_send_and_play(self, outdata, frames, time, status):
-        chunk = super()._read_send_and_play(outdata, frames, time, status)
+    def _read_io_and_play(self, outdata, frames, time, status):
+        chunk = super()._read_io_and_play(outdata, frames, time, status)
         self.chunks_in_the_cycle.append(chunk)
 
     def unpack(self, packed_chunk):
-        (chunk_number, len_compressed_channel_0) = struct.unpack("!HH", packed_chunk[:4])
-        len_compressed_channel_1 = len(packed_chunk[len_compressed_channel_0+4:])
-
-        self.bps[0] += len_compressed_channel_0*8
-        self.bps[1] += len_compressed_channel_1*8
-        #chunk_number, chunk = super().unpack(packed_chunk, dtype)
+        len_packed_chunk = len(packed_chunk)
+        self.bps[0] += len_packed_chunk*4
+        self.bps[1] += len_packed_chunk*4
         chunk_number, chunk = super().unpack(packed_chunk)
         return chunk_number, chunk
 

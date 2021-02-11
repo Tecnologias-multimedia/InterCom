@@ -43,7 +43,16 @@ class Compression1(compress.Compression):
         return chunk_number, chunk
 
 class Compression1__verbose(Compression1, compress.Compression__verbose):
-    pass
+    def __init__(self):
+        if __debug__:
+            print("Running Compression1__verbose.__init__")
+        super().__init__()
+
+    def unpack(self, packed_chunk):
+        len_packed_chunk = len(packed_chunk)
+        self.bps[0] += len_packed_chunk*4
+        self.bps[1] += len_packed_chunk*4
+        return Compression1.unpack(self, packed_chunk)
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
