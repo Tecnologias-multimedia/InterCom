@@ -39,7 +39,7 @@ parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Nu
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
-parser.add_argument("-f", "--filename", type=str, help="Use a .wav file instead of the mic data")
+parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
 
 class Minimal:
     """A minimal InterCom (no compression, no quantization, no transform,
@@ -64,6 +64,9 @@ class Minimal:
         self.zero_chunk = self.generate_zero_chunk()
         if args.filename:
             self.wavfile = sf.SoundFile(args.filename, 'r')
+            self._handler = self._read_io_and_play
+        else:
+            self._handler = self._record_send_and_play
 
     def pack(self, chunk):
         '''Builds a packet's payloads with a chunk.'''
@@ -150,41 +153,26 @@ class Minimal:
             #    print("indata[0] =", indata[0], "outdata[0] =", outdata[0])
             print(next(spinner), end='\b', flush=True)
 
+    def read_chunk_from_file(self):
+        chunk = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
+        chunk = np.frombuffer(chunk, dtype=np.int16)
+        chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        return chunk
+            
     def _read_io_and_play(self, outdata, frames, time, status):
-        #assert frames == args.frames_per_chunk
-        #if status.output_underflow:
-        #    print('Output underflow: increase blocksize?', file=sys.stderr)
-        #    raise sd.CallbackAbort
-        #assert not status
-        if __debug__:
-            data = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
-            data = np.frombuffer(data, dtype=np.int16)
-            data = np.reshape(data, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
-            packed_chunk = self.pack(data)
-        else:
-            packed_chunk = self.pack(indata)
+        chunk = self.read_chunk_from_file()
+        packed_chunk = self.pack(chunk)
         self.send(packed_chunk)
         try:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
         except (socket.timeout, BlockingIOError):
-            #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             if __debug__:
                 print("playing zero chunk")
         outdata[:] = chunk
         if __debug__:
             print(next(spinner), end='\b', flush=True)
-
-#        data = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
-#        data = np.frombuffer(data, dtype=np.int16)
-#        data = np.reshape(data, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
-#        if len(data) < len(outdata):
-#            outdata[:len(data)] = data
-#            outdata[len(data):] = b'\x00' * (len(outdata) - len(data))
-#            raise sd.CallbackStop
-#        else:
-#            outdata[:] = data
 
     def stream(self, callback_function):
         '''Creates the stream.
@@ -224,13 +212,8 @@ class Minimal:
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
         print("Press enter-key to quit")
-        #print(args.filename)
-        if args.filename:
-            with self.filestream(self._read_io_and_play):
-                input()
-        else:
-            with self.stream(self._record_io_and_play):
-                input()
+        with self.filestream(self._handler):
+            input()
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
@@ -433,16 +416,10 @@ class Minimal__verbose(Minimal):
         self.print_running_info()
         self.print_header()
         try:
-            if args.filename:
-                with self.filestream(self._read_io_and_play):
-                    while True:
-                        time.sleep(self.SECONDS_PER_CYCLE)
-                        self.cycle_feedback()
-            else:
-                with self.stream(self._record_io_and_play):
-                    while True:
-                        time.sleep(self.SECONDS_PER_CYCLE)
-                        self.cycle_feedback()
+            with self.filestream(self._handler):
+                while True:
+                    time.sleep(self.SECONDS_PER_CYCLE)
+                    self.cycle_feedback()
         except KeyboardInterrupt:
             self.print_final_averages()
 

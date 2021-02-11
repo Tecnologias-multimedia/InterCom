@@ -52,13 +52,11 @@ jitter."""
         packed_chunk = struct.pack("!H", chunk_number) + chunk.tobytes()
         return packed_chunk
 
-    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
     def unpack(self, packed_chunk):
         '''Splits the packed chunk into a chunk number and a chunk.'''
         (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
-        #chunk = np.frombuffer(chunk, dtype=dtype)
         chunk = np.frombuffer(chunk, dtype=np.int16)
         chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk_number, chunk
