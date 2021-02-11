@@ -40,6 +40,7 @@ parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My l
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
+parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only if --show_stats or --show_data is requested)")
 
 class Minimal:
     """A minimal InterCom (no compression, no quantization, no transform,
@@ -62,6 +63,7 @@ class Minimal:
         self.sock.bind(self.listening_endpoint)
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         self.zero_chunk = self.generate_zero_chunk()
+
         if args.filename:
             print(f"Using \"{args.filename}\" as input")
             self.wavfile = sf.SoundFile(args.filename, 'r')
@@ -265,6 +267,11 @@ class Minimal__verbose(Minimal):
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
 
+        self.total_number_of_sent_chunks = 0
+        self.chunks_to_sent = 999999
+        if args.reading_time:
+            self.chunks_to_sent = int(args.reading_time)/self.chunk_time
+
         if __debug__:
             print("SECONDS_PER_CYCLE =", self.SECONDS_PER_CYCLE)            
             print("chunks_per_cycle =", self.chunks_per_cycle)
@@ -389,7 +396,8 @@ class Minimal__verbose(Minimal):
         self.print_separator()        
         self.print_trailer()
         print("\033[5A")
-        
+
+        self.total_number_of_sent_chunks += self.sent_messages_count
         self.sent_bytes_count = 0
         self.received_bytes_count = 0
         self.sent_messages_count = 0
@@ -412,19 +420,6 @@ class Minimal__verbose(Minimal):
         print("chunk_time =", self.chunk_time, "seconds")
         print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
         print("Use CTRL+C to quit")
-        
-    def run(self):
-        ''' Runs the verbose InterCom. '''
-        self.sock.settimeout(0)
-        self.print_running_info()
-        self.print_header()
-        try:
-            with self.stream(self._handler):
-                while True:
-                    time.sleep(self.SECONDS_PER_CYCLE)
-                    self.cycle_feedback()
-        except KeyboardInterrupt:
-            self.print_final_averages()
 
     def show_data(self, data):
         for i in range(4):
@@ -467,6 +462,20 @@ class Minimal__verbose(Minimal):
         if args.show_samples:
             self.show_outdata(outdata)
 
+    def run(self):
+        ''' Runs the verbose InterCom. '''
+        self.sock.settimeout(0)
+        self.print_running_info()
+        self.print_header()
+        try:
+            with self.stream(self._handler):
+                while self.total_number_of_sent_chunks < self.chunks_to_sent:
+                    time.sleep(self.SECONDS_PER_CYCLE)
+                    self.cycle_feedback()
+                self.print_final_averages()
+        except KeyboardInterrupt:
+            self.print_final_averages()
+
 if __name__ == "__main__":
     parser.description = __doc__
     try:
@@ -484,6 +493,7 @@ if __name__ == "__main__":
         intercom = Minimal__verbose()
     else:
         intercom = Minimal()
+
     try:
         intercom.run()
     except KeyboardInterrupt:
