@@ -7,12 +7,7 @@ import zlib
 import numpy as np
 import struct
 import math
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
-import buffer
 import compress
 
 class Compression0(compress.Compression):
@@ -48,6 +43,11 @@ class Compression0__verbose(Compression0, compress.Compression__verbose):
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
         return Compression0.unpack(self, packed_chunk)
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

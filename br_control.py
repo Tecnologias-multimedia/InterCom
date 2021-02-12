@@ -7,19 +7,27 @@ import numpy as np
 import math
 import threading
 import time
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
-import buffer
 from compress3 import Compression3 as Compression
 from compress3 import Compression3__verbose as Compression__verbose
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
 class BR_Control(Compression):
-    '''Bit-rate control through controlling the quantization step. In this module, no control has been implemented.
+    '''Bit-rate control through controlling the quantization step. In this
+    module, no control has been implemented. Both channels are
+    quantized using the same step.
+
+    This implementation of the BR control supposes that the
+    communication link is symmetric, or at least, the quality of the
+    audio for both interlocutors should be the same. This last
+    supposition responds to the idea (used in some transmission
+    protocols such as Bittorrent) that is "Why I should send more data
+    than I'm receiving?"
+
+    Moreover, notice that we don't need to send any extra data to
+    perform the BR control.
+
     '''
 
     def __init__(self):
@@ -216,6 +224,11 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
         super().print_final_averages()
         print(f"Average RMSE (Root Mean Square Error) per sample = {self.average_RMSE / self.frames_per_cycle / self.NUMBER_OF_CHANNELS}")
         print(f"Average SNR (Signal Noise Ratio) in decibels = {self.average_SNR}")
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

@@ -7,15 +7,10 @@ import zlib
 import numpy as np
 import struct
 import math
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
-import buffer
 import compress
 
-class Compression4(buffer.Buffering):
+class Compression4(compress.Compression):
     '''Compress the chunks by byte-planes ([MSB], [LSB]), where the frames
 are interlaced [frame0, frame1]). Each byte-plane is compressed
 independently.
@@ -58,6 +53,11 @@ class Compression4__verbose(Compression4, compress.Compression__verbose):
         self.bps[0] += len_compressed_channel_0*8
         self.bps[1] += len_compressed_channel_1*8
         return Compression4.unpack(self, packed_chunk)
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

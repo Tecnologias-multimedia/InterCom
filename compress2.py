@@ -7,15 +7,10 @@ import zlib
 import numpy as np
 import struct
 import math
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
-import buffer
 import compress
 
-class Compression2(buffer.Buffering):
+class Compression2(compress.Compression):
     '''Compress the chunks zlib. Each channel is compressed independently (first channel 0, next channel 1).'''
     def __init__(self):
         if __debug__:
@@ -61,6 +56,11 @@ class Compression2__verbose(Compression2, compress.Compression__verbose):
         self.bps[0] += len_compressed_channel_0*8
         self.bps[1] += len_compressed_channel_1*8
         return Compression2.unpack(self, packed_chunk)
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

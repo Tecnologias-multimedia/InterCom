@@ -12,10 +12,6 @@ import psutil
 import math
 import struct
 import threading
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
 
 minimal.parser.add_argument("-b", "--buffering_time", type=int, default=100, help="Miliseconds to buffer")
@@ -185,6 +181,11 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
                 self.print_final_averages()
         except KeyboardInterrupt:
             self.print_final_averages()
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

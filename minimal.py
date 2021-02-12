@@ -10,10 +10,6 @@ import socket
 import time
 import psutil
 import logging
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import soundfile as sf
 
 def spinning_cursor():
@@ -477,6 +473,11 @@ class Minimal__verbose(Minimal):
                 self.print_final_averages()
         except KeyboardInterrupt:
             self.print_final_averages()
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     parser.description = __doc__
