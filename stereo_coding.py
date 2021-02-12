@@ -16,8 +16,8 @@ import minimal
 import buffer
 import compress
 import br_control
-from br_control import BR_Control as BR_Control
-from br_control import BR_Control__verbose as BR_Control__verbose
+from br_control2 import BR_Control2 as BR_Control
+from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Stereo_Coding(BR_Control):
     ''' Removes the inter-channel (spatial) redundancy.'''
@@ -27,7 +27,7 @@ class Stereo_Coding(BR_Control):
             print("Running Stereo_Coding.__init__")
         super().__init__()
 
-    def _analyze(self, x):
+    def analyze(self, x):
         #w = np.empty_like(x, dtype=np.int32)
         w = np.empty_like(x, dtype=np.int16)
         #w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])/2
@@ -35,20 +35,20 @@ class Stereo_Coding(BR_Control):
         #w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
         w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
         return w
-    def analyze(self, x):
+    def _analyze(self, x):
         w = np.empty_like(x, dtype=np.int32)
         w[:, 0] = x[:, 0].astype(np.int32) + x[:, 1]
         w[:, 1] = x[:, 0].astype(np.int32) - x[:, 1]
         return w
  
-    def _synthesize(self, w):
+    def synthesize(self, w):
         #x = np.empty_like(w, dtype=np.int32)
         x = np.empty_like(w, dtype=np.int16)
         x[:, 0] = w[:, 0] + w[:, 1]
         x[:, 1] = w[:, 0] - w[:, 1]
         return x
 
-    def synthesize(self, w):
+    def _synthesize(self, w):
         x = np.empty_like(w)
         x[:, 0] = (w[:, 0] + w[:, 1])/2
         x[:, 1] = (w[:, 0] - w[:, 1])/2
