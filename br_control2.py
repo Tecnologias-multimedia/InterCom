@@ -13,13 +13,27 @@ except ImportError:
     print("Unable to import argcomplete")
 import minimal
 import buffer
-from compress3 import Compression3 as Compression
-from compress3 import Compression3__verbose as Compression__verbose
+import compress
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
-class BR_Control(Compression):
-    '''Bit-rate control through controlling the quantization step. In this module, no control has been implemented.
+class BR_Control(compress.Compression):
+    '''Bit-rate control through controlling the quantization step. Both
+    channels are quantized using the same step. To control the
+    quantization step, the number of lost chunks is added to
+    it. Otherwise, the quantization step is decremented by 1 each
+    second.
+
+    This implementation of the BR control supposes that the
+    communication link is symmetric, or at least, the quality of the
+    audio for both interlocutors should be the same. This last
+    supposition responds to the idea (used in some transmission
+    protocols such as Bittorrent) that is "Why I should send more data
+    than I'm receiving?"
+
+    Moreover, notice that we don't need to send any extra data to
+    perform the BR control.
+
     '''
 
     def __init__(self):
@@ -34,8 +48,36 @@ class BR_Control(Compression):
         data_flow_control_thread.daemon = True
         data_flow_control_thread.start()
 
+    def data_flow_control_(self):
+        while True:
+            self.quantization_step += self.number_of_lost_packets
+            if self.quantization_step < minimal.args.minimal_quantization_step:
+                self.quantization_step = minimal.args.minimal_quantization_step
+            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
+            self.number_of_sent_chunks = 0
+            self.number_of_received_chunks = 0
+            time.sleep(1)
+
+    def data_flow_control_(self):
+        while True:
+            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
+            self.quantization_step += self.number_of_lost_packets
+            if self.quantization_step < minimal.args.minimal_quantization_step:
+                self.quantization_step = minimal.args.minimal_quantization_step
+            self.number_of_sent_chunks = 0
+            self.number_of_received_chunks = 0
+            time.sleep(1)
+
     def data_flow_control(self):
         while True:
+            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks
+            if self.number_of_lost_packets > 2:
+                self.quantization_step *= 2
+            self.quantization_step = int(self.quantization_step / 1.1)
+            if self.quantization_step < minimal.args.minimal_quantization_step:
+                self.quantization_step = minimal.args.minimal_quantization_step
+            self.number_of_sent_chunks = 0
+            self.number_of_received_chunks = 0
             time.sleep(1)
 
     def send(self, packed_chunk):
@@ -47,32 +89,37 @@ class BR_Control(Compression):
         self.number_of_received_chunks += 1
         return packed_chunk
 
+    #def quantize(self, chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
+    #def quantize(self, chunk, dtype=np.int16):
     def quantize(self, chunk):
-        '''Dead-zone quantizer.'''
+        '''Dead-zone quantizer'''
+        #quantized_chunk = np.round(chunk / self.quantization_step).astype(dtype)
         #quantized_chunk = np.round(chunk / self.quantization_step).astype(np.int16)
         quantized_chunk = (chunk / self.quantization_step).astype(np.int16)
         return quantized_chunk
     
+    #def dequantize(self, quantized_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
     def dequantize(self, quantized_chunk):
-        '''Deadzone dequantizer.'''
+        '''Deadzone dequantizer'''
         chunk = quantized_chunk * self.quantization_step
         return chunk
 
     def pack(self, chunk_number, chunk):
-        '''Quantize and pack a chunk.'''
+        '''Quantize and packs a chunk.'''
         quantized_chunk = self.quantize(chunk)
-        #quantized_chunk = chunk
         packed_chunk = super().pack(chunk_number, quantized_chunk)
         return packed_chunk
 
+    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
     def unpack(self, packed_chunk):
-        '''Dequantize and unpack a chunk.'''
+        '''Dequantizes and unpacks a chunk.'''
+        #chunk_number, quantized_chunk = super().unpack(packed_chunk, dtype)
         chunk_number, quantized_chunk = super().unpack(packed_chunk)
+        #chunk = self.dequantize(quantized_chunk, dtype)
         chunk = self.dequantize(quantized_chunk)
-        #chunk = quantized_chunk
         return chunk_number, chunk
 
-class BR_Control__verbose(BR_Control, Compression__verbose):
+class BR_Control__verbose(BR_Control, compress.Compression__verbose):
     
     def __init__(self):
         if __debug__:
@@ -137,7 +184,9 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
         self.accumulated_SNR_per_cycle[:] = 0.0
         self.accumulated_RMSE_per_cycle[:] = 0.0
 
-    def compute(self, indata, outdata):
+    def _record_send_and_play(self, indata, outdata, frames, time, status):
+
+        super()._record_send_and_play(indata, outdata, frames, time, status)
         # Remember that indata contains the recorded chunk and
         # outdata, the played chunk, but this is only true after
         # running this method.
@@ -201,16 +250,6 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
                 if signal_energy[c].any():
                     SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
                     self.accumulated_SNR_per_cycle[c] += SNR[c]
-
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
-
-        super()._record_io_and_play(indata, outdata, frames, time, status)
-        self.compute(indata, outdata)
-
-    def _read_io_and_play(self, outdata, frames, time, status):
-
-        chunk = super()._read_io_and_play(outdata, frames, time, status)
-        self.compute(chunk, outdata)
 
     def print_final_averages(self):
         super().print_final_averages()

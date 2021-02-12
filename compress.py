@@ -122,6 +122,7 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
     def _read_io_and_play(self, outdata, frames, time, status):
         chunk = super()._read_io_and_play(outdata, frames, time, status)
         self.chunks_in_the_cycle.append(chunk)
+        return chunk
 
     def unpack(self, packed_chunk):
         len_packed_chunk = len(packed_chunk)

@@ -30,7 +30,7 @@ independently.
 
     def pack(self, chunk_number, chunk):
         MSB = (chunk // 256).astype(np.int8)
-        LSB = (chunk % 256).astype(np.int8)
+        LSB = (chunk % 256).astype(np.uint8)
         compressed_MSB = zlib.compress(MSB)
         compressed_LSB = zlib.compress(LSB)
         packed_chunk = struct.pack("!HH", chunk_number, len(compressed_MSB)) + compressed_MSB + compressed_LSB 
@@ -41,7 +41,7 @@ independently.
         compressed_MSB = packed_chunk[4:len_compressed_MSB+4]
         compressed_LSB = packed_chunk[len_compressed_MSB+4:]
         MSB = np.frombuffer(zlib.decompress(compressed_MSB), dtype=np.int8).reshape((minimal.args.frames_per_chunk, 2))
-        LSB = np.frombuffer(zlib.decompress(compressed_LSB), dtype=np.int8).reshape((minimal.args.frames_per_chunk, 2))
+        LSB = np.frombuffer(zlib.decompress(compressed_LSB), dtype=np.uint8).reshape((minimal.args.frames_per_chunk, 2))
         chunk = MSB*256 + LSB
         return chunk_number, chunk
 

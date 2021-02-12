@@ -40,7 +40,7 @@ parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My l
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
-parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only if --show_stats or --show_data is requested)")
+parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is requested)")
 
 class Minimal:
     """A minimal InterCom (no compression, no quantization, no transform,
