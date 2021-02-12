@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (temporal_coding.py)). '''
+''' Real-time Audio Intercommunicator (temporal_coding.py). '''
 
 import numpy as np
 import sounddevice as sd
 import pywt
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import time
 import minimal
 import compress
@@ -25,7 +21,7 @@ minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels o
 
 class Temporal_Coding(Stereo_Coding):
     '''Removes the intra-channel redundancy between the samples of the
-    same channel of each chunk
+    same channel of each chunk using the DWT.
 
     '''
     def __init__(self):
@@ -60,7 +56,7 @@ class Temporal_Coding(Stereo_Coding):
             assert np.all( abs(channel_DWT_chunk) < (1<<15) )
             DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
         return DWT_chunk
-    
+
     def pack(self, chunk_number, chunk):
         #chunk = Stereo_Coding.analyze(self, chunk)
         chunk = self.analyze(chunk)
@@ -86,6 +82,11 @@ class Temporal_Coding(Stereo_Coding):
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
     ''' Verbose version of Decorrelation. '''
     pass
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

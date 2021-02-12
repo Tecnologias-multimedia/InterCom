@@ -30,9 +30,10 @@ class Chunks_Overlapping(Temporal_Coding):
         print("Overlapping chunks")
         self.nos = 10
         print("Number of overlapped samples =", self.nos)
-        self.prev_chunk = self.zero_chunk
-        self.curr_chunk = None
-        self.next_chunk = None
+        #self.prev_chunk = self.zero_chunk
+        #self.curr_chunk = None
+        #self.next_chunk = None
+        self.last_samples = np.zeros((self.nos, 2))
 
     def _record_send_and_play(self, indata, outdata, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS

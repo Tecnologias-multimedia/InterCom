@@ -4,23 +4,12 @@
 '''Real-time Audio Intercommunicator (stereo_coding.py).'''
 
 import numpy as np
-import sounddevice as sd
-import math
-import struct
-import zlib
-try:
-    import argcomplete  # <tab> completion for argparse.
-except ImportError:
-    print("Unable to import argcomplete")
 import minimal
-import buffer
-import compress
-import br_control
 from br_control2 import BR_Control2 as BR_Control
 from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Stereo_Coding(BR_Control):
-    ''' Removes the inter-channel (spatial) redundancy.'''
+    ''' Removes the inter-channel (spatial) redundancy. Not here.'''
 
     def __init__(self):
         if __debug__:
@@ -28,46 +17,23 @@ class Stereo_Coding(BR_Control):
         super().__init__()
 
     def analyze(self, x):
-        #w = np.empty_like(x, dtype=np.int32)
-        w = np.empty_like(x, dtype=np.int16)
-        #w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])/2
-        w[:, 0] = (x[:, 0].astype(np.int32) + x[:, 1])/2
-        #w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
-        w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
-        return w
-    def _analyze(self, x):
-        w = np.empty_like(x, dtype=np.int32)
-        w[:, 0] = x[:, 0].astype(np.int32) + x[:, 1]
-        w[:, 1] = x[:, 0].astype(np.int32) - x[:, 1]
-        return w
+        return x
  
     def synthesize(self, w):
-        #x = np.empty_like(w, dtype=np.int32)
-        x = np.empty_like(w, dtype=np.int16)
-        x[:, 0] = w[:, 0] + w[:, 1]
-        x[:, 1] = w[:, 0] - w[:, 1]
-        return x
-
-    def _synthesize(self, w):
-        x = np.empty_like(w)
-        x[:, 0] = (w[:, 0] + w[:, 1])/2
-        x[:, 1] = (w[:, 0] - w[:, 1])/2
-        return x
+        return w
 
     def pack(self, chunk_number, chunk):
         analyzed_chunk = self.analyze(chunk)
         packed_chunk = super().pack(chunk_number, analyzed_chunk)
         return packed_chunk
 
-    #def unpack(self, packed_chunk, dtype=minimal.Minimal.SAMPLE_TYPE):
     def unpack(self, packed_chunk):
-        #chunk_number, analyzed_chunk = super().unpack(packed_chunk, dtype)
         chunk_number, analyzed_chunk = super().unpack(packed_chunk)
         chunk = self.synthesize(analyzed_chunk)
-
         return chunk_number, chunk
 
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
+
     def __init__(self):
         super().__init__()
         self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
@@ -118,6 +84,11 @@ class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
         analyzed_chunk = super().analyze(chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
+
+try:
+    import argcomplete  # <tab> completion for argparse.
+except ImportError:
+    print("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
