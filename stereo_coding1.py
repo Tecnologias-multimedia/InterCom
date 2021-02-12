@@ -9,7 +9,9 @@ import stereo_coding
 
 class Stereo_Coding1(stereo_coding.Stereo_Coding):
     '''Implements MST for 32 bits/coefficient output. Thought for using
-after temporal_coding, where 32 bits/coefficient are required.'''
+after temporal_coding, where 32 bits/coefficient are required.
+
+    '''
 
     def __init__(self):
         if __debug__:

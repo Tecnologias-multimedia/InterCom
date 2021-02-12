@@ -4,28 +4,28 @@
 ''' Real-time Audio Intercommunicator (temporal_coding.py). '''
 
 import numpy as np
-import sounddevice as sd
 import pywt
-import time
 import minimal
-import compress
-from compress import Compression as Compression
-import br_control
-from br_control import BR_Control as BR_Control 
-import stereo_coding
-from stereo_coding import Stereo_Coding as Stereo_Coding
-from stereo_coding import Stereo_Coding__verbose as Stereo_Coding__verbose
+#import buffer
+#from compress2 import Compression2 as Compression
+from br_control2 import BR_Control2 as BR_Control
+#from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
 
-class Temporal_Coding(Stereo_Coding):
+#class Temporal_Coding(buffer.Buffering):
+#class Temporal_Coding(Stereo_Coding):
+class Temporal_Coding(BR_Control):
     '''Removes the intra-channel redundancy between the samples of the
     same channel of each chunk using the DWT.
 
     '''
     def __init__(self):
+        if __debug__:
+            print("Running Temporal_Coding.__init__")
         super().__init__()
+
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
         # Default dwt_levels is based on the length of the chunk and the length of the filter
@@ -53,16 +53,13 @@ class Temporal_Coding(Stereo_Coding):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
-            assert np.all( abs(channel_DWT_chunk) < (1<<15) )
+            #assert np.all( abs(channel_DWT_chunk) < (1<<15) )
             DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
         return DWT_chunk
 
     def pack(self, chunk_number, chunk):
-        #chunk = Stereo_Coding.analyze(self, chunk)
-        chunk = self.analyze(chunk)
-        quantized_chunk = BR_Control.quantize(self, chunk)
-        compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
-        return compressed_chunk
+        #return Stereo_Coding.pack(self, chunk_number, chunk)
+        return super().pack(chunk_number, chunk)
 
     def synthesize(self, chunk_DWT):
         '''Inverse DWT.'''
@@ -73,15 +70,17 @@ class Temporal_Coding(Stereo_Coding):
         return chunk
 
     def unpack(self, compressed_chunk):
-        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
-        chunk = BR_Control.dequantize(self, quantized_chunk)
-        chunk = self.synthesize(chunk)
-        #chunk = Stereo_Coding.synthesize(self, chunk)
-        return chunk_number, chunk
+        #return Stereo_Coding.unpack(self, compressed_chunk)
+        return super().unpack(compressed_chunk)
+
+from stereo_coding1 import Stereo_Coding1 as Stereo_Coding__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
-    ''' Verbose version of Decorrelation. '''
-    pass
+
+    def __init__(self):
+        if __debug__:
+            print("Running Temporal_Coding__verbose.__init__")
+        super().__init__()
 
 try:
     import argcomplete  # <tab> completion for argparse.

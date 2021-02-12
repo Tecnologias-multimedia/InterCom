@@ -3,82 +3,38 @@
 
 ''' Real-time Audio Intercommunicator (temporal_coding0.py). '''
 
-import numpy as np
-import sounddevice as sd
-import pywt
-import time
 import minimal
-import compress
-from compress import Compression as Compression
-import br_control
-from br_control import BR_Control as BR_Control 
-import stereo_coding
-from stereo_coding import Stereo_Coding as Stereo_Coding
-from stereo_coding import Stereo_Coding__verbose as Stereo_Coding__verbose
+from compress2 import Compression2 as Compression
+from br_control2 import BR_Control2 as BR_Control 
+from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
+from temporal_coding import Temporal_Coding
 
-minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
-minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
-
-class Temporal_Coding(Stereo_Coding):
+class Temporal_Coding0(Temporal_Coding):
     '''Removes first intra-frame redudancy and then, intra-channel redundancy.
 
     '''
     def __init__(self):
-        super().__init__()
-        self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
-        
-        # Default dwt_levels is based on the length of the chunk and the length of the filter
-        max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=max_filters_length)
-        if minimal.args.levels:
-            self.dwt_levels = int(minimal.args.levels)
-
-        # Structure used during the decoding
-        zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-        self.slices = pywt.coeffs_to_array(coeffs)[1]
-
-        print("Performing intra-channel decorrelation")
         if __debug__:
-            print("wavelet name =", minimal.args.wavelet_name)
-            print("analysis filters's length =", self.wavelet.dec_len)
-            print("synthesis filters's length =", self.wavelet.rec_len)
-            print("DWT levels =", self.dwt_levels)
-
-    def analyze(self, chunk):
-        '''Forward DWT.'''
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
-            #assert np.all( channel_DWT_chunk < (1<<31) )
-            assert np.all( abs(channel_DWT_chunk) < (1<<15) )
-            DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
-        return DWT_chunk
+            print("Running Temporal_Coding0.__init__")
+        super().__init__()
 
     def pack(self, chunk_number, chunk):
-        #chunk = Stereo_Coding.analyze(self, chunk)
-        chunk = self.analyze(chunk)
+        chunk = Stereo_Coding.analyze(self, chunk)
+        chunk = super().analyze(chunk)
         quantized_chunk = BR_Control.quantize(self, chunk)
         compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
         return compressed_chunk
 
-    def synthesize(self, chunk_DWT):
-        '''Inverse DWT.'''
-        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
-            chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int16)
-        return chunk
-
     def unpack(self, compressed_chunk):
         chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
         chunk = BR_Control.dequantize(self, quantized_chunk)
-        chunk = self.synthesize(chunk)
-        #chunk = Stereo_Coding.synthesize(self, chunk)
+        chunk = super().synthesize(chunk)
+        chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk_number, chunk
 
-class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
+from temporal_coding import Temporal_Coding__verbose
+
+class Temporal_Coding0__verbose(Temporal_Coding0, Temporal_Coding__verbose):
     ''' Verbose version of Decorrelation. '''
     pass
 
@@ -98,9 +54,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Temporal_Coding__verbose()
+        intercom = Temporal_Coding0__verbose()
     else:
-        intercom = Temporal_Coding()
+        intercom = Temporal_Coding0()
     try:
         intercom.run()
     except KeyboardInterrupt:

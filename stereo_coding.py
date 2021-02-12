@@ -35,6 +35,8 @@ class Stereo_Coding(BR_Control):
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 
     def __init__(self):
+        if __debug__:
+            print("Running Stereo_Coding__verbose.__init__")
         super().__init__()
         self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
         self.average_LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
