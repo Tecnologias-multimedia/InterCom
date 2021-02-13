@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress3_b.py). '''
+''' Real-time Audio Intercommunicator (compress3b.py). '''
 
 import zlib
 import numpy as np
@@ -11,13 +11,13 @@ import minimal
 import compress
 
 class Compression3_b(compress.Compression):
-    '''Compress the chunks by byte-planes, considering 32-bit
+    '''Compress chunks by byte-planes. 32-bits
 samples. Each byte-plane is compressed independently.
 
     '''
     def __init__(self):
         if __debug__:
-            print("Running Compression3b.__init__")
+            print(self.__doc__)
         super().__init__()
 
     def pack(self, chunk_number, chunk):

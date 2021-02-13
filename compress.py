@@ -11,7 +11,7 @@ import minimal
 import buffer
 
 class Compression(buffer.Buffering):
-    '''Compress the chunks. Common stuff. 16-bits version.'''
+    '''Compress the chunks. Common stuff.'''
     def __init__(self):
         if __debug__:
             print(self.__doc__)
