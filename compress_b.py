@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress.py). '''
+''' Real-time Audio Intercommunicator (compress_b.py). '''
 
 import zlib
 import numpy as np
@@ -11,7 +11,7 @@ import minimal
 import buffer
 
 class Compression(buffer.Buffering):
-    '''Compress the chunks. Common stuff. 16-bits version.'''
+    '''Compress the chunks. Common stuff. 32-bits version.'''
     def __init__(self):
         if __debug__:
             print(self.__doc__)

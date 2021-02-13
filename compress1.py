@@ -16,8 +16,6 @@ class Compression1(compress.Compression):
         if __debug__:
             print("Running Compression1.__init__")
         super().__init__()
-        if __debug__:
-            print("InterCom (Compression1) is running")
 
     def pack(self, chunk_number, chunk):
         chunk = np.stack([chunk[:, 0], chunk[:, 1]])

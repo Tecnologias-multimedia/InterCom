@@ -15,6 +15,7 @@ from br_control import BR_Control as BR_Control
 import stereo_coding
 from stereo_coding import Stereo_Coding as Stereo_Coding
 from stereo_coding import Stereo_Coding__verbose as Stereo_Coding__verbose
+import temporal_coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")

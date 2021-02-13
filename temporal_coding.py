@@ -8,15 +8,15 @@ import pywt
 import minimal
 #import buffer
 #from compress2 import Compression2 as Compression
-from br_control2 import BR_Control2 as BR_Control
-#from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
+#from br_control2 import BR_Control2 as BR_Control
+from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
 
 #class Temporal_Coding(buffer.Buffering):
-#class Temporal_Coding(Stereo_Coding):
-class Temporal_Coding(BR_Control):
+class Temporal_Coding(Stereo_Coding):
+#class Temporal_Coding(BR_Control):
     '''Removes the intra-channel redundancy between the samples of the
     same channel of each chunk using the DWT.
 
@@ -46,7 +46,8 @@ class Temporal_Coding(BR_Control):
             print("synthesis filters's length =", self.wavelet.rec_len)
             print("DWT levels =", self.dwt_levels)
 
-    def analyze(self, chunk):
+    def analyze_(self, chunk):
+        print("DWT analyze")
         '''Forward DWT.'''
         DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
         for c in range(self.NUMBER_OF_CHANNELS):
@@ -57,11 +58,7 @@ class Temporal_Coding(BR_Control):
             DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
         return DWT_chunk
 
-    def pack(self, chunk_number, chunk):
-        #return Stereo_Coding.pack(self, chunk_number, chunk)
-        return super().pack(chunk_number, chunk)
-
-    def synthesize(self, chunk_DWT):
+    def synthesize_(self, chunk_DWT):
         '''Inverse DWT.'''
         chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
         for c in range(self.NUMBER_OF_CHANNELS):
@@ -69,13 +66,19 @@ class Temporal_Coding(BR_Control):
             chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int16)
         return chunk
 
-    def unpack(self, compressed_chunk):
+    def pack_(self, chunk_number, chunk):
+        #return Stereo_Coding.pack(self, chunk_number, chunk)
+        return super().pack(chunk_number, chunk)
+
+    def unpack_(self, compressed_chunk):
         #return Stereo_Coding.unpack(self, compressed_chunk)
         return super().unpack(compressed_chunk)
 
-from stereo_coding1 import Stereo_Coding1 as Stereo_Coding__verbose
+from stereo_coding1 import Stereo_Coding1__verbose as Stereo_Coding__verbose
+from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
+#class Temporal_Coding__verbose(Temporal_Coding, BR_Control__verbose):
 
     def __init__(self):
         if __debug__:

@@ -20,8 +20,6 @@ independently.
         if __debug__:
             print("Running Compression4.__init__")
         super().__init__()
-        if __debug__:
-            print("InterCom (Compression4) is running")
 
     def pack(self, chunk_number, chunk):
         MSB = (chunk // 256).astype(np.int8)

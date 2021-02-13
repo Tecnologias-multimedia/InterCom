@@ -16,8 +16,6 @@ class Compression0(compress.Compression):
         if __debug__:
             print("Running Compression0.__init__")
         super().__init__()
-        if __debug__:
-            print("InterCom (Compression0) is running")
 
     def pack(self, chunk_number, chunk):
         compressed_chunk = zlib.compress(chunk)

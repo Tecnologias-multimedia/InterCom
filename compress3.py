@@ -18,8 +18,6 @@ independently.'''
         if __debug__:
             print("Running Compression3.__init__")
         super().__init__()
-        if __debug__:
-            print("InterCom (Compression3) is running")
 
     def pack(self, chunk_number, chunk):
         channel_0_MSB = (chunk[:, 0] // 256).astype(np.int8)

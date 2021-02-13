@@ -16,8 +16,6 @@ class Compression2(compress.Compression):
         if __debug__:
             print("Running Compression2.__init__")
         super().__init__()
-        if __debug__:
-            print("InterCom (Compression2) is running")
 
     def pack(self, chunk_number, chunk):
         channel_0 = chunk[:, 0].copy()
