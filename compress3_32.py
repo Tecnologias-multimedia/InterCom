@@ -10,7 +10,7 @@ import math
 import minimal
 import compress
 
-class Compression3b(compress.Compression):
+class Compression3_32(compress.Compression):
     '''Chunk compression by byte-planes. 32 bits/sample. 4 code-streams.
 
     '''
@@ -24,9 +24,9 @@ class Compression3b(compress.Compression):
         channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.uint8)
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
-        channel_1_MSB3 = (chunk[:, 1] // (1<<24)).astype(np.int8)
-        channel_1_MSB2 = (chunk[:, 1] // (1<<16)).astype(np.uint8)
-        channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.int8)
+        channel_1_MSB2 = (chunk[:, 1] // (1<<24)).astype(np.int8)
+        channel_1_MSB1 = (chunk[:, 1] // (1<<16)).astype(np.uint8)
+        channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.uint8)
         channel_1_LSB  = (chunk[:, 1] % (1<<8)).astype(np.uint8)
         MSB2 = np.concatenate([channel_0_MSB2, channel_1_MSB2])
         MSB1 = np.concatenate([channel_0_MSB1, channel_1_MSB1])
@@ -36,7 +36,7 @@ class Compression3b(compress.Compression):
         compressed_MSB1 = zlib.compress(MSB1)
         compressed_MSB0 = zlib.compress(MSB0)
         compressed_LSB  = zlib.compress(LSB)
-        packed_chunk = struct.pack("!HHHH", chunk_number, len(compressed_MSB2, len(comressed_MSB1), len(compressed_MSB0)) + compressed_MSB2 + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
+        packed_chunk = struct.pack("!HHHH", chunk_number, len(compressed_MSB2), len(compressed_MSB1), len(compressed_MSB0)) + compressed_MSB2 + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
         return packed_chunk
 
     def unpack(self, packed_chunk):
@@ -58,11 +58,11 @@ class Compression3b(compress.Compression):
         channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
         channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int32)
-        chunk[:, 0] = channel_MSB2[:len(channel_MSB2)//2]*(1<<24) + channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_MSB)//2]
-        chunk[:, 1] = channel_MSB2[len(channel_MSB2)//2:]*(1<<24) + channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_MSB)//2:]
+        chunk[:, 0] = channel_MSB2[:len(channel_MSB2)//2]*(1<<24) + channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_LSB)//2]
+        chunk[:, 1] = channel_MSB2[len(channel_MSB2)//2:]*(1<<24) + channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
         return chunk_number, chunk
 
-class Compression3b__verbose(Compression3, compress.Compression__verbose):
+class Compression3_32__verbose(Compression3_32, compress.Compression__verbose):
 
     def __init__(self):
         super().__init__()
@@ -71,11 +71,10 @@ class Compression3b__verbose(Compression3, compress.Compression__verbose):
         (chunk_number, len_compressed_MSB2, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHHH", packed_chunk[:8])
         len_compressed_LSB = len(packed_chunk) - (len_compressed_MSB2 + len_compressed_MSB1 + len_compressed_MSB0 + 8)
 
-        self.bps[3] += len_compressed_MSB2*8
-        self.bps[2] += len_compressed_MSB1*8
-        self.bps[1] += len_compressed_MSB0*8
-        self.bps[0] += len_compressed_LSB*8
-        return Compression3b.unpack(self, packed_chunk)
+        # Ojo, que esto no son los bps / canal
+        self.bps[1] += (len_compressed_MSB2 + len_compressed_MSB1)*8
+        self.bps[0] += (len_compressed_MSB0 + len_compressed_LSB)*8
+        return Compression3_32.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -93,9 +92,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression3__verbose()
+        intercom = Compression3_32__verbose()
     else:
-        intercom = Compression3()
+        intercom = Compression3_32()
     try:
         intercom.run()
     except KeyboardInterrupt:

@@ -40,7 +40,9 @@ class Compression3(compress.Compression):
         buffer_LSB = zlib.decompress(compressed_LSB)
         channel_MSB = np.frombuffer(buffer_MSB, dtype=np.int8)
         channel_LSB = np.frombuffer(buffer_LSB, dtype=np.uint8)
+        #print(channel_MSB.shape, channel_LSB.shape)
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int16)
+        #print(chunk.shape)
         chunk[:, 0] = channel_MSB[:len(channel_MSB)//2]*256 + channel_LSB[:len(channel_MSB)//2]
         chunk[:, 1] = channel_MSB[len(channel_MSB)//2:]*256 + channel_LSB[len(channel_MSB)//2:]
         return chunk_number, chunk

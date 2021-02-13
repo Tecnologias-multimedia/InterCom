@@ -6,7 +6,6 @@
 import numpy as np
 import minimal
 from br_control2 import BR_Control2 as BR_Control
-from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Stereo_Coding(BR_Control):
     ''' Removes the inter-channel (spatial) redundancy. Not here.'''
@@ -31,6 +30,8 @@ class Stereo_Coding(BR_Control):
         chunk_number, analyzed_chunk = super().unpack(packed_chunk)
         chunk = self.synthesize(analyzed_chunk)
         return chunk_number, chunk
+
+from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 

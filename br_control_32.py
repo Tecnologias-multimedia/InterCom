@@ -12,7 +12,7 @@ from compress3_32 import Compression3_32 as Compression
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
-class BR_Control(Compression):
+class BR_Control_32(Compression):
     '''Bit-rate control through controlling the quantization step. In this
     module, no control has been implemented. Both channels are
     quantized using the same step.
@@ -81,7 +81,7 @@ class BR_Control(Compression):
 
 from compress3_32 import Compression3_32__verbose as Compression__verbose
 
-class BR_Control__verbose(BR_Control, Compression__verbose):
+class BR_Control_32__verbose(BR_Control_32, Compression__verbose):
     
     def __init__(self):
         if __debug__:
@@ -242,9 +242,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_args()
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = BR_Control__verbose()
+        intercom = BR_Control_32__verbose()
     else:
-        intercom = BR_Control()
+        intercom = BR_Control_32()
     try:
         intercom.run()
     except KeyboardInterrupt:
