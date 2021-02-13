@@ -8,7 +8,7 @@ import math
 import threading
 import time
 import minimal
-from compress3_b import Compression
+from compress3_b import Compression3_b as Compression
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 

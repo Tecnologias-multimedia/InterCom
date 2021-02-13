@@ -11,12 +11,12 @@ import minimal
 import compress
 
 class Compression3(compress.Compression):
-    '''Compress the chunks by byte-planes ([MSB channel 0, MSB channel 1],
-[LSB_cannel0, LSB_cannel1]). Each byte-plane is compressed
-independently.'''
+    '''Chunk compression by byte-planes. 16 bits/sample. 2 code-streams.
+
+    '''
     def __init__(self):
         if __debug__:
-            print("Running Compression3.__init__")
+            print(self.__doc__)
         super().__init__()
 
     def pack(self, chunk_number, chunk):
@@ -46,17 +46,16 @@ independently.'''
         return chunk_number, chunk
 
 class Compression3__verbose(Compression3, compress.Compression__verbose):
+
     def __init__(self):
-        if __debug__:
-            print("Running Compression3__verbose.__init__")
         super().__init__()
 
     def unpack(self, packed_chunk):
-        (chunk_number, len_compressed_channel_0) = struct.unpack("!HH", packed_chunk[:4])
-        len_compressed_channel_1 = len(packed_chunk[len_compressed_channel_0+4:])
+        (chunk_number, len_compressed_MSB) = struct.unpack("!HH", packed_chunk[:4])
+        len_compressed_LSB = len(packed_chunk[len_compressed_MSB + 4 :])
 
-        self.bps[0] += len_compressed_channel_0*8
-        self.bps[1] += len_compressed_channel_1*8
+        self.bps[0] += len_compressed_MSB*8
+        self.bps[1] += len_compressed_LSB*8
         return Compression3.unpack(self, packed_chunk)
 
 try:
