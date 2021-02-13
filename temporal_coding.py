@@ -9,7 +9,7 @@ import minimal
 #import buffer
 #from compress2 import Compression2 as Compression
 #from br_control2 import BR_Control2 as BR_Control
-from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
+from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
@@ -46,36 +46,40 @@ class Temporal_Coding(Stereo_Coding):
             print("synthesis filters's length =", self.wavelet.rec_len)
             print("DWT levels =", self.dwt_levels)
 
-    def analyze_(self, chunk):
-        print("DWT analyze")
-        '''Forward DWT.'''
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
-            #assert np.all( channel_DWT_chunk < (1<<31) )
-            #assert np.all( abs(channel_DWT_chunk) < (1<<15) )
-            DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
-        return DWT_chunk
-
-    def synthesize_(self, chunk_DWT):
-        '''Inverse DWT.'''
-        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
-            chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int16)
+    def analyze(self, chunk):
         return chunk
 
-    def pack_(self, chunk_number, chunk):
-        #return Stereo_Coding.pack(self, chunk_number, chunk)
-        return super().pack(chunk_number, chunk)
+    def synthesize(self, DWT_chunk):
+        return DWT_chunk
 
+    def pack(self, chunk_number, chunk):
+        #chunk = Stereo_Coding.analyze(self, chunk)
+        analyzed_chunk = self.analyze(chunk)
+        #chunk = super().analyze(chunk)
+        #quantized_chunk = self.quantize(chunk)
+        #quantized_chunk = br_control.BR_Control.quantize(self, chunk)
+        #chunk = chunk.astype(np.int16)
+        #print(quantized_chunk.shape, np.dtype(quantized_chunk))
+        #compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
+        packed_chunk = super().pack(chunk_number, analyzed_chunk)
+        return packed_chunk
+
+    def unpack(self, packed_chunk):
+        chunk_number, analyzed_chunk = super().unpack(packed_chunk)
+        chunk = self.synthesize(analyzed_chunk)
+        return chunk_number, chunk
+    
     def unpack_(self, compressed_chunk):
-        #return Stereo_Coding.unpack(self, compressed_chunk)
-        return super().unpack(compressed_chunk)
+        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
+        print(quantized_chunk.shape)
+        chunk = self.dequantize(quantized_chunk)
+        #chunk = br_control.BR_Control.dequantize(self, quantized_chunk)
+        chunk = super().synthesize(chunk)
+        #chunk = Stereo_Coding.synthesize(self, chunk)
+        return chunk_number, chunk
 
-from stereo_coding1 import Stereo_Coding1__verbose as Stereo_Coding__verbose
-from br_control2 import BR_Control2__verbose as BR_Control__verbose
+from stereo_coding_32 import Stereo_Coding_32__verbose as Stereo_Coding__verbose
+#from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
 #class Temporal_Coding__verbose(Temporal_Coding, BR_Control__verbose):

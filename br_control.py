@@ -57,7 +57,8 @@ class BR_Control(Compression):
     def quantize(self, chunk):
         '''Dead-zone quantizer.'''
         #quantized_chunk = np.round(chunk / self.quantization_step).astype(np.int16)
-        quantized_chunk = (chunk / self.quantization_step).astype(np.int16)
+        #quantized_chunk = (chunk / self.quantization_step).astype(np.int16)
+        quantized_chunk = (chunk / self.quantization_step).astype(np.int32)
         return quantized_chunk
     
     def dequantize(self, quantized_chunk):

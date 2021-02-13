@@ -20,6 +20,7 @@ class Compression3_24(compress.Compression):
         super().__init__()
 
     def pack(self, chunk_number, chunk):
+        assert np.all( abs(chunk) < (1<<24) )
         #chunk += 32768
         #channel_0_MSB2 = (chunk[:, 0] // (1<<24)).astype(np.int8)
         channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.int8)

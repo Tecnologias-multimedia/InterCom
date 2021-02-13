@@ -4,11 +4,12 @@
 ''' Real-time Audio Intercommunicator (temporal_coding0.py). '''
 
 import numpy as np
+import pywt
 import minimal
-from compress2 import Compression2 as Compression
-import br_control
-from br_control2 import BR_Control2 as BR_Control 
-from stereo_coding1 import Stereo_Coding1 as Stereo_Coding
+#from compress2 import Compression2 as Compression
+#import br_control
+#from br_control2 import BR_Control2 as BR_Control 
+#from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 from temporal_coding import Temporal_Coding
 
 class Temporal_Coding0(Temporal_Coding):
@@ -20,35 +21,35 @@ class Temporal_Coding0(Temporal_Coding):
             print("Running Temporal_Coding0.__init__")
         super().__init__()
 
-    def quantize(self, chunk):
-        '''Dead-zone quantizer.'''
-        #quantized_chunk = np.round(chunk / self.quantization_step).astype(np.int16)
-        quantized_chunk = (chunk / 128).astype(np.int32)
-        return quantized_chunk
-    
-    def dequantize(self, quantized_chunk):
-        '''Deadzone dequantizer.'''
-        chunk = quantized_chunk * 128
+    def analyze(self, chunk):
+        #print("DWT analyze")
+        '''Forward DWT.'''
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
+            #assert np.all( channel_DWT_chunk < (1<<31) )
+            assert np.all( abs(channel_DWT_chunk) < (1<<24) )
+            #DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int32)
+            DWT_chunk[:, c] = channel_DWT_chunk
+        return DWT_chunk
+
+    def synthesize(self, chunk_DWT):
+        '''Inverse DWT.'''
+        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
+            #chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int32)
+            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return chunk
 
-    def pack(self, chunk_number, chunk):
-        #chunk = Stereo_Coding.analyze(self, chunk)
-        chunk = super().analyze(chunk)
-        quantized_chunk = self.quantize(chunk)
-        #quantized_chunk = br_control.BR_Control.quantize(self, chunk)
-        #chunk = chunk.astype(np.int16)
-        print(quantized_chunk.shape, np.dtype(quantized_chunk))
-        compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
-        return compressed_chunk
+    def pack_(self, chunk_number, chunk):
+        #return Stereo_Coding.pack(self, chunk_number, chunk)
+        return super().pack(chunk_number, chunk)
 
-    def unpack(self, compressed_chunk):
-        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
-        print(quantized_chunk.shape)
-        chunk = self.dequantize(quantized_chunk)
-        #chunk = br_control.BR_Control.dequantize(self, quantized_chunk)
-        chunk = super().synthesize(chunk)
-        #chunk = Stereo_Coding.synthesize(self, chunk)
-        return chunk_number, chunk
+    def unpack_(self, compressed_chunk):
+        #return Stereo_Coding.unpack(self, compressed_chunk)
+        return super().unpack(compressed_chunk)
 
 from temporal_coding import Temporal_Coding__verbose
 
