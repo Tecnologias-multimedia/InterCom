@@ -20,9 +20,9 @@ class Compression3_32(compress.Compression):
         super().__init__()
 
     def pack(self, chunk_number, chunk):
-        chunk += 32768
+        #chunk += 32768
         channel_0_MSB2 = (chunk[:, 0] // (1<<24)).astype(np.int8)
-        channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.uint8)
+        channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.uint8) # Get LSB
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
         channel_1_MSB2 = (chunk[:, 1] // (1<<24)).astype(np.int8)
@@ -61,7 +61,7 @@ class Compression3_32(compress.Compression):
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int32)
         chunk[:, 0] = channel_MSB2[:len(channel_MSB2)//2]*(1<<24) + channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_LSB)//2]
         chunk[:, 1] = channel_MSB2[len(channel_MSB2)//2:]*(1<<24) + channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
-        chunk -= 32768
+        #chunk -= 32768
         return chunk_number, chunk
 
 class Compression3_32__verbose(Compression3_32, compress.Compression__verbose):

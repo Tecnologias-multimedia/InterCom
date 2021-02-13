@@ -8,7 +8,7 @@ import math
 import threading
 import time
 import minimal
-from compress3_32 import Compression3_32 as Compression
+from compress3_24 import Compression3_24 as Compression
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
@@ -79,7 +79,7 @@ class BR_Control(Compression):
         #chunk = quantized_chunk
         return chunk_number, chunk
 
-from compress3_32 import Compression3_32__verbose as Compression__verbose
+from compress3_24 import Compression3_24__verbose as Compression__verbose
 
 class BR_Control__verbose(BR_Control, Compression__verbose):
     
