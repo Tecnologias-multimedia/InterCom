@@ -6,6 +6,7 @@
 import numpy as np
 import sounddevice as sd
 import pywt
+import math
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
@@ -27,13 +28,54 @@ class Chunks_Overlapping(Temporal_Coding):
     
     def __init__(self):
         super().__init__()
-        print("Overlapping chunks")
-        self.nos = 10
-        print("Number of overlapped samples =", self.nos)
         #self.prev_chunk = self.zero_chunk
         #self.curr_chunk = None
         #self.next_chunk = None
-        self.last_samples = np.zeros((self.nos, 2))
+        self.prev_chunk = super().generate_zero_chunk()
+        #self.last_samples = np.zeros((self.nos, 2))
+        overlaped_area_size = self.max_filters_length * (1 << self.dwt_levels)
+        self.overlaped_area_size = 1<<math.ceil(math.log(overlaped_area_size)/math.log(2))
+        #self.overlaped_area_size = 0
+        if __debug__:
+            print("overlaped_area_size =", self.overlaped_area_size)
+
+    def analyze(self, chunk):
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk+self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        print("B", DWT_chunk.shape)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
+            DWT_chunk[:, c] = channel_DWT_chunk
+        return DWT_chunk
+
+    def synthesize(self, chunk_DWT):
+        '''Inverse DWT.'''
+        chunk = np.empty((minimal.args.frames_per_chunk+self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
+            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
+        return chunk
+
+    # Use the last samples of the previous chunk to build a left-shifted extended chunk, whose left DWT coefficients should not be transmitted. For the chunk number 0, these last samples are zero. In the decoder, the discarded coefficients should be replaced by the last coefficients of the previous chunk. Only the non-overlapped samples should be played. In this version, all the coefficients are transmitted.
+    def pack(self, chunk_number, chunk):
+        # Recuerda: la redundancia espacial podría estar ya eliminada
+        #extended_chunk = np.concatenate([self.prev_chunk[:-nos], chunk, self.next_chunk[:nos]])
+        extended_chunk = np.concatenate([self.prev_chunk[-self.overlaped_area_size:], chunk])
+        print("A", chunk.shape, self.prev_chunk[-self.overlaped_area_size:].shape, extended_chunk.shape)
+        self.prev_chunk = chunk        
+        extended_chunk = Stereo_Coding.analyze(self, extended_chunk)
+        extended_chunk = self.analyze(extended_chunk)
+        quantized_chunk = BR_Control.quantize(self, extended_chunk)
+        compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
+        return compressed_chunk
+
+    def unpack(self, compressed_chunk):
+        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
+        chunk = BR_Control.dequantize(self, quantized_chunk)
+        chunk = self.synthesize(chunk)[self.overlaped_area_size:]
+        chunk = Stereo_Coding.synthesize(self, chunk)
+        self.prev_chunk = chunk
+        return chunk_number, chunk
 
     def _record_send_and_play(self, indata, outdata, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
@@ -43,28 +85,6 @@ class Chunks_Overlapping(Temporal_Coding):
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(outdata, chunk)
-
-    def _pack(self, chunk_number, chunk):
-        # Recuerda: la redundancia espacial podría estar ya eliminada
-        extended_chunk = np.concatenate([self.prev_chunk[:-nos], chunk, self.next_chunk[:nos]])
-        self.next_chunk = chunk
-        
-        ''' I/O idem to Stereo_Coding.pack(). Redefines it to provide intra-channel redundancy removal. '''
-        Stereo_Coding.analyze(self, chunk)
-        chunk = chunk.astype(self.COEFFICIENT_TYPE)
-        chunk = self.analyze(chunk)
-        quantized_chunk = BR_Control.quantize(self, chunk, self.COEFFICIENT_TYPE)
-        compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
-        return compressed_chunk
-
-    def _unpack(self, compressed_chunk):
-        ''' I/O idem to IFD.unpack(). Redefines it to restore the original chunk representation. '''
-        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk, self.COEFFICIENT_TYPE)
-        chunk = BR_Control.dequantize(self, quantized_chunk, self.COEFFICIENT_TYPE)
-        chunk = self.synthesize(chunk)
-        chunk = chunk.astype(minimal.Minimal.SAMPLE_TYPE)
-        Stereo_Coding.synthesize(self, chunk)
-        return chunk_number, chunk
 
     def _analyze(self, extended_chunk):
         return super.analyze(extended_chunk)

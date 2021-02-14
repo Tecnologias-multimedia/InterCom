@@ -29,8 +29,8 @@ class Temporal_Coding(Stereo_Coding):
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
         # Default dwt_levels is based on the length of the chunk and the length of the filter
-        max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=max_filters_length)
+        self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
+        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
         if minimal.args.levels:
             self.dwt_levels = int(minimal.args.levels)
 
