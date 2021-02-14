@@ -89,12 +89,12 @@ jitter."""
 
     def _read_io_and_play(self, outdata, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
-        chunk = self.read_chunk_from_file()
-        packed_chunk = self.pack(self.chunk_number, chunk)
+        read_chunk = self.read_chunk_from_file()
+        packed_chunk = self.pack(self.chunk_number, read_chunk)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(outdata, chunk)
-        return chunk
+        return read_chunk
 
     def run(self):
         '''Creates the stream, install the callback function, and waits for
