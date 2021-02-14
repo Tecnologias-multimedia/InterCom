@@ -13,7 +13,7 @@ import minimal
 from temporal_coding import Temporal_Coding
 
 class Temporal_Coding0(Temporal_Coding):
-    '''Removes first intra-frame redudancy and then, intra-channel redundancy.
+    '''Removes first intra-channel redudancy and then, intra-frame redudancy.
 
     '''
     def __init__(self):
@@ -29,7 +29,7 @@ class Temporal_Coding0(Temporal_Coding):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
-            assert np.all( abs(channel_DWT_chunk) < (1<<24) )
+            #assert np.all( abs(channel_DWT_chunk) < (1<<24) )
             #DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int32)
             DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk

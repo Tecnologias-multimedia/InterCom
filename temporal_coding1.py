@@ -9,19 +9,15 @@ import pywt
 import time
 import minimal
 import compress
-from compress import Compression as Compression
-import br_control
+import buffer
+from compress3_24 import Compression3_24 as Compression
 from br_control import BR_Control as BR_Control 
 import stereo_coding
 from stereo_coding import Stereo_Coding as Stereo_Coding
-from stereo_coding import Stereo_Coding__verbose as Stereo_Coding__verbose
 import temporal_coding
 
-minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
-minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
-
-class Temporal_Coding(Stereo_Coding):
-    '''Removes first intra-channel redudancy and then, intra-frame redudancy.
+class Temporal_Coding1(buffer.Buffering):
+    '''Removes first intra-frame redudancy and then, intra-channel redundancy.
 
     '''
     def __init__(self):
@@ -48,39 +44,40 @@ class Temporal_Coding(Stereo_Coding):
 
     def analyze(self, chunk):
         '''Forward DWT.'''
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
-            assert np.all( abs(channel_DWT_chunk) < (1<<15) )
-            DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int16)
+            #assert np.all( abs(channel_DWT_chunk) < (1<<15) )
+            DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk
 
+    def synthesize(self, chunk_DWT):
+        '''Inverse DWT.'''
+        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
+            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
+        return chunk
+
     def pack(self, chunk_number, chunk):
-        #chunk = Stereo_Coding.analyze(self, chunk)
+        chunk = Stereo_Coding.analyze(self, chunk)
         chunk = self.analyze(chunk)
         quantized_chunk = BR_Control.quantize(self, chunk)
         compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
         return compressed_chunk
 
-    def synthesize(self, chunk_DWT):
-        '''Inverse DWT.'''
-        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int16)
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
-            chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int16)
-        return chunk
-
     def unpack(self, compressed_chunk):
         chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
         chunk = BR_Control.dequantize(self, quantized_chunk)
         chunk = self.synthesize(chunk)
-        #chunk = Stereo_Coding.synthesize(self, chunk)
+        chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk_number, chunk
 
-class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
-    ''' Verbose version of Decorrelation. '''
+from temporal_coding import Temporal_Coding__verbose
+
+class Temporal_Coding1__verbose(Temporal_Coding1, Temporal_Coding__verbose):
     pass
 
 try:
@@ -99,9 +96,9 @@ if __name__ == "__main__":
             pass
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Temporal_Coding__verbose()
+        intercom = Temporal_Coding1__verbose()
     else:
-        intercom = Temporal_Coding()
+        intercom = Temporal_Coding1()
     try:
         intercom.run()
     except KeyboardInterrupt:
