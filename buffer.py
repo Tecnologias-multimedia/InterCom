@@ -64,7 +64,7 @@ jitter."""
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        #chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk_number, chunk
 
     def buffer_chunk(self, chunk_number, chunk):
@@ -76,6 +76,7 @@ jitter."""
 
     def play_chunk(self, DAC, chunk):
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
+        chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         DAC[:] = chunk
 
     def receive(self):

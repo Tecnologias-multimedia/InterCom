@@ -39,6 +39,11 @@ class Chunks_Overlapping(Temporal_Coding):
         if __debug__:
             print("overlaped_area_size =", self.overlaped_area_size)
 
+        # Structure used during the decoding
+        zero_array = np.zeros(shape=minimal.args.frames_per_chunk + self.overlaped_area_size)
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+        self.slices = pywt.coeffs_to_array(coeffs)[1]
+
     def analyze(self, chunk):
         DWT_chunk = np.empty((minimal.args.frames_per_chunk+self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
         print("B", DWT_chunk.shape)
@@ -72,6 +77,7 @@ class Chunks_Overlapping(Temporal_Coding):
     def unpack(self, compressed_chunk):
         chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
         chunk = BR_Control.dequantize(self, quantized_chunk)
+        chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS).astype(np.int32)
         chunk = self.synthesize(chunk)[self.overlaped_area_size:]
         chunk = Stereo_Coding.synthesize(self, chunk)
         self.prev_chunk = chunk
