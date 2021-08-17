@@ -11,3 +11,18 @@ specifically for this project and run the modules inside.
 
 		mkdir /home/vruiz/python_environments
 		python3 -m venv /home/vruiz/python_environments/intercom
+
+2. Activate the environment:
+
+		source /home/vruiz/python_environments/intercom/bin/activate
+		
+3. To deactivate the environment:
+
+		deactivate
+		
+## Remember
+
+To install the dependencies (example for `sounddevice`):
+
+	pip install sounddevice
+	
