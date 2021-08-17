@@ -1,22 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (br_control.py). '''
-
-import numpy as np
-import math
-import threading
-import time
-import minimal
-from compress3_24 import Compression3_24 as Compression
-import logging
-FORMAT = "%(module)s: %(message)s"
-logging.basicConfig(format=FORMAT)
-
-minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
-
-class BR_Control(Compression):
-    '''Bit-rate control through controlling the quantization step. In this
+'''Bit-rate control through controlling the quantization step. In this
     module, no control has been implemented. Both channels are
     quantized using the same step.
 
@@ -29,8 +14,21 @@ class BR_Control(Compression):
 
     Moreover, notice that we don't need to send any extra data to
     perform the BR control.
+'''
 
-    '''
+import numpy as np
+import math
+import threading
+import time
+import minimal
+from compress3_24 import Compression3_24 as Compression
+import logging
+#FORMAT = "%(module)s: %(message)s"
+#logging.basicConfig(format=FORMAT)
+
+minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
+
+class BR_Control(Compression):
 
     def __init__(self):
         if __debug__:

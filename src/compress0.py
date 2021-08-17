@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress.py: Compress the chunks using DEFLATE.'''
+'''compress0.py: Compress the (whole) chunks using DEFLATE.'''
 
 import zlib
 import numpy as np
@@ -9,13 +9,13 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 class Compression0(compress.Compression):
-    '''Compress the chunks (playing forma) with zlib.'''
     def __init__(self):
-        if __debug__:
-            print("Running Compression0.__init__")
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         compressed_chunk = zlib.compress(chunk)
@@ -45,17 +45,14 @@ class Compression0__verbose(Compression0, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warnning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Compression0__verbose()

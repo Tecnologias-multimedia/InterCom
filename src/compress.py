@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress.py: Compress the chunks using DEFLATE.'''
+'''compress.py: I'm not compressing the chunks at all (testing purpose).'''
 
 import zlib
 import numpy as np
