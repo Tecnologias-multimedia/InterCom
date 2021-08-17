@@ -26,4 +26,4 @@ To install the dependencies (example for `sounddevice`):
 
 	pip3 install sounddevice
 	
-To stop (killing it) an Unix process, press at the same time <CTRL> and <c>.
+To stop (killing it) an Unix process, press at the same time the keys `CTRL` and `c`.
