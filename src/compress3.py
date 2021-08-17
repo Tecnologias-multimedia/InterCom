@@ -63,7 +63,7 @@ class Compression3__verbose(Compression3, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    print("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

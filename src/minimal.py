@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (minimal.py). '''
+'''minimal.py: A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks. '''
 
 import argparse
 import sounddevice as sd
@@ -11,6 +11,9 @@ import time
 import psutil
 import logging
 import soundfile as sf
+import logging
+FORMAT = "(%(levelname)s) %(module)s: %(message)s"
+logging.basicConfig(format=FORMAT)
 
 def spinning_cursor():
     ''' https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor'''
@@ -39,12 +42,6 @@ parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file i
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is requested)")
 
 class Minimal:
-    """A minimal InterCom (no compression, no quantization, no transform,
-... only provides a bidirectional (full-duplex) transmission of raw
-(playable) chunks.
-
-    """
-
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
     #SAMPLE_TYPE = np.int16    # The number of bits per sample.
@@ -53,7 +50,7 @@ class Minimal:
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
         if __debug__:
-            print("Running Minimal.__init__")
+            print(__doc__)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
@@ -477,14 +474,14 @@ class Minimal__verbose(Minimal):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     parser.description = __doc__
     try:
         argcomplete.autocomplete(parser)
     except Exception:
-        print("argcomplete not working :-/")
+        logging.warning("argcomplete not working :-/")
     args = parser.parse_known_args()[0]
 
     if args.list_devices:

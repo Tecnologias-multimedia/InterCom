@@ -22,8 +22,8 @@ specifically for this project and run the modules inside.
 		
 ## Remember
 
-To install the dependencies (example for `sounddevice`):
+To install the dependencies (example for `pywavelets`):
 
-	pip3 install sounddevice
+	pip3 install pywavelets
 	
 To stop (killing it) an Unix process, press at the same time the keys `CTRL` and `c`.

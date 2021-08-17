@@ -37,7 +37,7 @@ class BR_Control1__verbose(BR_Control1, br_control.BR_Control__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    print("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

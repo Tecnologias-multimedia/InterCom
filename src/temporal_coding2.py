@@ -10,7 +10,7 @@ import math
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    print("Unable to import argcomplete (optional)")
 import time
 import minimal
 import compress

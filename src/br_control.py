@@ -9,6 +9,9 @@ import threading
 import time
 import minimal
 from compress3_24 import Compression3_24 as Compression
+import logging
+FORMAT = "%(module)s: %(message)s"
+logging.basicConfig(format=FORMAT)
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
@@ -230,7 +233,7 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    print("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

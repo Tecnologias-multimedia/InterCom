@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (buffer.py). '''
+"""buffer.py: Implements a random access buffer structure for hiding the jitter."""
 
 import argparse
 import sounddevice as sd
@@ -14,21 +14,19 @@ import struct
 import threading
 import minimal
 import soundfile as sf
+import logging
 
 minimal.parser.add_argument("-b", "--buffering_time", type=int, default=100, help="Miliseconds to buffer")
 
 class Buffering(minimal.Minimal):
 
     CHUNK_NUMBERS = 1 << 15 # Enought for most buffering times.
-    
-    """Implements a random access buffer structure for hiding the
-jitter."""
 
     def __init__(self):
         ''' Initializes the buffer. '''
-        if __debug__:
-            print("Running Buffering.__init__")
         super().__init__()
+        if __debug__:
+            print(__doc__)
         if minimal.args.buffering_time <= 0:
             minimal.args.buffering_time = 1 # ms
         print(f"buffering_time = {minimal.args.buffering_time} miliseconds")
@@ -196,17 +194,14 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Buffering__verbose()

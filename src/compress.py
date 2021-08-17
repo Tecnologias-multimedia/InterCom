@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress.py). '''
+'''compress.py: Compress the chunks using DEFLATE.'''
 
 import zlib
 import numpy as np
@@ -9,13 +9,13 @@ import struct
 import math
 import minimal
 import buffer
+import logging
 
 class Compression(buffer.Buffering):
-    '''Compress the chunks. Common stuff.'''
     def __init__(self):
-        if __debug__:
-            print(self.__doc__)
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         '''Builds a packed packet with a compressed chunk and a chunk_number
@@ -129,17 +129,14 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Compression__verbose()
