@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress2.py). '''
+'''compress2.py: Compress the chunks using DEFLATE. Each channel of the chunk compressed independently. The channels are consecutive.'''
 
 import zlib
 import numpy as np
@@ -11,11 +11,10 @@ import minimal
 import compress
 
 class Compression2(compress.Compression):
-    '''Compress the chunks zlib. Each channel is compressed independently (first channel 0, next channel 1).'''
     def __init__(self):
-        if __debug__:
-            print("Running Compression2.__init__")
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         channel_0 = chunk[:, 0].copy()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress.py: I'm not compressing the chunks at all (testing purpose).'''
+'''compress.py: The chunks are not compressed (testing purpose).'''
 
 import zlib
 import numpy as np

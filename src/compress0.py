@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress0.py: Compress the (whole) chunks using DEFLATE.'''
+'''compress0.py: Compress each chunk using DEFLATE, notice that the samples are interleaved.'''
 
 import zlib
 import numpy as np
