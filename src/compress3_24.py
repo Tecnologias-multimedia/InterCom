@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress3b.py). '''
+'''compress3_24.py: Chunk compression by byte-planes using DEFLATE. 24 bits/sample. 4 code-streams.'''
 
 import zlib
 import numpy as np
@@ -11,13 +11,10 @@ import minimal
 import compress
 
 class Compression3_24(compress.Compression):
-    '''Chunk compression by byte-planes. 24 bits/sample. 4 code-streams.
-
-    '''
     def __init__(self):
-        if __debug__:
-            print(self.__doc__)
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         assert np.all( abs(chunk) < (1<<24) )

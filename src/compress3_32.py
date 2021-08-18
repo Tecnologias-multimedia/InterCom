@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress3b.py). '''
-
 import zlib
 import numpy as np
 import struct
@@ -10,14 +8,13 @@ import math
 import minimal
 import compress
 
-class Compression3_32(compress.Compression):
-    '''Chunk compression by byte-planes. 32 bits/sample. 4 code-streams.
+'''compress3_32.py: Chunk compression by byte-planes using DEFLATE. 32 bits/sample. 4 code-streams.'''
 
-    '''
+class Compression3_32(compress.Compression):
     def __init__(self):
-        if __debug__:
-            print(self.__doc__)
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         #chunk += 32768

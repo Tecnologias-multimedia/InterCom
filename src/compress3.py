@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress3.py). '''
+'''compress3.py: Chunk compression by byte-planes using DEFLATE. 16 bits/sample (notice that this can be insufficient when energy accumulation is used). 2 code-streams.'''
 
 import zlib
 import numpy as np
@@ -11,13 +11,10 @@ import minimal
 import compress
 
 class Compression3(compress.Compression):
-    '''Chunk compression by byte-planes. 16 bits/sample. 2 code-streams.
-
-    '''
     def __init__(self):
-        if __debug__:
-            print(self.__doc__)
         super().__init__()
+        if __debug__:
+            print(__doc__)
 
     def pack(self, chunk_number, chunk):
         channel_0_MSB = (chunk[:, 0] // 256).astype(np.int8)
