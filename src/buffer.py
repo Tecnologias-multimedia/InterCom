@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""buffer.py: Implements a random access buffer structure for hiding the jitter."""
+"""Implements a random access buffer structure for hiding the jitter."""
 
 import argparse
 import sounddevice as sd
@@ -25,11 +25,10 @@ class Buffering(minimal.Minimal):
     def __init__(self):
         ''' Initializes the buffer. '''
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
         if minimal.args.buffering_time <= 0:
             minimal.args.buffering_time = 1 # ms
-        print(f"buffering_time = {minimal.args.buffering_time} miliseconds")
+        logging.info(f"buffering_time = {minimal.args.buffering_time} miliseconds")
         self.chunks_to_buffer = int(math.ceil(minimal.args.buffering_time / 1000 / self.chunk_time))
         self.zero_chunk = self.generate_zero_chunk()
         self.cells_in_buffer = self.chunks_to_buffer * 2
@@ -39,11 +38,10 @@ class Buffering(minimal.Minimal):
         #self.sock.settimeout(self.chunk_time)
         #self.sock.settimeout(0)
         self.chunk_number = 0
-        if __debug__:
-            print("chunks_to_buffer =", self.chunks_to_buffer)
+        logging.info(f"chunks_to_buffer = {self.chunks_to_buffer}")
 
         if minimal.args.filename:
-            print(f"Using \"{minimal.args.filename}\" as input")
+            logging.info(f"Using \"{minimal.args.filename}\" as input")
             self.wavfile = sf.SoundFile(minimal.args.filename, 'r')
             self._handler = self._read_send_and_play
             self.stream = self.file_stream

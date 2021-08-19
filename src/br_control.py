@@ -2,18 +2,17 @@
 # PYTHON_ARGCOMPLETE_OK
 
 '''Bit-rate control through controlling the quantization step. In this
-    module, no control has been implemented. Both channels are
-    quantized using the same step.
+module, no control has been implemented. Both channels are quantized
+using the same constant step.
 
-    This implementation of the BR control supposes that the
-    communication link is symmetric, or at least, the quality of the
-    audio for both interlocutors should be the same. This last
-    supposition responds to the idea (used in some transmission
-    protocols such as Bittorrent) that is "Why I should send more data
-    than I'm receiving?"
-
-    Moreover, notice that we don't need to send any extra data to
-    perform the BR control.
+This implementation of the BR control supposes that the communication
+link is symmetric, or at least, the quality of the audio for both
+interlocutors should be the same. This last supposition responds to
+the idea (used in some transmission protocols such as Bittorrent) that
+is "Why I should send more data than I'm receiving?" As an advantage,
+notice that we don't need to send any extra data to perform the BR
+control.
+------------------
 '''
 
 import numpy as np
@@ -31,9 +30,8 @@ minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, defau
 class BR_Control(Compression):
 
     def __init__(self):
-        if __debug__:
-            print("Running BR_Control.__init__")
         super().__init__()
+        logging.debug(__doc__)
         self.quantization_step = minimal.args.minimal_quantization_step
         print("(minimum) quantization_step =", minimal.args.minimal_quantization_step)
         self.number_of_sent_chunks = 0
@@ -231,7 +229,7 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

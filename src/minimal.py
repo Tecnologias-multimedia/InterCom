@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''minimal.py: A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks. '''
+'''A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks. '''
 
 import argparse
 import sounddevice as sd
@@ -13,7 +13,7 @@ import logging
 import soundfile as sf
 import logging
 FORMAT = "(%(levelname)s) %(module)s: %(message)s"
-logging.basicConfig(format=FORMAT)
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 def spinning_cursor():
     ''' https://stackoverflow.com/questions/4995733/how-to-create-a-spinning-command-line-cursor'''
@@ -49,8 +49,7 @@ class Minimal:
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
@@ -58,7 +57,7 @@ class Minimal:
         self.zero_chunk = self.generate_zero_chunk()
 
         if args.filename:
-            print(f"Using \"{args.filename}\" as input")
+            logging.info(f"Using \"{args.filename}\" as input")
             self.wavfile = sf.SoundFile(args.filename, 'r')
             self._handler = self._read_io_and_play
             self.stream = self.file_stream
@@ -143,8 +142,7 @@ class Minimal:
         except (socket.timeout, BlockingIOError):
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
-            if __debug__:
-                print("playing zero chunk")
+            logging.debug("playing zero chunk")
         outdata[:] = chunk
         if __debug__:
             #if not np.array_equal(indata, outdata):
@@ -166,8 +164,7 @@ class Minimal:
             chunk = self.unpack(packed_chunk)
         except (socket.timeout, BlockingIOError):
             chunk = self.zero_chunk
-            if __debug__:
-                print("playing zero chunk")
+            logging.debug("playing zero chunk")
         outdata[:] = chunk
         if __debug__:
             print(next(spinner), end='\b', flush=True)
