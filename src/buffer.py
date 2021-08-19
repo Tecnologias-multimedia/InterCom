@@ -106,7 +106,7 @@ class Buffering(minimal.Minimal):
     def run(self):
         '''Creates the stream, install the callback function, and waits for
         an enter-key pressing.'''
-        print("Press CTRL+c to quit")
+        logging.info("Press CTRL+c to quit")
         self.played_chunk_number = 0
         with self.stream(self._handler):
             first_received_chunk_number = self.receive_and_buffer()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress.py: The chunks are not compressed (testing purpose).'''
+'''compress.py: The chunks are not compressed (using only for testing).'''
 
 import zlib
 import numpy as np
@@ -14,8 +14,7 @@ import logging
 class Compression(buffer.Buffering):
     def __init__(self):
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         '''Builds a packed packet with a compressed chunk and a chunk_number

@@ -206,7 +206,7 @@ class Minimal:
         an enter-key pressing.'''
         #self.sock.settimeout(self.chunk_time)
         self.sock.settimeout(0)
-        print("Press enter-key to quit")
+        logging.info("Press enter-key to quit")
 
         with self.stream(self._handler):
             input()
