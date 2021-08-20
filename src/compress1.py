@@ -56,10 +56,7 @@ if __name__ == "__main__":
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Compression1__verbose()

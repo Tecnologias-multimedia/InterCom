@@ -128,7 +128,7 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    logging.warning("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

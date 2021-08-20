@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (temporal_coding0.py). '''
+'''Removes first intra-channel redudancy and then, intra-frame redudancy.'''
 
 import numpy as np
 import pywt
@@ -11,15 +11,13 @@ import minimal
 #from br_control2 import BR_Control2 as BR_Control 
 #from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 from temporal_coding import Temporal_Coding
+import logging
 
 class Temporal_Coding0(Temporal_Coding):
-    '''Removes first intra-channel redudancy and then, intra-frame redudancy.
 
-    '''
     def __init__(self):
-        if __debug__:
-            print("Running Temporal_Coding0.__init__")
         super().__init__()
+        logging.info(__doc__)
 
     def analyze(self, chunk):
         #print("DWT analyze")
@@ -60,17 +58,14 @@ class Temporal_Coding0__verbose(Temporal_Coding0, Temporal_Coding__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Temporal_Coding0__verbose()

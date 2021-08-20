@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (temporal_coding.py). '''
+'''Removes the intra-channel redundancy between the samples of the same channel of each chunk using the DWT.'''
 
 import numpy as np
 import pywt
@@ -10,6 +10,7 @@ import minimal
 #from compress2 import Compression2 as Compression
 #from br_control2 import BR_Control2 as BR_Control
 from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
+import logging
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
@@ -17,14 +18,9 @@ minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels o
 #class Temporal_Coding(buffer.Buffering):
 class Temporal_Coding(Stereo_Coding):
 #class Temporal_Coding(BR_Control):
-    '''Removes the intra-channel redundancy between the samples of the
-    same channel of each chunk using the DWT.
-
-    '''
     def __init__(self):
-        if __debug__:
-            print("Running Temporal_Coding.__init__")
         super().__init__()
+        logging.info(__doc__)
 
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
@@ -92,17 +88,14 @@ class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Temporal_Coding__verbose()
