@@ -1,22 +1,17 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Real-time Audio Intercommunicator (stereo_coding1.py).'''
-
+'''Implements MST (Mid/Side Transform) for 32 bits/coefficients.'''
 import numpy as np
 import minimal
 import stereo_coding
+import logging
 
 class Stereo_Coding_32(stereo_coding.Stereo_Coding):
-    '''Implements MST for 32 bits/coefficient output. Thought for using
-after temporal_coding, where 32 bits/coefficient are required.
-
-    '''
 
     def __init__(self):
-        if __debug__:
-            print("Running Stereo_Coding1.__init__")
         super().__init__()
+        logging.info(__doc__)
 
     def analyze(self, x):
         w = np.empty_like(x, dtype=np.int32)
@@ -43,17 +38,15 @@ class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding.Stereo_Coding__v
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+            logging.warning("argcomplete not working :-/")
+            
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Stereo_Coding_32__verbose()

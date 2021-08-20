@@ -110,8 +110,7 @@ class Buffering(minimal.Minimal):
         self.played_chunk_number = 0
         with self.stream(self._handler):
             first_received_chunk_number = self.receive_and_buffer()
-            if __debug__:
-                print("first_received_chunk_number =", first_received_chunk_number)
+            logging.debug("first_received_chunk_number =", first_received_chunk_number)
 
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             # The previous selects the first chunk to be played the

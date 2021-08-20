@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress3_24.py: Chunk compression by byte-planes using DEFLATE. 24 bits/sample. 4 code-streams.'''
+'''Chunk compression by byte-planes using DEFLATE. 24 bits/sample. 4 code-streams.'''
 
 import zlib
 import numpy as np
@@ -9,12 +9,12 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 class Compression3_24(compress.Compression):
     def __init__(self):
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         assert np.all( abs(chunk) < (1<<24) )
@@ -79,7 +79,7 @@ class Compression3_24__verbose(Compression3_24, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

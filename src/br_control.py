@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Bit-rate control using the quantization step. In this module, no control has been implemented. Both channels are quantized using the same constant step. Notice that this implementation of the BR control supposes that the communication link is symmetric, or at least, the quality of the audio for both interlocutors should be the same. This last supposition responds to the idea (used in some transmission protocols such as Bittorrent) that is "Why I should send more data than I'm receiving?" As an advantage, notice that we don't need to send any extra data to perform the BR control. '''
+'''Bit-rate control using quantization. In this module, no control has been implemented. Both channels are quantized using the same constant step. Notice that this implementation of the BR control supposes that the communication link is symmetric, or at least, the quality of the audio for both interlocutors should be the same. This last supposition responds to the idea (used in some transmission protocols such as Bittorrent) that is "Why I should send more data than I'm receiving?" As an advantage, notice that we don't need to send any extra data to perform the BR control. '''
 
 import numpy as np
 import math
@@ -20,6 +20,7 @@ class BR_Control(Compression):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
+
         self.quantization_step = minimal.args.minimal_quantization_step
         print("(minimum) quantization_step =", minimal.args.minimal_quantization_step)
         self.number_of_sent_chunks = 0

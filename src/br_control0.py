@@ -1,24 +1,17 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (br_control0.py). '''
+'''To control the quantization step, the number of lost chunks is added to it. Otherwise, the quantization step is decremented by 1 each second.'''
 
 import time
 import minimal
 import br_control
+import logging
 
 class BR_Control0(br_control.BR_Control):
-    '''To control the
-    quantization step, the number of lost chunks is added to
-    it. Otherwise, the quantization step is decremented by 1 each
-    second.
-
-    '''
-
     def __init__(self):
-        if __debug__:
-            print("Running BR_Control0.__init__")
         super().__init__()
+        logging.info(__doc__)
 
     def data_flow_control(self):
         while True:
@@ -41,7 +34,7 @@ class BR_Control0__verbose(BR_Control0, br_control.BR_Control__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

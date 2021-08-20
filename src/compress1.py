@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress1.py: Compress the chunks using DEFLATE. The channels are consecutive.'''
+'''Compress the chunks using DEFLATE. The channels are consecutive.'''
 
 import zlib
 import numpy as np
@@ -14,8 +14,7 @@ class Compression1(compress.Compression):
     
     def __init__(self):
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         chunk = np.stack([chunk[:, 0], chunk[:, 1]])
@@ -50,7 +49,7 @@ class Compression1__verbose(Compression1, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Real-time Audio Intercommunicator (stereo_coding.py).'''
+''' The spatial redundancy is not removed (using only for testing).'''
 
 import numpy as np
 import minimal
 from br_control2 import BR_Control2 as BR_Control
+import logging
 
 class Stereo_Coding(BR_Control):
-    ''' Removes the inter-channel (spatial) redundancy. Not here.'''
 
     def __init__(self):
-        if __debug__:
-            print("Running Stereo_Coding.__init__")
         super().__init__()
+        logging.info(__doc__)
 
     def analyze(self, x):
         return x
@@ -91,17 +90,14 @@ class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        if __debug__:
-            print("argcomplete not working :-/")
-        else:
-            pass
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Stereo_Coding__verbose()

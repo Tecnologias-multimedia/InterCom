@@ -13,8 +13,7 @@ import compress
 class Compression2(compress.Compression):
     def __init__(self):
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         channel_0 = chunk[:, 0].copy()
@@ -57,7 +56,7 @@ class Compression2__verbose(Compression2, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete (optional)")
+    logging.warning("Unable to import argcomplete (optional)")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__

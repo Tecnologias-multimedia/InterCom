@@ -7,14 +7,14 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 '''compress3_32.py: Chunk compression by byte-planes using DEFLATE. 32 bits/sample. 4 code-streams.'''
 
 class Compression3_32(compress.Compression):
     def __init__(self):
         super().__init__()
-        if __debug__:
-            print(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         #chunk += 32768
@@ -78,7 +78,7 @@ class Compression3_32__verbose(Compression3_32, compress.Compression__verbose):
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:
-    print("Unable to import argcomplete")
+    logging.warning("Unable to import argcomplete")
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
