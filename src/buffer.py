@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""Implements a random access buffer structure for hiding the jitter."""
+"""Over minimal, implements a random access buffer structure for hiding the jitter."""
 
 import argparse
 import sounddevice as sd
