@@ -36,7 +36,7 @@ parser.add_argument("-d", "--list-devices", action="store_true", help="Print the
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
 parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My listening port")
-parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening-) address")
+parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is requested)")
@@ -305,8 +305,8 @@ class Minimal__verbose(Minimal):
         string += "{:>8s}".format("sent") # sent_messages_count
         string += "{:>8s}".format("recv.") # received_messages_count
         string += "{:>8s}".format("sent") # sent_kbps
-        string += "{:>8s}".format("recv.") # received_kbps
-        string += "{:4s}".format('') # CPU_usage
+        string += "{:>9s}".format("recv.") # received_kbps
+        string += "{:3s}".format('') # CPU_usage
         string += "{:>6s}".format("Global") # average_global_CPU_usage
         return string
 

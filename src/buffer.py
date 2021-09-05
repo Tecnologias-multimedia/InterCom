@@ -195,11 +195,19 @@ except ImportError:
 
 if __name__ == "__main__":
     minimal.parser.description = __doc__
+
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
         logging.warning("argcomplete not working :-/")
+
     minimal.args = minimal.parser.parse_known_args()[0]
+    
+    if minimal.args.list_devices:
+        print("Available devices:")
+        print(sd.query_devices())
+        quit()
+
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = Buffering__verbose()
     else:
