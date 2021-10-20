@@ -9,6 +9,7 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 class Compression2(compress.Compression):
     def __init__(self):
