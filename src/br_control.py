@@ -168,7 +168,7 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
         # computing the power by 2, which is equivalent to compute
         # "a**2". Moreover, numpy provides the element-wise array
         # multiplication "numpy.multiply(a, b)" that when "a" and "b"
-        # are equal, generaes the same result. Among all these
+        # are equal, generates the same result. Among all these
         # alternatives, the dot product seems to be the faster one.
        
         signal_energy = [None] * self.NUMBER_OF_CHANNELS
