@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress.py: The chunks are not compressed (using only for testing).'''
+'''Base class. The chunks are not compressed.'''
 
 import zlib
 import numpy as np
@@ -29,8 +29,6 @@ class Compression(buffer.Buffering):
 
 class Compression__verbose(Compression, buffer.Buffering__verbose):
     def __init__(self):
-        if __debug__:
-            print("Running Compression__verbose.__init__")
         super().__init__()
         self.standard_deviation = np.zeros(self.NUMBER_OF_CHANNELS) # Standard_Deviation of the chunks_per_cycle chunks.
         self.entropy = np.zeros(self.NUMBER_OF_CHANNELS) # Entropy of the chunks_per_cycle chunks.

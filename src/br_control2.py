@@ -29,8 +29,6 @@ class BR_Control2(br_control.BR_Control):
 class BR_Control2__verbose(BR_Control2, br_control.BR_Control__verbose):
     
     def __init__(self):
-        if __debug__:
-            print("Running BR_Control2__verbose.__init__")
         super().__init__()
 
 try:

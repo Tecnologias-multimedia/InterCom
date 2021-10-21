@@ -226,12 +226,10 @@ class Minimal__verbose(Minimal):
     run()
     '''
 
-    SECONDS_PER_CYCLE = 1
+    seconds_per_cycle = 1
     
     def __init__(self):
         ''' Defines the stuff for providing the running information. '''
-        if __debug__:
-            print("Running Minimal__verbose.__init__")
         super().__init__()
 
         self.cycle = 1 # An infinite cycle's counter.
@@ -252,7 +250,7 @@ class Minimal__verbose(Minimal):
         self.average_received_kbps = 0
         # All average values are per cycle.
         
-        self.frames_per_cycle = self.SECONDS_PER_CYCLE * args.frames_per_second
+        self.frames_per_cycle = self.seconds_per_cycle * args.frames_per_second
         self.chunks_per_cycle = self.frames_per_cycle / args.frames_per_chunk
 
         self.old_time = time.time()
@@ -263,10 +261,9 @@ class Minimal__verbose(Minimal):
         if args.reading_time:
             self.chunks_to_sent = int(args.reading_time)/self.chunk_time
 
-        if __debug__:
-            print("SECONDS_PER_CYCLE =", self.SECONDS_PER_CYCLE)            
-            print("chunks_per_cycle =", self.chunks_per_cycle)
-            print("frames_per_cycle =", self.frames_per_cycle)
+        logging.info(f"seconds_per_cycle = {self.seconds_per_cycle}")            
+        logging.info(f"chunks_per_cycle = {self.chunks_per_cycle}")
+        logging.info(f"frames_per_cycle = {self.frames_per_cycle}")
 
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
@@ -462,7 +459,7 @@ class Minimal__verbose(Minimal):
         try:
             with self.stream(self._handler):
                 while self.total_number_of_sent_chunks < self.chunks_to_sent:
-                    time.sleep(self.SECONDS_PER_CYCLE)
+                    time.sleep(self.seconds_per_cycle)
                     self.cycle_feedback()
                 self.print_final_averages()
         except KeyboardInterrupt:

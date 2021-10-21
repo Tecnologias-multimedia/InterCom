@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Implements MST (Mid/Side Transform) for 32 bits/coefficients.'''
+'''Implements MST (Mid/Side Transform) using 32 bits/coefficient.'''
 import numpy as np
 import minimal
 import stereo_coding
@@ -28,8 +28,6 @@ class Stereo_Coding_32(stereo_coding.Stereo_Coding):
 class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding.Stereo_Coding__verbose):
 
     def __init__(self):
-        if __debug__:
-            print("Running Stereo_Coding0__verbose.__init__")
         super().__init__()
 
     def analyze(self, x):

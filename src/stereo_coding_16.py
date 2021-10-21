@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Implements MST (Mid/Side Transform) for 16 bits/coefficients.'''
+'''Implements MST (Mid/Side Transform) using 16 bits/coefficient.'''
 
 import numpy as np
 import minimal
@@ -33,8 +33,6 @@ class Stereo_Coding0(stereo_coding.Stereo_Coding):
 class Stereo_Coding0__verbose(Stereo_Coding0, stereo_coding.Stereo_Coding__verbose):
 
     def __init__(self):
-        if __debug__:
-            print("Running Stereo_Coding0__verbose.__init__")
         super().__init__()
 
 try:

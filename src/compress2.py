@@ -42,8 +42,6 @@ class Compression2(compress.Compression):
 
 class Compression2__verbose(Compression2, compress.Compression__verbose):
     def __init__(self):
-        if __debug__:
-            print("Running Compression2__verbose.__init__")
         super().__init__()
 
     def unpack(self, packed_chunk):

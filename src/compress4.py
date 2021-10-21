@@ -38,8 +38,6 @@ class Compression4(compress.Compression):
 
 class Compression4__verbose(Compression4, compress.Compression__verbose):
     def __init__(self):
-        if __debug__:
-            print("Running Compression4__verbose.__init__")
         super().__init__()
 
     def unpack(self, packed_chunk):

@@ -124,8 +124,6 @@ class Buffering(minimal.Minimal):
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
-        if __debug__:
-            print("Running Buffering__verbose.__init__")
         super().__init__()
 
         thread = threading.Thread(target=self.feedback)
@@ -134,7 +132,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
 
     def feedback(self):
         while True:
-            time.sleep(self.SECONDS_PER_CYCLE)
+            time.sleep(self.seconds_per_cycle)
             self.cycle_feedback()
 
     def send(self, packed_chunk):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Removes the intra-channel redundancy between the samples of the same channel of each chunk using the DWT.'''
+'''Removes the intra-channel redundancy between the samples of the same channel of each chunk using a non-overlapped DWT.'''
 
 import numpy as np
 import pywt
@@ -35,12 +35,10 @@ class Temporal_Coding(Stereo_Coding):
         coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
         self.slices = pywt.coeffs_to_array(coeffs)[1]
 
-        print("Performing intra-channel decorrelation")
-        if __debug__:
-            print("wavelet name =", minimal.args.wavelet_name)
-            print("analysis filters's length =", self.wavelet.dec_len)
-            print("synthesis filters's length =", self.wavelet.rec_len)
-            print("DWT levels =", self.dwt_levels)
+        logging.info(f"wavelet name = {minimal.args.wavelet_name}")
+        logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
+        logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
+        logging.info(f"DWT levels = {self.dwt_levels}")
 
     def analyze(self, chunk):
         return chunk
@@ -81,8 +79,6 @@ class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
 #class Temporal_Coding__verbose(Temporal_Coding, BR_Control__verbose):
 
     def __init__(self):
-        if __debug__:
-            print("Running Temporal_Coding__verbose.__init__")
         super().__init__()
 
 try:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' The spatial redundancy is not removed (using only for testing).'''
+'''Base class. The spatial redundancy is not exploited.'''
 
 import numpy as np
 import minimal
@@ -35,8 +35,6 @@ from br_control2 import BR_Control2__verbose as BR_Control__verbose
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 
     def __init__(self):
-        if __debug__:
-            print("Running Stereo_Coding__verbose.__init__")
         super().__init__()
         self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
         self.average_LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
