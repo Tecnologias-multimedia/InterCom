@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
+'''Chunk compression by byte-planes using DEFLATE. 32 bits/sample. 4 code-streams.'''
+
 import zlib
 import numpy as np
 import struct
@@ -8,8 +10,6 @@ import math
 import minimal
 import compress
 import logging
-
-'''compress3_32.py: Chunk compression by byte-planes using DEFLATE. 32 bits/sample. 4 code-streams.'''
 
 class Compression3_32(compress.Compression):
     def __init__(self):

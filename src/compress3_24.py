@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Chunk compression by byte-planes using DEFLATE. 24 bits/sample. 4 code-streams.'''
+'''Chunk compression by byte-planes using DEFLATE. 24 bits/sample. 3 code-streams  (one per byte-plane) are generated.'''
 
 import zlib
 import numpy as np

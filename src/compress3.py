@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress3.py: Chunk compression by byte-planes using DEFLATE. 16 bits/sample (notice that this can be insufficient when energy accumulation is used). 2 code-streams.'''
+'''Chunk compression by byte-planes using DEFLATE. 16 bits/sample (notice that this can be insufficient when energy accumulation is used). 2 code-streams (one per byte-plane) are generated. Channels are concatenated before compression.'''
 
 import zlib
 import numpy as np
@@ -9,12 +9,13 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 class Compression3(compress.Compression):
     def __init__(self):
         super().__init__()
         if __debug__:
-            print(__doc__)
+            logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         channel_0_MSB = (chunk[:, 0] // 256).astype(np.int8)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (compress3.py). '''
+'''Compress the chunks by byte-planes ([MSB], [LSB]), where the frames are interlaced [frame0, frame1]). Each byte-plane is compressed independently.'''
 
 import zlib
 import numpy as np
@@ -9,17 +9,15 @@ import struct
 import math
 import minimal
 import compress
+import logging
 
 class Compression4(compress.Compression):
-    '''Compress the chunks by byte-planes ([MSB], [LSB]), where the frames
-are interlaced [frame0, frame1]). Each byte-plane is compressed
-independently.
-
-    '''
+    
     def __init__(self):
         if __debug__:
             print("Running Compression4.__init__")
         super().__init__()
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         MSB = (chunk // 256).astype(np.int8)
