@@ -35,8 +35,6 @@ class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__v
     def __init__(self):
         super().__init__()
 
-    def _analyze(self, x):
-        return stereo_coding.Stereo_Coding__verbose.analyze(self, x)
     def analyze(self, chunk):
         analyzed_chunk = Stereo_Coding_16.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)

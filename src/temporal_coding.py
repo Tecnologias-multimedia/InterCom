@@ -1,23 +1,19 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Removes the intra-channel redundancy between the samples of the same channel of each chunk using a non-overlapped DWT.'''
+'''Base class. No DWT.'''
 
 import numpy as np
 import pywt
 import minimal
-#import buffer
-#from compress2 import Compression2 as Compression
-#from br_control2 import BR_Control2 as BR_Control
 from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 import logging
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
 
-#class Temporal_Coding(buffer.Buffering):
 class Temporal_Coding(Stereo_Coding):
-#class Temporal_Coding(BR_Control):
+    pass # <-----------------------------------------------------
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -41,45 +37,38 @@ class Temporal_Coding(Stereo_Coding):
         logging.info(f"DWT levels = {self.dwt_levels}")
 
     def analyze(self, chunk):
-        return chunk
+        analyzed_chunk = super().analyze(chunk)
+        #analyzed_chunk = Stereo_Coding.analyze(self, chunk)
+        return analyzed_chunk
 
     def synthesize(self, DWT_chunk):
-        return DWT_chunk
+        chunk = super().synthesize(DWT_chunk)
+        #chunk = Stereo_Coding.synthesize(self, DWT_chunk)
+        return chunk
 
+'''
     def pack(self, chunk_number, chunk):
-        #chunk = Stereo_Coding.analyze(self, chunk)
         analyzed_chunk = self.analyze(chunk)
-        #chunk = super().analyze(chunk)
-        #quantized_chunk = self.quantize(chunk)
-        #quantized_chunk = br_control.BR_Control.quantize(self, chunk)
-        #chunk = chunk.astype(np.int16)
-        #print(quantized_chunk.shape, np.dtype(quantized_chunk))
-        #compressed_chunk = Compression.pack(self, chunk_number, quantized_chunk)
-        packed_chunk = super().pack(chunk_number, analyzed_chunk)
+        #packed_chunk = super().pack(chunk_number, analyzed_chunk)
+        packed_chunk = Stereo_Coding.pack(self, chunk_number, analyzed_chunk)
         return packed_chunk
-
     def unpack(self, packed_chunk):
-        chunk_number, analyzed_chunk = super().unpack(packed_chunk)
+        #chunk_number, analyzed_chunk = super().unpack(packed_chunk)
+        chunk_number, analyzed_chunk = Stereo_Coding.unpack(self, packed_chunk)
         chunk = self.synthesize(analyzed_chunk)
         return chunk_number, chunk
-    
-    def unpack_(self, compressed_chunk):
-        chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
-        print(quantized_chunk.shape)
-        chunk = self.dequantize(quantized_chunk)
-        #chunk = br_control.BR_Control.dequantize(self, quantized_chunk)
-        chunk = super().synthesize(chunk)
-        #chunk = Stereo_Coding.synthesize(self, chunk)
-        return chunk_number, chunk
-
+'''
 from stereo_coding_32 import Stereo_Coding_32__verbose as Stereo_Coding__verbose
-#from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
-#class Temporal_Coding__verbose(Temporal_Coding, BR_Control__verbose):
 
     def __init__(self):
         super().__init__()
+
+    def analyze(self, chunk):
+        analyzed_chunk = Temporal_Coding.analyze(self, chunk)
+        self.LH_chunks_in_the_cycle.append(analyzed_chunk)
+        return analyzed_chunk
 
 try:
     import argcomplete  # <tab> completion for argparse.

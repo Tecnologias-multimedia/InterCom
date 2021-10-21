@@ -48,7 +48,7 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
 
     def first_line(self):
         string = super().first_line()
-        string += "{:27s}".format('') # standard_deviation
+        string += "{:>21s}".format("sent channels's") # standard_deviation
         string += "{:17s}".format('') # entropy
         string += "{:17s}".format('') # bps
         return string
@@ -107,14 +107,13 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
     def _record_io_and_play(self, indata, outdata, frames, time, status):
         super()._record_io_and_play(indata, outdata, frames, time, status)
         self.chunks_in_the_cycle.append(indata)
-        print(",")
         # Remember: indata contains the recorded chunk and outdata,
         # the played chunk.
 
     def _read_io_and_play(self, outdata, frames, time, status):
-        chunk = super()._read_io_and_play(outdata, frames, time, status)
-        self.chunks_in_the_cycle.append(chunk)
-        return chunk
+        read_chunk = super()._read_io_and_play(outdata, frames, time, status)
+        self.chunks_in_the_cycle.append(read_chunk)
+        return read_chunk
 
     # Chunks are uncompressed
     def unpack(self, packed_chunk):
