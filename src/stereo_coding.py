@@ -33,7 +33,8 @@ class Stereo_Coding(BR_Control):
 from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
-
+    pass
+'''
     def __init__(self):
         super().__init__()
         self.LH_std_deviation = np.zeros(self.NUMBER_OF_CHANNELS)
@@ -79,6 +80,7 @@ class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
         analyzed_chunk = super().analyze(chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
+'''
 
 try:
     import argcomplete  # <tab> completion for argparse.

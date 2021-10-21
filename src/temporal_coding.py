@@ -61,7 +61,8 @@ class Temporal_Coding(Stereo_Coding):
 from stereo_coding_32 import Stereo_Coding_32__verbose as Stereo_Coding__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
-
+    pass
+'''
     def __init__(self):
         super().__init__()
 
@@ -69,6 +70,7 @@ class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):
         analyzed_chunk = Temporal_Coding.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
+'''
 
 try:
     import argcomplete  # <tab> completion for argparse.

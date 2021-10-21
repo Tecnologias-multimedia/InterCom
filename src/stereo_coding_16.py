@@ -31,7 +31,8 @@ class Stereo_Coding_16(stereo_coding.Stereo_Coding):
         return x
 
 class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__verbose):
-
+    pass
+'''
     def __init__(self):
         super().__init__()
 
@@ -39,7 +40,8 @@ class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__v
         analyzed_chunk = Stereo_Coding_16.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
-    
+'''
+
 try:
     import argcomplete  # <tab> completion for argparse.
 except ImportError:

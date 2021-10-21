@@ -68,6 +68,8 @@ class Minimal:
             self._handler = self._record_io_and_play
             self.stream = self.mic_stream
 
+        self.input_exhausted = False
+
     def pack(self, chunk):
         '''Builds a packet's payloads with a chunk.'''
         return chunk  # In minimal, this method does not perform any work.
@@ -155,7 +157,11 @@ class Minimal:
     def read_chunk_from_file(self):
         chunk = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        try:
+            chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        except ValueError:
+            logging.warning("Input exhausted! :-/")
+            self.input_exhausted = True
         return chunk
             
     def _read_io_and_play(self, outdata, frames, time, status):
@@ -165,7 +171,7 @@ class Minimal:
         try:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
-        except (socket.timeout, BlockingIOError):
+        except (socket.timeout, BlockingIOError, ValueError):
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
         outdata[:] = chunk
@@ -212,7 +218,9 @@ class Minimal:
         logging.info("Press enter-key to quit")
 
         with self.stream(self._handler):
-            input()
+            #input()
+            while not self.input_exhausted:
+                time.sleep(1)
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
@@ -459,7 +467,7 @@ class Minimal__verbose(Minimal):
 
         try:
             with self.stream(self._handler):
-                while self.total_number_of_sent_chunks < self.chunks_to_sent:
+                while self.total_number_of_sent_chunks < self.chunks_to_sent and not self.input_exhausted:
                     time.sleep(self.seconds_per_cycle)
                     self.cycle_feedback()
                 self.print_final_averages()

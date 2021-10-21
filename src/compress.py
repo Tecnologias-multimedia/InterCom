@@ -48,16 +48,16 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
 
     def first_line(self):
         string = super().first_line()
-        string += "{:>21s}".format("sent channels's") # standard_deviation
-        string += "{:17s}".format('') # entropy
-        string += "{:17s}".format('') # bps
+        string += "{:>21s}".format("input audio") # standard_deviation
+        string += "{:>17s}".format('input audio') # entropy
+        string += "{:>17s}".format('output') # bps
         return string
 
     def second_line(self):
         string = super().second_line()
         string += "{:>21s}".format("standard deviation") # standard_deviation
         string += "{:>17s}".format("entropy") # entropy
-        string += "{:>17s}".format("BPS") # bps
+        string += "{:>17s}".format("bits/sample") # bps
         return string
 
     def separator(self):

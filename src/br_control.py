@@ -95,7 +95,7 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
 
     def stats(self):
         string = super().stats()
-        string += "{:>4d}".format(self.quantization_step)
+        string += "{:>5d}".format(self.quantization_step)
         string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE_per_cycle / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(np.int)])
         string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR_per_cycle).astype(np.int)])
 
@@ -103,26 +103,26 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
         
     def first_line(self):
         string = super().first_line()
-        string += "{:>4s}".format('') # self.quantization_step
+        string += "{:>5s}".format('') # self.quantization_step
         string += "{:>19s}".format('10^4 *') # average_RMSE_per_cycle
         string += "{:>15s}".format('') # average_SNR_per_cycle
         return string
 
     def second_line(self):
         string = super().second_line()
-        string += "{:>4s}".format('Q') # self.quantization_step
+        string += "{:>5s}".format('Q') # self.quantization_step
         string += "{:>19s}".format('RMSE/sample') # average_RMSE_per_cycle
         string += "{:>15s}".format('SNR[dB]') # average_SNR_per_cycle
         return string
 
     def separator(self):
         string = super().separator()
-        string += f"{'='*(4+19+15)}"
+        string += f"{'='*(5+19+15)}"
         return string
 
     def averages(self):
         string = super().averages()
-        string += 4*' '
+        string += 5*' '
         string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(np.int)])
         string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR).astype(np.int)])
         return string

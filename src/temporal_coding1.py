@@ -18,8 +18,7 @@ class Temporal_Coding0(Temporal_Coding):
         logging.info(__doc__)
 
     def analyze(self, chunk):
-        #print("DWT analyze")
-        '''Forward DWT.'''
+        chunk = super().analyze(chunk)
         DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
@@ -37,6 +36,7 @@ class Temporal_Coding0(Temporal_Coding):
             channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
             #chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int32)
             chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
+        chunk = super().synthesize(chunk)
         return chunk
 '''
     def pack_(self, chunk_number, chunk):
@@ -50,10 +50,11 @@ class Temporal_Coding0(Temporal_Coding):
 from temporal_coding import Temporal_Coding__verbose
 
 class Temporal_Coding0__verbose(Temporal_Coding0, Temporal_Coding__verbose):
+    pass
     #pass
     #def ___init__(self):
     #    super().__init__()
-
+'''
     def _analyze(self, chunk):
         analyzed_chunk = Temporal_Coding0.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
@@ -61,6 +62,7 @@ class Temporal_Coding0__verbose(Temporal_Coding0, Temporal_Coding__verbose):
 
     def __analyze(self, chunk):
         return Temporal_Coding__verbose.analyze(self, chunk)
+'''
 
 try:
     import argcomplete  # <tab> completion for argparse.

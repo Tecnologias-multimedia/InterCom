@@ -118,7 +118,7 @@ class Buffering(minimal.Minimal):
             # <self.chunks_to_buffer> position before
                 # <first_received_chunk_number>.
 
-            while True:
+            while True and not self.input_exhausted:
                 self.receive_and_buffer()
             
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
@@ -180,7 +180,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
                 if __debug__:
                     print("first_received_chunk_number =", first_received_chunk_number)
                 self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
-                while self.total_number_of_sent_chunks < self.chunks_to_sent:
+                while self.total_number_of_sent_chunks < self.chunks_to_sent and not self.input_exhausted:
                     self.receive_and_buffer()
                 self.print_final_averages()
         except KeyboardInterrupt:
