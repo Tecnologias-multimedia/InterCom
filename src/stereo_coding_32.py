@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Implements MST (Mid/Side Transform) using 32 bits/coefficient.'''
+'''Implements MST using 32 bits/coefficient.'''
+
 import numpy as np
 import minimal
 import stereo_coding
@@ -30,8 +31,12 @@ class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding.Stereo_Coding__v
     def __init__(self):
         super().__init__()
 
-    def analyze(self, x):
+    def _analyze(self, x):
         return stereo_coding.Stereo_Coding__verbose.analyze(self, x)
+    def analyze(self, chunk):
+        analyzed_chunk = Stereo_Coding_32.analyze(self, chunk)
+        self.LH_chunks_in_the_cycle.append(analyzed_chunk)
+        return analyzed_chunk
 
 try:
     import argcomplete  # <tab> completion for argparse.

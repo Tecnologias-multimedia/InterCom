@@ -50,11 +50,14 @@ class Minimal:
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
         logging.info(__doc__)
+        logging.info(f"NUMBER_OF_CHANNELS = {self.NUMBER_OF_CHANNELS}")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
+        logging.info(f"chunk_time = {self.chunk_time} seconds")
         self.zero_chunk = self.generate_zero_chunk()
+
 
         if args.filename:
             logging.info(f"Using \"{args.filename}\" as input")
@@ -405,8 +408,6 @@ class Minimal__verbose(Minimal):
         print("\nUsing device:\n")
         print(sd.query_devices(args.input_device))
         print()
-        print("chunk_time =", self.chunk_time, "seconds")
-        print("NUMBER_OF_CHANNELS =", self.NUMBER_OF_CHANNELS)
         print("Use CTRL+C to quit")
 
     def show_data(self, data):

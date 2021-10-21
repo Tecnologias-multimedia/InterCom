@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Base class. The spatial redundancy is not exploited.'''
+'''Base class. MST (Mid/Side Transform) is not used.'''
 
 import numpy as np
 import minimal
@@ -36,28 +36,23 @@ class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 
     def __init__(self):
         super().__init__()
-        self.LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
-        self.average_LH_variance = np.zeros(self.NUMBER_OF_CHANNELS)
+        self.LH_std_deviation = np.zeros(self.NUMBER_OF_CHANNELS)
+        self.average_LH_std_deviation = np.zeros(self.NUMBER_OF_CHANNELS)
         self.LH_chunks_in_the_cycle = []
 
     def stats(self):
         string = super().stats()
-        string += " {}".format(['{:>5d}'.format(int(i/1000)) for i in self.LH_variance])
-        return string
-
-    def _first_line(self):
-        string = super().first_line()
-        string += "{:19s}".format('') # LH_variance
+        string += " {}".format(['{:>5d}'.format(int(i/1)) for i in self.LH_std_deviation])
         return string
 
     def first_line(self):
         string = super().first_line()
-        string += "{:19s}".format('') # LH_variance
+        string += "{:19s}".format('') # LH_std_deviation
         return string
 
     def second_line(self):
         string = super().second_line()
-        string += "{:>19s}".format("LH variance") # LH variance
+        string += "{:>19s}".format("LH std_deviation") # LH std_deviation
         return string
 
     def separator(self):
@@ -67,16 +62,16 @@ class Stereo_Coding__verbose(Stereo_Coding, BR_Control__verbose):
 
     def averages(self):
         string = super().averages()
-        string += " {}".format(['{:>5d}'.format(int(i/1000)) for i in self.average_LH_variance])
+        string += " {}".format(['{:>5d}'.format(int(i/1)) for i in self.average_LH_std_deviation])
         return string
 
     def cycle_feedback(self):
         try:
             concatenated_chunks = np.vstack(self.LH_chunks_in_the_cycle)
-            self.LH_variance = np.var(concatenated_chunks, axis=0)
+            self.LH_std_deviation = np.sqrt(np.var(concatenated_chunks, axis=0))
         except ValueError:
             pass
-        self.average_LH_variance = self.moving_average(self.average_LH_variance, self.LH_variance, self.cycle)
+        self.average_LH_std_deviation = self.moving_average(self.average_LH_std_deviation, self.LH_std_deviation, self.cycle)
         super().cycle_feedback()
         self.LH_chunks_in_the_cycle = []
 
