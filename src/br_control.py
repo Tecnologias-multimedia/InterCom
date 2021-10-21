@@ -98,7 +98,7 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
     def first_line(self):
         string = super().first_line()
         string += "{:>4s}".format('') # self.quantization_step
-        string += "{:>19s}".format('10^4 *') # average_RMSE_per_cycle
+        string += "{:>13s}".format('10^4 *') # average_RMSE_per_cycle
         string += "{:>15s}".format('') # average_SNR_per_cycle
         return string
 
