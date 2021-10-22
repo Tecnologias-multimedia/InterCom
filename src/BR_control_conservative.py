@@ -7,9 +7,9 @@ import time
 import logging
 
 import minimal
-import br_control_no
+import BR_control_no
 
-class BR_Control_Conservative(br_control_no.BR_Control_No):
+class BR_Control_Conservative(BR_control_no.BR_Control_No):
 
     def __init__(self):
         super().__init__()
@@ -27,7 +27,7 @@ class BR_Control_Conservative(br_control_no.BR_Control_No):
             self.number_of_received_chunks = 0
             time.sleep(1)
 
-class BR_Control_Conservative__verbose(BR_Control_Conservative, br_control_no.BR_Control_No__verbose):
+class BR_Control_Conservative__verbose(BR_Control_Conservative, BR_control_no.BR_Control_No__verbose):
     pass
     #def __init__(self):
     #    super().__init__()
