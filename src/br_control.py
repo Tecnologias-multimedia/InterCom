@@ -207,12 +207,10 @@ class BR_Control__verbose(BR_Control, Compression__verbose):
                     self.accumulated_SNR_per_cycle[c] += SNR[c]
 
     def _record_io_and_play(self, indata, outdata, frames, time, status):
-
         super()._record_io_and_play(indata, outdata, frames, time, status)
         self.compute(indata, outdata)
 
     def _read_io_and_play(self, outdata, frames, time, status):
-
         chunk = super()._read_io_and_play(outdata, frames, time, status)
         self.compute(chunk, outdata)
 

@@ -1,35 +1,36 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-# UNUSED!!!!!!!!!!!!!!!!!
-
-'''Base class. The chunks are not compressed.'''
+'''Compress each raw chunk using DEFLATE.'''
 
 import zlib
 import numpy as np
 import struct
 import math
-import minimal
-import buffer
 import logging
 
-class Compression(buffer.Buffering):
+import minimal
+import buffer
+
+class Compression_Raw(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
-        '''Builds a packed packet with a compressed chunk and a chunk_number
-        (which is not compressed).
-
-        '''
-        return super().pack(chunk_number, chunk)
+        compressed_chunk = zlib.compress(chunk)
+        packed_chunk = struct.pack("!H", chunk_number) + compressed_chunk
+        return packed_chunk
 
     def unpack(self, packed_chunk):
-        '''Gets the chunk number and the chunk from packed_chunk.'''
-        return super().unpack(packed_chunk)
+        (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
+        compressed_chunk = packed_chunk[2:]
+        chunk = zlib.decompress(compressed_chunk)
+        chunk = np.frombuffer(chunk, dtype=np.int16)
+        chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        return chunk_number, chunk
 
-class Compression__verbose(Compression, buffer.Buffering__verbose):
+class Compression_Raw__verbose(Compression_Raw, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
         self.standard_deviation = np.zeros(self.NUMBER_OF_CHANNELS) # Standard_Deviation of the chunks_per_cycle chunks.
@@ -117,13 +118,11 @@ class Compression__verbose(Compression, buffer.Buffering__verbose):
         self.chunks_in_the_cycle.append(read_chunk)
         return read_chunk
 
-    # Chunks are uncompressed
     def unpack(self, packed_chunk):
         len_packed_chunk = len(packed_chunk)
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
-        chunk_number, chunk = super().unpack(packed_chunk)
-        return chunk_number, chunk
+        return Compression_Raw.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -135,12 +134,12 @@ if __name__ == "__main__":
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        logging.warning("argcomplete not working :-/")
+        logging.warnning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression__verbose()
+        intercom = Compression_Raw__verbose()
     else:
-        intercom = Compression()
+        intercom = Compression_Raw()
     try:
         intercom.run()
     except KeyboardInterrupt:

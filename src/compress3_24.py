@@ -71,7 +71,7 @@ class Compression3_24__verbose(Compression3_24, compress.Compression__verbose):
         (chunk_number, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHH", packed_chunk[:6])
         len_compressed_LSB = len(packed_chunk) - (len_compressed_MSB1 + len_compressed_MSB0 + 6)
 
-        # Ojo, que esto no son los bps / canal
+        # Ojo, que esto no son los bps / canal. ¿Pues qué son?
         self.bps[1] += (len_compressed_MSB1 + len_compressed_MSB0)*8
         self.bps[0] += len_compressed_LSB*8
         return Compression3_24.unpack(self, packed_chunk)
