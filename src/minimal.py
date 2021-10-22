@@ -12,7 +12,9 @@ import psutil
 import logging
 import soundfile as sf
 import logging
+#FORMAT = "%(module)s: %(message)s"
 FORMAT = "(%(levelname)s) %(module)s: %(message)s"
+#logging.basicConfig(format=FORMAT)
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 def spinning_cursor():

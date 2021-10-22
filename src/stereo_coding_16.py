@@ -4,12 +4,13 @@
 '''Implements MST using 16 bits/coefficient.'''
 
 import numpy as np
-import minimal
-import stereo_coding
 import logging
 
-class Stereo_Coding_16(stereo_coding.Stereo_Coding):
+import minimal
+from br_control2 import BR_Control2 as BR_Control
 
+#class Stereo_Coding_16(stereo_coding.Stereo_Coding):
+class Stereo_Coding_16(BR_Control):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -30,7 +31,10 @@ class Stereo_Coding_16(stereo_coding.Stereo_Coding):
         x[:, 1] = w[:, 0] - w[:, 1]
         return x
 
-class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__verbose):
+from br_control2 import BR_Control2__verbose as BR_Control__verbose
+
+#class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__verbose):
+class Stereo_Coding_16__verbose(Stereo_Coding_16, BR_Control__verbose):
     pass
 '''
     def __init__(self):

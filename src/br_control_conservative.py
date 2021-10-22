@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''The quantization step is multipled by 2 each time 2 lost chunks has been detected. Otherwise, the quantization step is divided by 1.1.'''
+'''Bit-rate control using quantization. Both channels are quantized using the same constant step. The quantization step is multipled by 2 each time 2 lost chunks has been detected. Otherwise, the quantization step is divided by 1.1.'''
 
 import time
-import minimal
-import br_control
 import logging
 
-class BR_Control2(br_control.BR_Control):
+import minimal
+import br_control_no
+
+class BR_Control_Conservative(br_control_no.BR_Control_No):
 
     def __init__(self):
         super().__init__()
@@ -26,10 +27,10 @@ class BR_Control2(br_control.BR_Control):
             self.number_of_received_chunks = 0
             time.sleep(1)
 
-class BR_Control2__verbose(BR_Control2, br_control.BR_Control__verbose):
-    
-    def __init__(self):
-        super().__init__()
+class BR_Control_Conservative__verbose(BR_Control_Conservative, br_control_no.BR_Control_No__verbose):
+    pass
+    #def __init__(self):
+    #    super().__init__()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -44,9 +45,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_args()
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = BR_Control2__verbose()
+        intercom = BR_Control_Conservative__verbose()
     else:
-        intercom = BR_Control2()
+        intercom = BR_Control_Conservative()
     try:
         intercom.run()
     except KeyboardInterrupt:
