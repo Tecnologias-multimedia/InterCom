@@ -10,9 +10,9 @@ import math
 import logging
 
 import minimal
-import compress_raw
+import DEFLATE_raw
 
-class Compression_Serial(compress_raw.Compression_Raw):
+class DEFLATE_Serial(DEFLATE_raw.DEFLATE_Raw):
     
     def __init__(self):
         super().__init__()
@@ -36,7 +36,7 @@ class Compression_Serial(compress_raw.Compression_Raw):
         chunk = reordered_chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
         return chunk_number, chunk
 
-class Compression_Serial__verbose(Compression_Serial, compress_raw.Compression_Raw__verbose):
+class DEFLATE_Serial__verbose(DEFLATE_Serial, DEFLATE_raw.DEFLATE_Raw__verbose):
     def __init__(self):
         super().__init__()
 
@@ -44,7 +44,7 @@ class Compression_Serial__verbose(Compression_Serial, compress_raw.Compression_R
         len_packed_chunk = len(packed_chunk)
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
-        return Compression_Serial.unpack(self, packed_chunk)
+        return DEFLATE_Serial.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -59,9 +59,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression_Serial__verbose()
+        intercom = DEFLATE_Serial__verbose()
     else:
-        intercom = Compression_Serial()
+        intercom = DEFLATE_Serial()
     try:
         intercom.run()
     except KeyboardInterrupt:

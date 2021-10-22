@@ -18,7 +18,7 @@ import time
 import logging
 
 import minimal
-from compress_byteplanes3 import Compression_BytePlanes3 as Compression
+from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as Compression
 
 minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
 
@@ -75,7 +75,7 @@ class BR_Control_No(Compression):
         #chunk = quantized_chunk
         return chunk_number, chunk
 
-from compress_byteplanes3 import Compression_BytePlanes3__verbose as Compression__verbose
+from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3__verbose as Compression__verbose
 
 class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
     

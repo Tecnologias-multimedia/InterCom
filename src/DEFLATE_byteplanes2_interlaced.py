@@ -10,9 +10,9 @@ import math
 import logging
 
 import minimal
-import compress_raw
+import DEFLATE_raw
 
-class Compression_BytePlanes2_Interlaced(compress_raw.Compression_Raw):
+class DEFLATE_BytePlanes2_Interlaced(DEFLATE_raw.DEFLATE_Raw):
 
     def __init__(self):
         super().__init__()
@@ -35,7 +35,7 @@ class Compression_BytePlanes2_Interlaced(compress_raw.Compression_Raw):
         chunk = MSB*256 + LSB
         return chunk_number, chunk
 
-class Compression_BytePlanes2_Interlaced__verbose(Compression_BytePlanes2_Interlaced, compress_raw.Compression_Raw__verbose):
+class DEFLATE_BytePlanes2_Interlaced__verbose(DEFLATE_BytePlanes2_Interlaced, DEFLATE_raw.DEFLATE_Raw__verbose):
     def __init__(self):
         super().__init__()
 
@@ -45,7 +45,7 @@ class Compression_BytePlanes2_Interlaced__verbose(Compression_BytePlanes2_Interl
 
         self.bps[0] += len_compressed_channel_0*8
         self.bps[1] += len_compressed_channel_1*8
-        return Compression_BytePlanes2_Interlaced.unpack(self, packed_chunk)
+        return DEFLATE_BytePlanes2_Interlaced.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -60,9 +60,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression_BytePlanes2_Interlaced__verbose()
+        intercom = DEFLATE_BytePlanes2_Interlaced__verbose()
     else:
-        intercom = Compression_BytePlanes2_Interlaced()
+        intercom = DEFLATE_BytePlanes2_Interlaced()
     try:
         intercom.run()
     except KeyboardInterrupt:

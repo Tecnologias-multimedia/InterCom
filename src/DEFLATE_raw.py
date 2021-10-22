@@ -12,7 +12,7 @@ import logging
 import minimal
 import buffer
 
-class Compression_Raw(buffer.Buffering):
+class DEFLATE_Raw(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -30,7 +30,7 @@ class Compression_Raw(buffer.Buffering):
         chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
         return chunk_number, chunk
 
-class Compression_Raw__verbose(Compression_Raw, buffer.Buffering__verbose):
+class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
         self.standard_deviation = np.zeros(self.NUMBER_OF_CHANNELS) # Standard_Deviation of the chunks_per_cycle chunks.
@@ -122,7 +122,7 @@ class Compression_Raw__verbose(Compression_Raw, buffer.Buffering__verbose):
         len_packed_chunk = len(packed_chunk)
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
-        return Compression_Raw.unpack(self, packed_chunk)
+        return DEFLATE_Raw.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -137,9 +137,9 @@ if __name__ == "__main__":
         logging.warnning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression_Raw__verbose()
+        intercom = DEFLATE_Raw__verbose()
     else:
-        intercom = Compression_Raw()
+        intercom = DEFLATE_Raw()
     try:
         intercom.run()
     except KeyboardInterrupt:

@@ -10,9 +10,9 @@ import math
 import logging
 
 import minimal
-import compress_raw
+import DEFLATE_raw
 
-class Compression_BytePlanes3(compress_raw.Compression_Raw):
+class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -53,7 +53,7 @@ class Compression_BytePlanes3(compress_raw.Compression_Raw):
         chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
         return chunk_number, chunk
 
-class Compression_BytePlanes3__verbose(Compression_BytePlanes3, compress_raw.Compression_Raw__verbose):
+class DEFLATE_BytePlanes3__verbose(DEFLATE_BytePlanes3, DEFLATE_raw.DEFLATE_Raw__verbose):
 
     def __init__(self):
         super().__init__()
@@ -65,7 +65,7 @@ class Compression_BytePlanes3__verbose(Compression_BytePlanes3, compress_raw.Com
         # Ojo, que esto son los bps / byteplanes !!! (lo mismo nos vamos a sólo una medida)
         self.bps[1] += (len_compressed_MSB1 + len_compressed_MSB0)*8
         self.bps[0] += len_compressed_LSB*8
-        return Compression_BytePlanes3.unpack(self, packed_chunk)
+        return DEFLATE_BytePlanes3.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -81,9 +81,9 @@ if __name__ == "__main__":
 
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression_BytePlanes3__verbose()
+        intercom = DEFLATE_BytePlanes3__verbose()
     else:
-        intercom = Compression_BytePlanes3()
+        intercom = DEFLATE_BytePlanes3()
     try:
         intercom.run()
     except KeyboardInterrupt:
