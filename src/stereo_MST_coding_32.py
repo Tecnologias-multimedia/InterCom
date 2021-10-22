@@ -7,11 +7,9 @@ import numpy as np
 import logging
 
 import minimal
-import stereo_coding_16
+import stereo_MST_coding_16
 
-#class Stereo_Coding_32(stereo_coding.Stereo_Coding):
-
-class Stereo_Coding_32(stereo_coding_16.Stereo_Coding_16):
+class Stereo_MST_Coding_32(stereo_MST_coding_16.Stereo_MST_Coding_16):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -28,14 +26,14 @@ class Stereo_Coding_32(stereo_coding_16.Stereo_Coding_16):
         x[:, 1] = (w[:, 0] - w[:, 1])/2
         return x
 
-class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding_16.Stereo_Coding_16__verbose):
+class Stereo_MST_Coding_32__verbose(Stereo_MST_Coding_32, stereo_MST_coding_16.Stereo_MST_Coding_16__verbose):
     pass
 '''
     def __init__(self):
         super().__init__()
 
     def analyze(self, chunk):
-        analyzed_chunk = Stereo_Coding_32.analyze(self, chunk)
+        analyzed_chunk = Stereo_MST_Coding_32.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
 '''
@@ -54,9 +52,9 @@ if __name__ == "__main__":
             
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Stereo_Coding_32__verbose()
+        intercom = Stereo_MST_Coding_32__verbose()
     else:
-        intercom = Stereo_Coding_32()
+        intercom = Stereo_MST_Coding_32()
     try:
         intercom.run()
     except KeyboardInterrupt:

@@ -1,21 +1,43 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Removes first intra-channel redudancy and then, intra-frame redudancy.'''
+'''Removes the temporal (intra-channel) redundancy using the DWT. First the spatial (inter-channel) redundancy is removed.'''
 
 # Rename to temporal_coding0.py
 
 import numpy as np
 import pywt
-import minimal
-from temporal_coding import Temporal_Coding
 import logging
 
-class Temporal_Coding0(Temporal_Coding):
+import minimal
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
+
+minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
+minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
+
+class Temporal_No_Overlapped_DWT(Stereo_Coding):
 
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
+
+        self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
+
+        # Default dwt_levels is based on the length of the chunk and the length of the filter
+        self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
+        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
+        if minimal.args.levels:
+            self.dwt_levels = int(minimal.args.levels)
+
+        # Structure used during the decoding
+        zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+        self.slices = pywt.coeffs_to_array(coeffs)[1]
+
+        logging.info(f"wavelet name = {minimal.args.wavelet_name}")
+        logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
+        logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
+        logging.info(f"DWT levels = {self.dwt_levels}")
 
     def analyze(self, chunk):
         chunk = super().analyze(chunk)
@@ -47,11 +69,10 @@ class Temporal_Coding0(Temporal_Coding):
         #return Stereo_Coding.unpack(self, compressed_chunk)
         return super().unpack(compressed_chunk)
 '''
-from temporal_coding import Temporal_Coding__verbose
+from stereo_MST_coding_32 import Stereo_MST_Coding_32__verbose as Stereo_Coding__verbose
 
-class Temporal_Coding0__verbose(Temporal_Coding0, Temporal_Coding__verbose):
+class Temporal_No_Overlapped_DWT__verbose(Temporal_No_Overlapped_DWT, Stereo_Coding__verbose):
     pass
-    #pass
     #def ___init__(self):
     #    super().__init__()
 '''
@@ -77,9 +98,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Temporal_Coding0__verbose()
+        intercom = Temporal_No_Overlapped_DWT__verbose()
     else:
-        intercom = Temporal_Coding0()
+        intercom = Temporal_No_Overlapped_DWT()
     try:
         intercom.run()
     except KeyboardInterrupt:

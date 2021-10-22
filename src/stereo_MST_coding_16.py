@@ -7,10 +7,9 @@ import numpy as np
 import logging
 
 import minimal
-from br_control_add_lost import BR_Control_Add_Lost as BR_Control
+from BR_control_add_lost import BR_Control_Add_Lost as BR_Control
 
-#class Stereo_Coding_16(stereo_coding.Stereo_Coding):
-class Stereo_Coding_16(BR_Control):
+class Stereo_MST_Coding_16(BR_Control):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -41,17 +40,16 @@ class Stereo_Coding_16(BR_Control):
         chunk = self.synthesize(analyzed_chunk)
         return chunk_number, chunk
 
-from br_control_add_lost import BR_Control_Add_Lost__verbose as BR_Control__verbose
+from BR_control_add_lost import BR_Control_Add_Lost__verbose as BR_Control__verbose
 
-#class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__verbose):
-class Stereo_Coding_16__verbose(Stereo_Coding_16, BR_Control__verbose):
+class Stereo_MST_Coding_16__verbose(Stereo_MST_Coding_16, BR_Control__verbose):
     pass
 '''
     def __init__(self):
         super().__init__()
 
     def analyze(self, chunk):
-        analyzed_chunk = Stereo_Coding_16.analyze(self, chunk)
+        analyzed_chunk = Stereo_MST_Coding_16.analyze(self, chunk)
         self.LH_chunks_in_the_cycle.append(analyzed_chunk)
         return analyzed_chunk
 '''
@@ -70,9 +68,9 @@ if __name__ == "__main__":
 
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Stereo_Coding_16__verbose()
+        intercom = Stereo_MST_Coding_16__verbose()
     else:
-        intercom = Stereo_Coding_16()
+        intercom = Stereo_MST_Coding_16()
     try:
         intercom.run()
     except KeyboardInterrupt:
