@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Compress the chunks using DEFLATE. Searialize the channels (remove samples interleaving).'''
+'''Compress the chunks using DEFLATE. Searialize the channels (remove samples interleaving). One DEFLATE interation per chunk.'''
 
 import zlib
 import numpy as np

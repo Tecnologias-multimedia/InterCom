@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Compress the chunks by byte-planes ([MSB], [LSB]), where the frames are interlaced [frame0, frame1]). Each byte-plane is compressed independently.'''
+'''Compress the least significant byte planes of the chunks using DEFLATE. The channels are interlaced. 2 code-streams (one per byte-plane) are generated'''
 
 import zlib
 import numpy as np
 import struct
 import math
-import minimal
-import compress
 import logging
 
-class Compression4(compress.Compression):
-    
+import minimal
+import compress_raw
+
+class Compression_BytePlanes2_Interlaced(compress_raw.Compression_Raw):
+
     def __init__(self):
-        if __debug__:
-            print("Running Compression4.__init__")
         super().__init__()
         logging.info(__doc__)
 
@@ -36,7 +35,7 @@ class Compression4(compress.Compression):
         chunk = MSB*256 + LSB
         return chunk_number, chunk
 
-class Compression4__verbose(Compression4, compress.Compression__verbose):
+class Compression_BytePlanes2_Interlaced__verbose(Compression_BytePlanes2_Interlaced, compress_raw.Compression_Raw__verbose):
     def __init__(self):
         super().__init__()
 
@@ -46,7 +45,7 @@ class Compression4__verbose(Compression4, compress.Compression__verbose):
 
         self.bps[0] += len_compressed_channel_0*8
         self.bps[1] += len_compressed_channel_1*8
-        return Compression4.unpack(self, packed_chunk)
+        return Compression_BytePlanes2_Interlaced.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -61,9 +60,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression4__verbose()
+        intercom = Compression_BytePlanes2_Interlaced__verbose()
     else:
-        intercom = Compression4()
+        intercom = Compression_BytePlanes2_Interlaced()
     try:
         intercom.run()
     except KeyboardInterrupt:

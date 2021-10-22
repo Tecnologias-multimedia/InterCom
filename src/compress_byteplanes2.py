@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Chunk compression by byte-planes using DEFLATE. 16 bits/sample (notice that this can be insufficient when energy accumulation is used). 2 code-streams (one per byte-plane) are generated. Channels are concatenated before compression.'''
+'''Compress the least significant byte planes of the chunks using DEFLATE. The channels are consecutive (serialized). 2 code-streams (one per byte-plane) are generated.'''
 
 import zlib
 import numpy as np
 import struct
 import math
-import minimal
-import compress
 import logging
 
-class Compression3(compress.Compression):
+import minimal
+import compress_raw
+
+class Compression_BytePlanes2(compress_raw.Compression_Raw):
     def __init__(self):
         super().__init__()
-        if __debug__:
-            logging.info(__doc__)
+        logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
         channel_0_MSB = (chunk[:, 0] // 256).astype(np.int8)
@@ -38,14 +38,12 @@ class Compression3(compress.Compression):
         buffer_LSB = zlib.decompress(compressed_LSB)
         channel_MSB = np.frombuffer(buffer_MSB, dtype=np.int8)
         channel_LSB = np.frombuffer(buffer_LSB, dtype=np.uint8)
-        #print(channel_MSB.shape, channel_LSB.shape)
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int16)
-        #print(chunk.shape)
         chunk[:, 0] = channel_MSB[:len(channel_MSB)//2]*256 + channel_LSB[:len(channel_MSB)//2]
         chunk[:, 1] = channel_MSB[len(channel_MSB)//2:]*256 + channel_LSB[len(channel_MSB)//2:]
         return chunk_number, chunk
 
-class Compression3__verbose(Compression3, compress.Compression__verbose):
+class Compression_BytePlanes2__verbose(Compression_BytePlanes2, compress_raw.Compression_Raw__verbose):
 
     def __init__(self):
         super().__init__()
@@ -56,7 +54,7 @@ class Compression3__verbose(Compression3, compress.Compression__verbose):
 
         self.bps[0] += len_compressed_MSB*8
         self.bps[1] += len_compressed_LSB*8
-        return Compression3.unpack(self, packed_chunk)
+        return Compression_BytePlanes2.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -71,9 +69,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression3__verbose()
+        intercom = Compression_BytePlanes2__verbose()
     else:
-        intercom = Compression3()
+        intercom = Compression_BytePlanes2()
     try:
         intercom.run()
     except KeyboardInterrupt:

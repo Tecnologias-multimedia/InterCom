@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''compress2.py: Compress the chunks using DEFLATE. Each channel of the chunk compressed independently. The channels are consecutive.'''
+'''Compress the chunks using DEFLATE. Searialize the channels (remove samples interleaving). One DEFLATE interation per channel (each byte-plane is compressed independently).'''
 
 import zlib
 import numpy as np
 import struct
 import math
-import minimal
-import compress
 import logging
 
-class Compression2(compress.Compression):
+import minimal
+import compress_raw
+
+class Compression_Serial2(compress_raw.Compression_Raw):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -40,7 +41,7 @@ class Compression2(compress.Compression):
 
         return chunk_number, chunk
 
-class Compression2__verbose(Compression2, compress.Compression__verbose):
+class Compression_Serial2__verbose(Compression_Serial2, compress_raw.Compression_Raw__verbose):
     def __init__(self):
         super().__init__()
 
@@ -50,7 +51,7 @@ class Compression2__verbose(Compression2, compress.Compression__verbose):
 
         self.bps[0] += len_compressed_channel_0*8
         self.bps[1] += len_compressed_channel_1*8
-        return Compression2.unpack(self, packed_chunk)
+        return Compression_Serial2.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -65,9 +66,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Compression2__verbose()
+        intercom = Compression_Serial2__verbose()
     else:
-        intercom = Compression2()
+        intercom = Compression_Serial2()
     try:
         intercom.run()
     except KeyboardInterrupt:
