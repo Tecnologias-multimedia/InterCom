@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Implements MST using 16 bits/coefficient.'''
+'''MST using 16 bits/coefficient.'''
 
 import numpy as np
 import logging
 
 import minimal
-from br_control2 import BR_Control2 as BR_Control
+from br_control_add_lost import BR_Control_Add_Lost as BR_Control
 
 #class Stereo_Coding_16(stereo_coding.Stereo_Coding):
 class Stereo_Coding_16(BR_Control):
@@ -31,7 +31,17 @@ class Stereo_Coding_16(BR_Control):
         x[:, 1] = w[:, 0] - w[:, 1]
         return x
 
-from br_control2 import BR_Control2__verbose as BR_Control__verbose
+    def pack(self, chunk_number, chunk):
+        analyzed_chunk = self.analyze(chunk)
+        packed_chunk = super().pack(chunk_number, analyzed_chunk)
+        return packed_chunk
+
+    def unpack(self, packed_chunk):
+        chunk_number, analyzed_chunk = super().unpack(packed_chunk)
+        chunk = self.synthesize(analyzed_chunk)
+        return chunk_number, chunk
+
+from br_control_add_lost import BR_Control_Add_Lost__verbose as BR_Control__verbose
 
 #class Stereo_Coding_16__verbose(Stereo_Coding_16, stereo_coding.Stereo_Coding__verbose):
 class Stereo_Coding_16__verbose(Stereo_Coding_16, BR_Control__verbose):

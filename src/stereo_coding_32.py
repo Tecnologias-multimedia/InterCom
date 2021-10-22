@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Implements MST using 32 bits/coefficient.'''
+'''MST using 32 bits/coefficient.'''
 
 import numpy as np
-import minimal
-import stereo_coding
 import logging
 
-class Stereo_Coding_32(stereo_coding.Stereo_Coding):
+import minimal
+import stereo_coding_16
 
+#class Stereo_Coding_32(stereo_coding.Stereo_Coding):
+
+class Stereo_Coding_32(stereo_coding_16.Stereo_Coding_16):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -26,7 +28,7 @@ class Stereo_Coding_32(stereo_coding.Stereo_Coding):
         x[:, 1] = (w[:, 0] - w[:, 1])/2
         return x
 
-class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding.Stereo_Coding__verbose):
+class Stereo_Coding_32__verbose(Stereo_Coding_32, stereo_coding_16.Stereo_Coding_16__verbose):
     pass
 '''
     def __init__(self):
