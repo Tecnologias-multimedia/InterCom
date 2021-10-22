@@ -3,6 +3,8 @@
 
 '''A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks. '''
 
+import os
+import signal
 import argparse
 import sounddevice as sd
 import numpy as np
@@ -70,7 +72,7 @@ class Minimal:
             self._handler = self._record_io_and_play
             self.stream = self.mic_stream
 
-        self.input_exhausted = False
+        #self.input_exhausted = False
 
     def pack(self, chunk):
         '''Builds a packet's payloads with a chunk.'''
@@ -158,12 +160,20 @@ class Minimal:
 
     def read_chunk_from_file(self):
         chunk = self.wavfile.buffer_read(args.frames_per_chunk, dtype='int16')
-        chunk = np.frombuffer(chunk, dtype=np.int16)
-        try:
-            chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
-        except ValueError:
+        #print(len(chunk), args.frames_per_chunk)
+        if len(chunk) < args.frames_per_chunk*4:
             logging.warning("Input exhausted! :-/")
-            self.input_exhausted = True
+            pid = os.getpid()
+            os.kill(pid, signal.SIGINT)
+            return self.zero_chunk
+        chunk = np.frombuffer(chunk, dtype=np.int16)
+        #try:
+        chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        #except ValueError:
+            #logging.warning("Input exhausted! :-/")
+            #pid = os.getpid()
+            #os.kill(pid, signal.SIGINT)
+            #self.input_exhausted = True
         return chunk
             
     def _read_io_and_play(self, outdata, frames, time, status):
@@ -220,9 +230,12 @@ class Minimal:
         logging.info("Press enter-key to quit")
 
         with self.stream(self._handler):
-            #input()
-            while not self.input_exhausted:
-                time.sleep(1)
+            input()
+            #while not self.input_exhausted:
+            #    time.sleep(1)
+
+    def print_final_averages(self):
+        pass
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
@@ -467,14 +480,15 @@ class Minimal__verbose(Minimal):
         self.print_running_info()
         self.print_header()
 
-        try:
-            with self.stream(self._handler):
-                while self.total_number_of_sent_chunks < self.chunks_to_sent and not self.input_exhausted:
-                    time.sleep(self.seconds_per_cycle)
-                    self.cycle_feedback()
-                self.print_final_averages()
-        except KeyboardInterrupt:
-            self.print_final_averages()
+        with self.stream(self._handler):
+            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+                time.sleep(self.seconds_per_cycle)
+                self.cycle_feedback()
+                #self.print_final_averages()
+        #except KeyboardInterrupt:
+        #except:
+        #    raise
+        #    self.print_final_averages()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -502,5 +516,6 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        parser.exit("\nInterrupted by user")
-
+        minimal.parser.exit("\nSIGINT received")
+    finally:
+        intercom.print_final_averages()

@@ -49,4 +49,6 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        minimal.parser.exit("\nInterrupted by user")
+        parser.exit("\nSIGINT received")
+    finally:
+        intercom.print_final_averages()

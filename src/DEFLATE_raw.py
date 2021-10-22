@@ -27,7 +27,11 @@ class DEFLATE_Raw(buffer.Buffering):
         compressed_chunk = packed_chunk[2:]
         chunk = zlib.decompress(compressed_chunk)
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        try:
+            chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        except ValueError:
+            logging.warning("Input exhausted! :-/")
+            self.input_exhausted = True
         return chunk_number, chunk
 
 class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
@@ -122,7 +126,10 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         len_packed_chunk = len(packed_chunk)
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
+        #try:
         return DEFLATE_Raw.unpack(self, packed_chunk)
+        #except ValueError:
+        #pass
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -143,4 +150,6 @@ if __name__ == "__main__":
     try:
         intercom.run()
     except KeyboardInterrupt:
-        minimal.parser.exit("\nInterrupted by user")
+        minimal.parser.exit("\nSIGINT received")
+    finally:
+       intercom.print_final_averages()
