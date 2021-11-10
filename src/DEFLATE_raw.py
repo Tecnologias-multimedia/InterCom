@@ -141,7 +141,7 @@ if __name__ == "__main__":
     try:
         argcomplete.autocomplete(minimal.parser)
     except Exception:
-        logging.warnning("argcomplete not working :-/")
+        logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = DEFLATE_Raw__verbose()
