@@ -7,7 +7,7 @@ import numpy as np
 import logging
 
 import minimal
-from BR_control_add_lost import BR_Control_Add_Lost as BR_Control
+from BR_control_conservative import BR_Control_Conservative as BR_Control
 
 class Stereo_MST_Coding_16(BR_Control):
     def __init__(self):

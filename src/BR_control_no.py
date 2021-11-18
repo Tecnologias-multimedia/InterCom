@@ -95,8 +95,8 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
     def stats(self):
         string = super().stats()
         string += "{:>5d}".format(self.quantization_step)
-        string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE_per_cycle / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(np.int)])
-        string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR_per_cycle).astype(np.int)])
+        string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE_per_cycle / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(int)])
+        string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR_per_cycle).astype(int)])
 
         return string
         
@@ -122,8 +122,8 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
     def averages(self):
         string = super().averages()
         string += 5*' '
-        string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(np.int)])
-        string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR).astype(np.int)])
+        string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(int)])
+        string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR).astype(int)])
         return string
         
     def cycle_feedback(self):
