@@ -10,7 +10,7 @@ import minimal
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT as temp_no_DWT
 
 class Temporal_Overlapped_DWT(temp_no_DWT):
-    
+    #WIP
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
