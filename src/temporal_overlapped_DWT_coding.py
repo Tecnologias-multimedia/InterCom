@@ -1,56 +1,82 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
+
 import numpy as np
 import pywt
 import logging
-import time
+import struct
+import zlib
+import math
+
 
 import minimal
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT as temp_no_DWT
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as stereo32
 
 class Temporal_Overlapped_DWT(temp_no_DWT):
-    #WIP
+    
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
+        self.overlaped_area_size = self.max_filters_length * (1 << self.dwt_levels)
+        #self.previous_chunk = self.generate_zero_chunk
+        self.lista = []
+        for i in range(3):
+            self.lista.append(np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32));
+           
         
-        # Default dwt_levels is based on the length of the chunk and the length of the filter
-        self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
-        if minimal.args.levels:
-            self.dwt_levels = int(minimal.args.levels)
-
-        # Structure used during the decoding
-        zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-        self.slices = pywt.coeffs_to_array(coeffs)[1]
-
-        logging.info(f"wavelet name = {minimal.args.wavelet_name}")
-        logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
-        logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
-        logging.info(f"DWT levels = {self.dwt_levels}")
-
-    def encoder(self,chunk):
-        chunk= super().analyze(chunk)
-        previous_chunk = np.zeros(shape= minimal.args.frames_per_chunk)
-        time.sleep(self.chunk_time)
-        next_chunk= super().analyze(chunk);    
+    def analyze(self,chunk):             
+        self.lista[0] = self.lista[1]
+        self.lista[1] = self.lista[2]
+        self.lista[2] = chunk
+        e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
+        d= self._analyze(e)
+        return d
+        #for(int i = 0, i <= self.dwt_levels; i++){
+             #d=
+            #}
         
-        for i in range (self.NUMBER_OF_CHANNELS):
-            e = np.concatenate(previous_chunk[-self.slices:], chunk,next_chunk[:self.slices])
-            d= super().analyze(e)            
-            previous_chunk= chunk;
-            chunk = next_chunk;
+    def _analyze(self, chunk):
+        chunk = stereo32.analyze(self, chunk)
+
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+        for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
+            DWT_chunk[:, c] = channel_DWT_chunk
+        return DWT_chunk
             
-        return d;
+    def unpack(self, packed_chunk):
+        (chunk_number, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHH", packed_chunk[:6])
+        offset = 6 # Header size
+        compressed_MSB1 = packed_chunk[offset : len_compressed_MSB1 + offset]
+        offset += len_compressed_MSB1 
+        compressed_MSB0 = packed_chunk[offset : len_compressed_MSB0 + offset]
+        offset += len_compressed_MSB0 
+        compressed_LSB = packed_chunk[offset :]
+        buffer_MSB1 = zlib.decompress(compressed_MSB1)
+        buffer_MSB0 = zlib.decompress(compressed_MSB0)
+        buffer_LSB  = zlib.decompress(compressed_LSB)
+        channel_MSB1 = np.frombuffer(buffer_MSB1, dtype=np.int8)
+        channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
+        channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
+        chunk = np.empty((minimal.args.frames_per_chunk+2*self.overlaped_area_size, 2), dtype=np.int32)
+        chunk[:, 0] = channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_LSB)//2]
+        chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
 
+        return chunk_number, chunk
+    
+    
+    def play_chunk(self, DAC, chunk):
+        self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
+        chunk = chunk.reshape(minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS)
+        DAC[:] = chunk
 
-from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose as temp_no_DWT_verbose
+from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose as temp_no_DWT__verbose
 
-class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT,temp_no_DWT_verbose):
+class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT,temp_no_DWT__verbose):
     pass
 
 try:
