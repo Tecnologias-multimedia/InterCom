@@ -33,11 +33,16 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         self.lista[2] = chunk
         e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
         d= self._analyze(e)
-        return d
-        #for(int i = 0, i <= self.dwt_levels; i++){
-             #d=
-            #}
+        low_freq = d[0:int(len(d)/4)]
+        high_freq2 = d[int(len(d)/4): int(len(d)/2)]
+        high_freq1 = d[int(len(d)/2):]
+        valores = int(self.overlaped_area_size/pow(2,self.dwt_levels));        
         
+        reduced_d = np.concatenate((low_freq[valores:-valores],high_freq2[valores:-valores], high_freq1[valores:-valores]), axis = 0)
+        return reduced_d;
+       
+    
+        #d[2][(self.overlaped_Area_size/(pow(2,self.dwt_levels-1)): -(self.overlaped_Area_size/(pow(2,self.dwt_levels-1))))])
     def _analyze(self, chunk):
         chunk = stereo32.analyze(self, chunk)
 
@@ -62,7 +67,9 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         channel_MSB1 = np.frombuffer(buffer_MSB1, dtype=np.int8)
         channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
         channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
-        chunk = np.empty((minimal.args.frames_per_chunk+2*self.overlaped_area_size, 2), dtype=np.int32)
+        valores = int(self.overlaped_area_size/pow(2,self.dwt_levels));
+        print(valores)
+        chunk = np.empty((minimal.args.frames_per_chunk+3*valores, 2), dtype=np.int32)
         chunk[:, 0] = channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_LSB)//2]
         chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
 
