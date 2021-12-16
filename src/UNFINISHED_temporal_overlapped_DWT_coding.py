@@ -13,7 +13,7 @@ import compress
 from compress import Compression as Compression
 import br_control
 from br_control import BR_Control as BR_Control 
-import stereo_coding
+import stereo_MST_coding
 from stereo_coding import Stereo_Coding as Stereo_Coding
 from stereo_coding import Stereo_Coding__verbose as Stereo_Coding__verbose
 import temporal_coding
