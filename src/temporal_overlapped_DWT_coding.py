@@ -21,28 +21,47 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         logging.info(__doc__)
         
         self.overlaped_area_size = self.max_filters_length * (1 << self.dwt_levels)
+
         #self.previous_chunk = self.generate_zero_chunk
         self.lista = []
         for i in range(3):
             self.lista.append(np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32));
+            
+        self.bandas = []
+        aux =pywt.wavedecn_shapes((1024,), wavelet='db2', level=self.dwt_levels, mode='per')
+        
+        for i in range(1,len(aux)):
+            self.bandas.extend(list(aux[i].values()))
+            
+       
+    
+            
            
         
-    def analyze(self,chunk):             
+    def analyze(self,chunk):
+            
         self.lista[0] = self.lista[1]
         self.lista[1] = self.lista[2]
         self.lista[2] = chunk
         e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
         d= self._analyze(e)
-        low_freq = d[0:int(len(d)/4)]
-        high_freq2 = d[int(len(d)/4): int(len(d)/2)]
-        high_freq1 = d[int(len(d)/2):]
-        valores = int(self.overlaped_area_size/pow(2,self.dwt_levels));        
+        reduced_d = []
+
+        valores = int(self.overlaped_area_size/(pow(2,self.dwt_levels)))
+        valores2 = int(self.overlaped_area_size/2)
+        tam = len(d)/2
+
         
-        reduced_d = np.concatenate((low_freq[valores:-valores],high_freq2[valores:-valores], high_freq1[valores:-valores]), axis = 0)
-        return reduced_d;
+        for i in range(self.dwt_levels+1):
+            if(i == self.dwt_levels):
+                reduced_d.extend(np.array(d[int(tam):][valores2:-valores2]))
+            else:                
+                reduced_d.extend(np.array(d[(i)*(int(tam/self.dwt_levels)) : (i+1)*(int(tam/self.dwt_levels))][valores:-valores]))
+                                    
+        chunknuevo= np.array(reduced_d)
+        return chunknuevo
        
     
-        #d[2][(self.overlaped_Area_size/(pow(2,self.dwt_levels-1)): -(self.overlaped_Area_size/(pow(2,self.dwt_levels-1))))])
     def _analyze(self, chunk):
         chunk = stereo32.analyze(self, chunk)
 
@@ -53,33 +72,8 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
             DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk
             
-    def unpack(self, packed_chunk):
-        (chunk_number, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHH", packed_chunk[:6])
-        offset = 6 # Header size
-        compressed_MSB1 = packed_chunk[offset : len_compressed_MSB1 + offset]
-        offset += len_compressed_MSB1 
-        compressed_MSB0 = packed_chunk[offset : len_compressed_MSB0 + offset]
-        offset += len_compressed_MSB0 
-        compressed_LSB = packed_chunk[offset :]
-        buffer_MSB1 = zlib.decompress(compressed_MSB1)
-        buffer_MSB0 = zlib.decompress(compressed_MSB0)
-        buffer_LSB  = zlib.decompress(compressed_LSB)
-        channel_MSB1 = np.frombuffer(buffer_MSB1, dtype=np.int8)
-        channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
-        channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
-        valores = int(self.overlaped_area_size/pow(2,self.dwt_levels));
-        print(valores)
-        chunk = np.empty((minimal.args.frames_per_chunk+3*valores, 2), dtype=np.int32)
-        chunk[:, 0] = channel_MSB1[:len(channel_MSB1)//2]*(1<<16) + channel_MSB0[:len(channel_MSB0)//2]*(1<<8) + channel_LSB[:len(channel_LSB)//2]
-        chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:]*(1<<16) + channel_MSB0[len(channel_MSB0)//2:]*(1<<8) + channel_LSB[len(channel_LSB)//2:]
+       
 
-        return chunk_number, chunk
-    
-    
-    def play_chunk(self, DAC, chunk):
-        self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
-        chunk = chunk.reshape(minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS)
-        DAC[:] = chunk
 
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose as temp_no_DWT__verbose
 
