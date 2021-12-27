@@ -27,36 +27,51 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         for i in range(3):
             self.lista.append(np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32));
             
-        self.bandas = []
+       
+        self.bandas1 = []
         aux =pywt.wavedecn_shapes((1024,), wavelet='db2', level=self.dwt_levels, mode='per')
         
+        self.bandas1.extend(aux[0])
         for i in range(1,len(aux)):
-            self.bandas.extend(list(aux[i].values()))
-            
-       
+            self.bandas1.extend(list(aux[i].values()))
+            self.bandas1[i] = self.bandas1[i][0]
     
-            
+             
            
         
     def analyze(self,chunk):
-            
         self.lista[0] = self.lista[1]
         self.lista[1] = self.lista[2]
         self.lista[2] = chunk
         e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
         d= self._analyze(e)
+        tam = int(len(d)/2)
         reduced_d = []
-
-        valores = int(self.overlaped_area_size/(pow(2,self.dwt_levels)))
-        valores2 = int(self.overlaped_area_size/2)
-        tam = len(d)/2
-
+        
+        bandas = []
+        aux =pywt.wavedecn_shapes((len(d),), wavelet='db2', level=self.dwt_levels, mode='per')
+        
+        bandas.extend(aux[0])
+        for i in range(1,len(aux)):
+            bandas.extend(list(aux[i].values()))
+            bandas[i] = bandas[i][0]
+            
+        
+        print(bandas)
+      
+           
+      
         
         for i in range(self.dwt_levels+1):
+            valores = int((bandas[i]-self.bandas1[i])/2)
             if(i == self.dwt_levels):
-                reduced_d.extend(np.array(d[int(tam):][valores2:-valores2]))
-            else:                
-                reduced_d.extend(np.array(d[(i)*(int(tam/self.dwt_levels)) : (i+1)*(int(tam/self.dwt_levels))][valores:-valores]))
+                reduced_d.extend(np.array(d[tam : ][valores:-valores]))              
+            elif i == 0:
+                reduced_d.extend(np.array(d[0: bandas[i+1]][valores : -valores]))
+            else:            
+                reduced_d.extend(np.array(d[bandas[i] : bandas[i+1]][valores : -valores]))
+                print(len(d[bandas[i] : bandas[i+1]]))
+               
                                     
         chunknuevo= np.array(reduced_d)
         return chunknuevo
