@@ -24,7 +24,7 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
 
         self.lista = []
         for i in range(3):
-            self.lista.append(np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32))
+            self.lista.append(np.zeros((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32))
             
         
        
@@ -36,15 +36,13 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
             self.bandas1.extend(list(aux[i].values()))
             self.bandas1[i] = self.bandas1[i][0]
     
-             
-        zero_array = np.zeros(shape=minimal.args.frames_per_chunk+2*self.overlaped_area_size)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
-        self.slices = pywt.coeffs_to_array(coeffs)[1]
+
         
     def analyze(self,chunk):
         self.lista[0] = self.lista[1]
-        self.lista[1] = self.lista[2]
+        self.lista[1] = self.lista[2]        
         self.lista[2] = chunk
+       
         e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
         d= self._analyze(e)
         tam = int(len(d)/2)
@@ -57,9 +55,9 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
             self.bandas.extend(list(aux[i].values()))
             self.bandas[i] = self.bandas[i][0]           
         
+
         valores = int((self.bandas[0]-self.bandas1[0])/2)
         reduced_d = d[0: self.bandas[0]][valores : -valores]
-        
         acumulador = 0
         for i in range(1,self.dwt_levels+1):
             valores = int((self.bandas[i]-self.bandas1[i])/2)
@@ -68,11 +66,10 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
             else:
                 reduced_d = np.concatenate((reduced_d,d[acumulador : acumulador+self.bandas[i]][valores : -valores]))
                 acumulador += self.bandas[i]
-       
-       
+        
+        print(reduced_d.max(), reduced_d.min())
         return reduced_d
        
-    
     def _analyze(self, chunk):
         chunk = stereo32.analyze(self, chunk)
 
@@ -83,9 +80,8 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
             DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk
     
-    
+    '''
     def synthesize(self, chunk_DWT):
-    
         descom = [] #Descomposicion
         for i in range(3):
             descom.append(np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32))
@@ -98,7 +94,6 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
                     
         extendido = np.array(descom[0][-self.overlaped_area_size : ][0: self.bandas1[0]])
         acumulado = 0
-        
         for i in range (len(self.bandas1)):    
             if(i == 0):
                 extendido = np.concatenate((extendido, descom[1][0 : self.bandas1[i]]))
@@ -114,24 +109,27 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
                 extendido = np.concatenate((extendido,descom[2][ : self.overlaped_area_size][acumulado : acumulado+self.bandas1[i]]))
                 acumulado += self.bandas1[i]
         
-            
-        chunk = self._synthesize(extendido)
-        
+
+        chunk = self._synthesize(extendido) 
        
-        chunkfinal = chunk[self.overlaped_area_size : -self.overlaped_area_size]    
-        return chunkfinal
+       
+        return chunk
     
-      
+    
     def _synthesize(self, chunk_DWT):
-        chunk = np.empty((minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
-          
-        for c in range(self.NUMBER_OF_CHANNELS):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
+         chunk = np.empty((minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
+         # Structure used during the decoding
+         zero_array = np.zeros(shape=minimal.args.frames_per_chunk+2*self.overlaped_area_size)
+         coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+         slices = pywt.coeffs_to_array(coeffs)[1]
+         for c in range(self.NUMBER_OF_CHANNELS):
+            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], slices, output_format="wavedec")
             #chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int32)
             chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
-        chunk = stereo32.synthesize(self,chunk)
-        return chunk   
+         chunk = stereo32.synthesize(self,chunk)
+         return chunk[self.overlaped_area_size : -self.overlaped_area_size]
     
+    '''
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose as temp_no_DWT__verbose
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT,temp_no_DWT__verbose):
