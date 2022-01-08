@@ -18,6 +18,7 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
         logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
+        assert np.all( abs(chunk) < (1<<24) )
         channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.int8)
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
