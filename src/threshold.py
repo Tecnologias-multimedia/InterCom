@@ -17,14 +17,14 @@ class threshold(temp_DWT):
         super().__init__()
         logging.info(__doc__)
        
+
         self.frecuencias = []
         for i in range(len(self.bandas)):
             self.frecuencias.append('0')
         self.cuant = []
         for i in range(len(self.bandas)):
             self.cuant.append('0')
-
-    def analyze(self,chunk):
+        
         self.frecuencia = 22050
         if(self.dwt_levels == 0):
             self.frecuencias[0] = self.frecuencia
@@ -39,7 +39,7 @@ class threshold(temp_DWT):
                 self.frecuencia = self.frecuencia/2
                 self.cuant[i] = abs(int(3.64*(self.frecuencias[i]/1000)**(-0.8)-6.5*math.exp((-0.6)*(self.frecuencias[i]/1000-3.3)**2)+ 10**(-3)*(self.frecuencias[i]/1000)**4))
 
-    
+    def analyze(self,chunk):   
         return super().analyze(chunk)
 
 
