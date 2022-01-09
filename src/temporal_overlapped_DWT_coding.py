@@ -79,6 +79,7 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         return reduced_d
 
     def _analyze(self, chunk):
+        chunk = stereo32.analyze(self,chunk)
         DWT_chunk = np.zeros((minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
