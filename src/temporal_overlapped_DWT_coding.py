@@ -50,12 +50,10 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         
     def analyze(self,chunk):
                                
-        self.lista[0] = self.lista[1]
-        self.lista[1] = self.lista[2]
         self.lista[2] = chunk
         e = np.concatenate((self.lista[0][-self.overlaped_area_size:], self.lista[1], self.lista[2][:self.overlaped_area_size]))
         d= self._analyze(e)
-
+        
         self.bandas = []
         aux =pywt.wavedecn_shapes((len(d),), wavelet=self.wavelet, level=self.dwt_levels, mode='per')
         
@@ -63,25 +61,24 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         for i in range(1,len(aux)):
             self.bandas.extend(list(aux[i].values()))
             self.bandas[i] = self.bandas[i][0]           
-        
-        division = int(self.overlaped_area_size/(2**(self.dwt_levels)))
-        reduced_d = d[0: self.bandas[0]][division : -division]
-              
-        
-        acumulador = 0
+                
+        reduced_d = d[0: self.bandas[0]][self.overlaped_area_size//2**self.dwt_levels : -self.overlaped_area_size//2**self.dwt_levels]
+                    
+        acumulador= self.bandas[0]
         for i in range(self.dwt_levels):
-            division = int(self.overlaped_area_size/(2**(self.dwt_levels-i)))
             if(i == self.dwt_levels-1):
-                division = int(self.overlaped_area_size /2)
-                reduced_d = np.concatenate((reduced_d,d[acumulador : acumulador+self.bandas[i+1]][division:-division]))
+                reduced_d = np.concatenate((reduced_d,d[acumulador : acumulador+self.bandas[i+1]][self.overlaped_area_size//2 : -self.overlaped_area_size//2]))
             else:
-                reduced_d = np.concatenate((reduced_d,d[acumulador : acumulador+self.bandas[i+1]][division : -division]))
+                reduced_d = np.concatenate((reduced_d,d[acumulador : acumulador+self.bandas[i+1]][self.overlaped_area_size//2**(self.dwt_levels-i) : -self.overlaped_area_size//2**(self.dwt_levels-i)]))
                 acumulador += self.bandas[i+1]
-
+            
+          
+                
+        self.lista[0] = self.lista[1]
+        self.lista[1] = self.lista[2]
         return reduced_d
 
     def _analyze(self, chunk):
-        chunk = stereo32.analyze(self,chunk)
         DWT_chunk = np.zeros((minimal.args.frames_per_chunk+2*self.overlaped_area_size, self.NUMBER_OF_CHANNELS), dtype=np.int32)
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
@@ -91,10 +88,7 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
     
     
     def synthesize(self, chunk_DWT):
-    
-        
-        self.descom[0] = self.descom[1]
-        self.descom[1] = self.descom[2]
+            
         self.descom[2] = chunk_DWT
         
         division = int(self.overlaped_area_size/(2**(self.dwt_levels)))
@@ -123,6 +117,10 @@ class Temporal_Overlapped_DWT(temp_no_DWT):
         
 
         chunkfinal = chunk[self.overlaped_area_size : -self.overlaped_area_size]
+        
+        self.descom[0] = self.descom[1]
+        self.descom[1] = self.descom[2]
+        
         return chunkfinal
       
     def _synthesize(self, chunk_DWT):
