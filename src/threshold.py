@@ -10,6 +10,7 @@ import math
 import minimal
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT as temp_DWT
 from stereo_MST_coding_32 import Stereo_MST_Coding_32 as stereo32
+from BR_control_no import BR_Control_No as br_control
 
 class threshold(temp_DWT):
     #V1
@@ -38,8 +39,9 @@ class threshold(temp_DWT):
                     self.frecuencias[i] = self.frecuencia/2 
                 self.frecuencia = self.frecuencia/2
                 self.cuant[i] = abs(int(3.64*(self.frecuencias[i]/1000)**(-0.8)-6.5*math.exp((-0.6)*(self.frecuencias[i]/1000-3.3)**2)+ 10**(-3)*(self.frecuencias[i]/1000)**4))
-
-    def analyze(self,chunk):   
+    
+    
+    def analyze(self,chunk):
         return super().analyze(chunk)
 
 
@@ -52,7 +54,7 @@ class threshold(temp_DWT):
            chunk[acumulador: self.bandas1[i]] = (chunk[acumulador: self.bandas1[i]] / self.cuant[i]).astype(np.int32)
            acumulador += self.bandas1[i]
         
-        return chunk
+        return br_control.quantize(self,chunk)
     
     def dequantize(self, quantized_chunk):
         '''Deadzone dequantizer.'''
@@ -60,7 +62,7 @@ class threshold(temp_DWT):
         for i in range (len(self.bandas1)):
            quantized_chunk[acumulador: self.bandas1[i]] = quantized_chunk[acumulador: self.bandas1[i]] * self.cuant[i]
            acumulador += self.bandas1[i]
-        return quantized_chunk
+        return br_control.dequantize(self,quantized_chunk)
         
 
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose as temp_DWT__verbose
