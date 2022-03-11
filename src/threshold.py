@@ -27,7 +27,7 @@ class Treshold(Temporal_Overlapped_DWT):
         def calc(f):
             return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
 
-        f=22100
+        f=22050
         average_SPLs = []
 
         # Calculate average SPL[dB] for each frequency subband
