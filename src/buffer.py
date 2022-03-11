@@ -16,7 +16,7 @@ import minimal
 import soundfile as sf
 import logging
 
-minimal.parser.add_argument("-b", "--buffering_time", type=int, default=100, help="Miliseconds to buffer")
+minimal.parser.add_argument("-b", "--buffering_time", type=int, default=150, help="Miliseconds to buffer")
 
 class Buffering(minimal.Minimal):
 
