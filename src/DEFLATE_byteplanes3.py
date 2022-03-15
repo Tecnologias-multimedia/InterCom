@@ -28,9 +28,12 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
         MSB1 = np.concatenate([channel_0_MSB1, channel_1_MSB1])
         MSB0 = np.concatenate([channel_0_MSB0, channel_1_MSB0])
         LSB  = np.concatenate([channel_0_LSB, channel_1_LSB])
-        compressed_MSB1 = zlib.compress(MSB1)
-        compressed_MSB0 = zlib.compress(MSB0)
-        compressed_LSB  = zlib.compress(LSB)
+        compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_BEST_COMPRESSION)
+        #compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_DEFAULT_COMPRESSION)
+        compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_BEST_COMPRESSION)
+        #compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_DEFAULT_COMPRESSION)
+        compressed_LSB  = zlib.compress(LSB, level=zlib.Z_BEST_COMPRESSION)
+        #compressed_LSB  = zlib.compress(LSB, level=zlib.Z_DEFAULT_COMPRESSION)
         packed_chunk = struct.pack("!HHH", chunk_number, len(compressed_MSB1), len(compressed_MSB0)) + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
         return packed_chunk
 
