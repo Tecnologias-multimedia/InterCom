@@ -295,7 +295,7 @@ class Minimal__verbose(Minimal):
         ''' Computes the number of sent bytes and the number of sent packets. '''
         super().send(packed_chunk)
         #self.sent_bytes_count += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*self.NUMBER_OF_CHANNELS
-        self.sent_bytes_count += packed_chunk.nbytes
+        self.sent_bytes_count += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
         self.sent_messages_count += 1
 
     def receive(self):
