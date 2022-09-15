@@ -1,4 +1,4 @@
-# Description
+ # Description
 
 InterCom is a low-[latency](https://en.wikipedia.org/wiki/Latency_(engineering)) [full-duplex](https://en.wikipedia.org/wiki/Duplex_(telecommunications)#FULL-DUPLEX) intercom(municator) designed for the transmission of media ([audio](https://en.wikipedia.org/wiki/Digital_audio)) between networked users. It is implemented in [Python](https://www.python.org/) and designed as a set of layers that provide an incremental functionality, following a multilevel (one-to-one) [inheritance](https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)) model:
 
