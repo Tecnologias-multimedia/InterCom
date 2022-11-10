@@ -235,7 +235,7 @@ if __name__ == "__main__":
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = BR_Control_No__verbose()
     else:
-        intercom = BR_No_Control()
+        intercom = BR_Control_No()
     try:
         intercom.run()
     except KeyboardInterrupt:
