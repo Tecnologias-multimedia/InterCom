@@ -6,7 +6,7 @@
 import os
 import signal
 import argparse
-import sounddevice as sd
+import sounddevice as sd # If "pip install sounddevice" fails, intall "libportaudio2"
 import numpy as np
 import socket
 import time
