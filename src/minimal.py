@@ -264,16 +264,16 @@ class Minimal__verbose(Minimal):
         self.received_bytes_count = 0
         self.sent_messages_count = 0
         self.received_messages_count = 0
-        self.sent_kbps = 0
-        self.received_kbps = 0
+        self.sent_KBPS = 0
+        self.received_KBPS = 0
         # All counters are reset at the end of each cycle.
 
         self.average_sent_messages = 0
         self.average_received_messages = 0
         self.average_CPU_usage = 0
         self.average_global_CPU_usage = 0
-        self.average_sent_kbps = 0
-        self.average_received_kbps = 0
+        self.average_sent_KBPS = 0
+        self.average_received_KBPS = 0
         # All average values are per cycle.
         
         self.frames_per_cycle = self.seconds_per_cycle * args.frames_per_second
@@ -313,8 +313,8 @@ class Minimal__verbose(Minimal):
         string += "{:5d}".format(self.cycle)
         string += "{:8d}".format(self.sent_messages_count)
         string += "{:8d}".format(self.received_messages_count)
-        string += "{:8d}".format(self.sent_kbps)
-        string += "{:8d}".format(self.received_kbps)
+        string += "{:8d}".format(self.sent_KBPS)
+        string += "{:8d}".format(self.received_KBPS)
         string += "{:5d}".format(int(self.CPU_usage))
         string += "{:5d}".format(int(self.global_CPU_usage))
         return string
@@ -327,8 +327,8 @@ class Minimal__verbose(Minimal):
         string += "{:5s}".format('') # cycle
         string += "{:>8s}".format("sent") # sent_messages_count
         string += "{:>8s}".format("recv.") # received_messages_count
-        string += "{:>8s}".format("sent") # sent_kbps
-        string += "{:>9s}".format("recv.") # received_kbps
+        string += "{:>8s}".format("sent") # sent_KBPS
+        string += "{:>9s}".format("recv.") # received_KBPS
         string += "{:3s}".format('') # CPU_usage
         string += "{:>6s}".format("Global") # average_global_CPU_usage
         return string
@@ -341,8 +341,8 @@ class Minimal__verbose(Minimal):
         string += "{:5s}".format("cycle") # cycle
         string += "{:>8s}".format("mesgs.") # sent_messages_count
         string += "{:>8s}".format("mesgs.") # received_messages_count
-        string += "{:>8s}".format("kbps") # sent_kbps
-        string += "{:>8s}".format("kbps") # received_kbps
+        string += "{:>8s}".format("KBPS") # sent_KBPS
+        string += "{:>8s}".format("KBPS") # received_KBPS
         string += "{:>5s}".format("%CPU") # CPU_usage
         string += "{:>5s}".format("%CPU") # global_CPU_usage
         return string
@@ -355,8 +355,8 @@ class Minimal__verbose(Minimal):
         string += "{:5s}".format("Avgs:") # cycle
         string += "{:8d}".format(int(self.average_sent_messages))
         string += "{:8d}".format(int(self.average_received_messages))
-        string += "{:>8d}".format(int(self.average_sent_kbps))
-        string += "{:>8d}".format(int(self.average_received_kbps))
+        string += "{:>8d}".format(int(self.average_sent_KBPS))
+        string += "{:>8d}".format(int(self.average_received_KBPS))
         string += "{:>5d}".format(int(self.average_CPU_usage))
         string += "{:>5d}".format(int(self.average_global_CPU_usage))
         return string
@@ -400,10 +400,10 @@ class Minimal__verbose(Minimal):
         self.average_sent_messages = self.moving_average(self.average_sent_messages, self.sent_messages_count, self.cycle)
         self.average_received_messages = self.moving_average(self.average_received_messages, self.received_messages_count, self.cycle)
 
-        self.sent_kbps = int(self.sent_bytes_count * 8 / 1000 / elapsed_time)
-        self.received_kbps = int(self.received_bytes_count * 8 / 1000 / elapsed_time)
-        self.average_sent_kbps = self.moving_average(self.average_sent_kbps, self.sent_kbps, self.cycle)
-        self.average_received_kbps = self.moving_average(self.average_received_kbps, self.received_kbps, self.cycle)
+        self.sent_KBPS = int(self.sent_bytes_count * 8 / 1000 / elapsed_time)
+        self.received_KBPS = int(self.received_bytes_count * 8 / 1000 / elapsed_time)
+        self.average_sent_KBPS = self.moving_average(self.average_sent_KBPS, self.sent_KBPS, self.cycle)
+        self.average_received_KBPS = self.moving_average(self.average_received_KBPS, self.received_KBPS, self.cycle)
 
         self.print_stats()
         self.print_averages()
@@ -422,8 +422,8 @@ class Minimal__verbose(Minimal):
     def print_final_averages(self):
         print('\n'*4)
         print(f"CPU usage average = {self.average_CPU_usage} %")
-        print(f"Payload sent average = {self.average_sent_kbps} kilo bits per second")
-        print(f"Payload received average = {self.average_received_kbps} kilo bits per second")
+        print(f"Payload sent average = {self.average_sent_KBPS} kilo bits per second")
+        print(f"Payload received average = {self.average_received_KBPS} kilo bits per second")
 
     def print_running_info(self):
         print("\nInterCom parameters:\n")
