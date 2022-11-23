@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Bit-rate control using quantization. Both channels are quantized using the same constant step. The quantization step is the number of lost packed minus 1.'''
+'''Bit-rate control using quantization. Both channels are quantized
+using the same constant step. The quantization step size is the number
+of lost packed minus 1.'''
 
 import time
 import logging
@@ -18,12 +20,12 @@ class BR_Control_Lost(BR_control_no.BR_Control_No):
     def data_flow_control(self):
         while True:
             self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
-            self.quantization_step += self.number_of_lost_packets
-            if self.quantization_step < minimal.args.minimal_quantization_step:
-                self.quantization_step = minimal.args.minimal_quantization_step
+            self.quantization_step_size += self.number_of_lost_packets
+            if self.quantization_step_size < minimal.args.minimal_quantization_step_size:
+                self.quantization_step_size = minimal.args.minimal_quantization_step_size
             self.number_of_sent_chunks = 0
             self.number_of_received_chunks = 0
-            time.sleep(1)
+            time.sleep(self.rate_control_period)
 
 class BR_Control_Lost__verbose(BR_Control_Lost, BR_control_no.BR_Control_No__verbose):
     pass

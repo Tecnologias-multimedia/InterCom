@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''No bit-rate control using quantization. In this module, no control has been implemented. Both channels are quantized using the same constant step.'''
+'''No bit-rate control using quantization. In this module, no control
+has been implemented. Both channels are quantized using the same
+constant step size.'''
 
 # Notice that this implementation of the BR control supposes that the
 # communication link is symmetric, or at least, the quality of the
@@ -21,7 +23,8 @@ import minimal
 #from DEFLATE_byteplanes2 import DEFLATE_BytePlanes2 as Compression
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as Compression
 
-minimal.parser.add_argument("-q", "--minimal_quantization_step", type=int, default=128, help="Minimal quantization step")
+minimal.parser.add_argument("-q", "--minimal_quantization_step_size", type=int, default=128, help="Minimal quantization step")
+minimal.parser.add_argument("-r", "--rate_control_period", type=float, default=1, help="Number of seconds between two consecutive runs of the bit-rate control algorithm")
 
 class BR_Control_No(Compression):
 
@@ -29,8 +32,11 @@ class BR_Control_No(Compression):
         super().__init__()
         logging.info(__doc__)
 
-        self.quantization_step = minimal.args.minimal_quantization_step
-        logging.info(f"(minimum) quantization_step = {minimal.args.minimal_quantization_step}")
+        self.rate_control_period = minimal.args.rate_control_period
+        logging.info(f"rate_control_period = {self.rate_control_period} seconds")
+
+        self.quantization_step_size = minimal.args.minimal_quantization_step_size
+        logging.info(f"(minimum) quantization_step_size = {minimal.args.minimal_quantization_step_size}")
         self.number_of_sent_chunks = 0
         self.number_of_received_chunks = 0
         data_flow_control_thread = threading.Thread(target=self.data_flow_control)
@@ -39,7 +45,7 @@ class BR_Control_No(Compression):
 
     def data_flow_control(self):
         while True:
-            time.sleep(1)
+            time.sleep(self.rate_control_period)
 
     def send(self, packed_chunk):
         super().send(packed_chunk)
@@ -52,14 +58,14 @@ class BR_Control_No(Compression):
 
     def quantize(self, chunk):
         '''Dead-zone quantizer.'''
-        #quantized_chunk = np.round(chunk / self.quantization_step).astype(np.int16)
-        #quantized_chunk = (chunk / self.quantization_step).astype(np.int16)
-        quantized_chunk = (chunk / self.quantization_step).astype(np.int32)
+        #quantized_chunk = np.round(chunk / self.quantization_step_size).astype(np.int16)
+        #quantized_chunk = (chunk / self.quantization_step_size).astype(np.int16)
+        quantized_chunk = (chunk / self.quantization_step_size).astype(np.int32)
         return quantized_chunk
     
     def dequantize(self, quantized_chunk):
         '''Deadzone dequantizer.'''
-        chunk = quantized_chunk * self.quantization_step
+        chunk = quantized_chunk * self.quantization_step_size
         return chunk
 
     def pack(self, chunk_number, chunk):
@@ -96,7 +102,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
     def stats(self):
         string = super().stats()
-        string += "{:>5d}".format(self.quantization_step)
+        string += "{:>5d}".format(self.quantization_step_size)
         string += " {}".format(['{:5d}'.format(i) for i in np.round(10**4 * self.average_RMSE_per_cycle / self.frames_per_cycle / self.NUMBER_OF_CHANNELS).astype(int)])
         string += " {}".format(['{:3d}'.format(i) for i in np.round(self.average_SNR_per_cycle).astype(int)])
 
@@ -104,14 +110,14 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         
     def first_line(self):
         string = super().first_line()
-        string += "{:>5s}".format('') # self.quantization_step
+        string += "{:>5s}".format('') # self.quantization_step_size
         string += "{:>19s}".format('10^4 *') # average_RMSE_per_cycle
         string += "{:>15s}".format('') # average_SNR_per_cycle
         return string
 
     def second_line(self):
         string = super().second_line()
-        string += "{:>5s}".format('Q') # self.quantization_step
+        string += "{:>5s}".format('Q') # self.quantization_step_size
         string += "{:>19s}".format('RMSE/sample') # average_RMSE_per_cycle
         string += "{:>15s}".format('SNR[dB]') # average_SNR_per_cycle
         return string
@@ -235,7 +241,7 @@ if __name__ == "__main__":
     if minimal.args.show_stats or minimal.args.show_samples:
         intercom = BR_Control_No__verbose()
     else:
-        intercom = BR_No_Control()
+        intercom = BR_Control_No()
     try:
         intercom.run()
     except KeyboardInterrupt:
