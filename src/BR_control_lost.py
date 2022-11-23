@@ -23,7 +23,7 @@ class BR_Control_Lost(BR_control_no.BR_Control_No):
                 self.quantization_step = minimal.args.minimal_quantization_step
             self.number_of_sent_chunks = 0
             self.number_of_received_chunks = 0
-            time.sleep(1)
+            time.sleep(self.rate_control_period)
 
 class BR_Control_Lost__verbose(BR_Control_Lost, BR_control_no.BR_Control_No__verbose):
     pass
