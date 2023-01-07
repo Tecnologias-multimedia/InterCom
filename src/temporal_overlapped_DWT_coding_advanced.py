@@ -75,23 +75,30 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         for c in range(self.NUMBER_OF_CHANNELS):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
+
+            # Divide chunk in quarters
             quarters = np.array_split(channel_DWT_chunk, 4)
 
+            # 1 level DWT in the second quarter of the chunk
             channel_coeffs = pywt.wavedec(quarters[1], wavelet=self.wavelet, level=1, mode="per")
             second_quarter_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
 
+            # 1 level DWT in the second half of the chunk
             second_half = channel_DWT_chunk[len(channel_DWT_chunk)//2:]
             channel_coeffs = pywt.wavedec(second_half, wavelet=self.wavelet, level=1, mode="per")
             second_half_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
 
+            # 2 levels DWT in the third quarter of the chunk
             third_quarter = second_half_DWT_chunk[:len(second_half_DWT_chunk)//2]
             channel_coeffs = pywt.wavedec(third_quarter, wavelet=self.wavelet, level=2, mode="per")
             third_quarter_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
 
+            # 1 level DWT in the last quarter of the chunk
             fourth_quarter = second_half_DWT_chunk[len(second_half_DWT_chunk)//2:]
             channel_coeffs = pywt.wavedec(fourth_quarter, wavelet=self.wavelet, level=1, mode="per")
             fourth_quarter_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
 
+            # Concatenate all quarters into final chunk
             final_chunk = np.concatenate((quarters[0], second_quarter_DWT_chunk, third_quarter_DWT_chunk, fourth_quarter_DWT_chunk))
 
             DWT_chunk[:, c] = final_chunk
