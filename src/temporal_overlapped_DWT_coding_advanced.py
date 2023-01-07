@@ -15,7 +15,7 @@ from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose
 
 
-class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
+class Temporal_Overlapped_DWT_Advanced(Temporal_No_Overlapped_DWT):
 
     def __init__(self):
         super().__init__()
@@ -153,7 +153,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
     '''
 
 
-class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):
+class Temporal_Overlapped_DWT_Advanced__verbose(Temporal_Overlapped_DWT_Advanced, Temporal_No_Overlapped_DWT__verbose):
 
     # Modified so the added chunk delay is taken into account
     def compute(self, indata, outdata):
@@ -235,9 +235,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Temporal_Overlapped_DWT__verbose()
+        intercom = Temporal_Overlapped_DWT_Advanced__verbose()
     else:
-        intercom = Temporal_Overlapped_DWT()
+        intercom = Temporal_Overlapped_DWT_Advanced()
     try:
         intercom.run()
     except KeyboardInterrupt:
