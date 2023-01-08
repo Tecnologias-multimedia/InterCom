@@ -64,6 +64,14 @@ class Treshold(Temporal_Overlapped_DWT):
             chunk_DWT[self.slices[i+1]['d'][0]] = (
                 chunk_DWT[self.slices[i+1]['d'][0]] / self.quantization_steps[i+1]).astype(np.int32)
 
+        # Calculate the subbands with the hamming window
+        hamming_window = np.hamming(chunk_DWT[:, 0].size)
+        chunk_DWT[:, 0] = (chunk_DWT[:, 0] / hamming_window).astype(np.int32)
+        chunk_DWT[:, 1] = (chunk_DWT[:, 1] / hamming_window).astype(np.int32)
+
+        # Apply the FFT
+        chunk_DWT = np.fft.fft(chunk_DWT)
+
         return chunk_DWT
 
     def synthesize(self, chunk_DWT):
@@ -74,6 +82,14 @@ class Treshold(Temporal_Overlapped_DWT):
         for i in range(self.dwt_levels):
             chunk_DWT[self.slices[i+1]['d'][0]] = chunk_DWT[self.slices[i+1]
                                                             ['d'][0]] * self.quantization_steps[i+1]
+
+        # Use the inverse calculation for the hamming window
+        hamming_window = np.hamming(chunk_DWT[:, 0].size)
+        chunk_DWT[:, 0] = (chunk_DWT[:, 0] * hamming_window).astype(np.int32)
+        chunk_DWT[:, 1] = (chunk_DWT[:, 1] * hamming_window).astype(np.int32)
+
+        # Apply the Inverse-FFT
+        chunk_DWT = np.fft.ifft(chunk_DWT)
 
         return super().synthesize(chunk_DWT)
 
