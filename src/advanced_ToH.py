@@ -12,6 +12,9 @@ from basic_ToH import Treshold
 from basic_ToH import Treshold__verbose
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
 
+minimal.parser.add_argument('--split', type=int, default=1,
+                            help='Number of times the wavelets subband will be split')
+
 
 class AdvancedTreshhold(Treshold):
 
@@ -21,9 +24,17 @@ class AdvancedTreshhold(Treshold):
 
     def analyze_hamming_fft(self, chunk, size):
         hamming_window = np.hamming(size)
+
+        # Apply the Hamming window to the entire chunk
         chunk[:, 0] = (chunk[:, 0] / hamming_window).astype(np.int32)
         chunk[:, 1] = (chunk[:, 1] / hamming_window).astype(np.int32)
-        return np.fft.fft(chunk)
+
+        # Split the chunk into multiple parts and apply the FFT to each part
+        split = minimal.args.split
+        split_chunks = np.array_split(chunk, split, axis=0)
+        fft_chunks = [np.fft.fft(split_chunk) for split_chunk in split_chunks]
+
+        return np.concatenate(fft_chunks, axis=0)
 
     def analyze(self, chunk):
         chunk_DWT = Temporal_Overlapped_DWT.analyze(self, chunk)
@@ -40,10 +51,19 @@ class AdvancedTreshhold(Treshold):
 
     def synthesize_hamming_fft(self, chunk, size):
         hamming_window = np.hamming(size)
-        chunk = np.fft.ifft(chunk)
-        chunk[:, 0] = (chunk[:, 0] * hamming_window).astype(np.int32)
-        chunk[:, 1] = (chunk[:, 1] * hamming_window).astype(np.int32)
-        return chunk
+
+        # Split the chunk into multiple parts and apply the IFFT to each part
+        split = minimal.args.split
+        split_chunks = np.array_split(chunk, split, axis=0)
+        fft_chunks = [np.fft.ifft(split_chunk) for split_chunk in split_chunks]
+        combined_chunk = np.concatenate(fft_chunks, axis=0)
+
+        # Apply the inverse of the Hamming window to the combined chunk
+        combined_chunk[:, 0] = (combined_chunk[:, 0] *
+                                hamming_window).astype(np.int32)
+        combined_chunk[:, 1] = (combined_chunk[:, 1] *
+                                hamming_window).astype(np.int32)
+        return combined_chunk
 
     def synthesize(self, chunk_DWT):
 
