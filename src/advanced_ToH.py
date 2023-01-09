@@ -1,100 +1,58 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Considering the threshold of human hearing. '''
+''' Considering the threshold of human hearing using the Hamming Window and the Fourier Transform. '''
 
 import numpy as np
 import math
 import minimal
 import logging
 
+from basic_ToH import Treshold
+from basic_ToH import Treshold__verbose
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
-from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose
 
 
-class Treshold(Temporal_Overlapped_DWT):
+class AdvancedTreshhold(Treshold):
 
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
 
-        # Calculate quantization step for each subband
-        # Modify max_q to change the amount of quantization
-        self.quantization_steps = self.calculate_quantization_steps(max_q=64)
-
-    def calculate_quantization_steps(self, max_q):
-
-        # Threshold of human hearing formula
-        def calc(f):
-            return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
-
-        f = 22050
-        average_SPLs = []
-
-        # Calculate average SPL[dB] for each frequency subband
-        for i in range(self.dwt_levels):
-            mean = 0
-            for j in np.arange(f/2, f, 1):
-                mean += calc(j)
-            f = f/2
-            average_SPLs.insert(0, mean/f)
-        mean = 0
-        for j in np.arange(1, f, 1):
-            mean += calc(j)
-        average_SPLs.insert(0, mean/f)
-
-        # Map the SPL values to quantization steps, from 1 to max_q
-        # https://stackoverflow.com/questions/345187/math-mapping-numbers
-        quantization_steps = []
-        min_SPL = np.min(average_SPLs)
-        max_SPL = np.max(average_SPLs)
-        for i in range(len(average_SPLs)):
-            quantization_steps.append(
-                round((average_SPLs[i]-min_SPL)/(max_SPL-min_SPL)*(max_q-1)+1))
-
-        return quantization_steps
+    def analyze_hamming_fft(chunk, size):
+        hamming_window = np.hamming(size)
+        return np.fft.fft(chunk / hamming_window)
 
     def analyze(self, chunk):
-        chunk_DWT = super().analyze(chunk)
+        chunk_DWT = Temporal_Overlapped_DWT().analyze(chunk)
 
         # Quantize the subbands
-        chunk_DWT[self.slices[0][0]] = (
-            chunk_DWT[self.slices[0][0]] / self.quantization_steps[0]).astype(np.int32)
+        chunk_DWT[self.slices[0][0]] = (self.analyze_hamming_fft(
+            chunk_DWT[self.slices[0][0]], self.slices[0][0]) / self.quantization_steps[0]).astype(np.int32)
         for i in range(self.dwt_levels):
             chunk_DWT[self.slices[i+1]['d'][0]] = (
-                chunk_DWT[self.slices[i+1]['d'][0]] / self.quantization_steps[i+1]).astype(np.int32)
-
-        # Calculate the subbands with the hamming window
-        hamming_window = np.hamming(chunk_DWT[:, 0].size)
-        chunk_DWT[:, 0] = (chunk_DWT[:, 0] / hamming_window).astype(np.int32)
-        chunk_DWT[:, 1] = (chunk_DWT[:, 1] / hamming_window).astype(np.int32)
-
-        # Apply the FFT
-        chunk_DWT = np.fft.fft(chunk_DWT)
+                self.analyze_hamming_fft(
+                    chunk_DWT[self.slices[0][0]], self.slices[i+1]['d'][0]) / self.quantization_steps[i+1]).astype(np.int32)
 
         return chunk_DWT
+
+    def synthesize_hamming_fft(chunk, size):
+        hamming_window = np.hamming(size)
+        return np.fft.fft(chunk) * hamming_window
 
     def synthesize(self, chunk_DWT):
 
         # Dequantize the subbands
-        chunk_DWT[self.slices[0][0]] = chunk_DWT[self.slices[0]
-                                                 [0]] * self.quantization_steps[0]
+        chunk_DWT[self.slices[0][0]] = self.synthesize_hamming_fft(
+            chunk_DWT[self.slices[0][0]], self.slices[0][0]) * self.quantization_steps[0]
         for i in range(self.dwt_levels):
-            chunk_DWT[self.slices[i+1]['d'][0]] = chunk_DWT[self.slices[i+1]
-                                                            ['d'][0]] * self.quantization_steps[i+1]
+            chunk_DWT[self.slices[i+1]['d'][0]] = self.synthesize_hamming_fft(
+                chunk_DWT[self.slices[i+1]['d'][0]], self.slices[i+1]['d'][0]) * self.quantization_steps[i+1]
 
-        # Use the inverse calculation for the hamming window
-        hamming_window = np.hamming(chunk_DWT[:, 0].size)
-        chunk_DWT[:, 0] = (chunk_DWT[:, 0] * hamming_window).astype(np.int32)
-        chunk_DWT[:, 1] = (chunk_DWT[:, 1] * hamming_window).astype(np.int32)
-
-        # Apply the Inverse-FFT
-        chunk_DWT = np.fft.ifft(chunk_DWT)
-
-        return super().synthesize(chunk_DWT)
+        return Temporal_Overlapped_DWT().synthesize(chunk_DWT)
 
 
-class Treshold__verbose(Treshold, Temporal_Overlapped_DWT__verbose):
+class AdvancedTreshold__verbose(AdvancedTreshhold, Treshold__verbose):
     pass
 
 
