@@ -21,10 +21,10 @@ class AdvancedTreshhold(Treshold):
         super().__init__()
         logging.info(__doc__)
 
-    def analyze_hamming_fft(self, chunk):
+    def analyze_hamming_fft(self, sliced_DWT_chunk):
         # Split the chunk into multiple parts
         split = minimal.args.split
-        split_chunks = np.array_split(chunk, split, axis=0)
+        split_chunks = np.array_split(sliced_DWT_chunk, split, axis=0)
 
         # Apply the hamming window to each part of the chunk
         for i in range(len(split_chunks)):
@@ -53,10 +53,10 @@ class AdvancedTreshhold(Treshold):
 
         return chunk_DWT
 
-    def synthesize_hamming_fft(self, chunk):
+    def synthesize_hamming_fft(self, sliced_DWT_chunk):
         # Split the chunk into multiple parts and apply the IFFT to each part
         split = minimal.args.split
-        split_chunks = np.array_split(chunk, split, axis=0)
+        split_chunks = np.array_split(sliced_DWT_chunk, split, axis=0)
         fft_chunks = [np.fft.ifft(split_chunk) for split_chunk in split_chunks]
 
         # Apply the inverse of the Hamming window to each part of the chunk
