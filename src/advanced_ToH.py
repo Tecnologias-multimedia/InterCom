@@ -4,7 +4,6 @@
 ''' Considering the threshold of human hearing using the Hamming Window and the Fourier Transform. '''
 
 import numpy as np
-import math
 import minimal
 import logging
 
@@ -22,17 +21,22 @@ class AdvancedTreshhold(Treshold):
         super().__init__()
         logging.info(__doc__)
 
-    def analyze_hamming_fft(self, chunk, size):
-        hamming_window = np.hamming(size)
-
-        # Apply the Hamming window to the entire chunk
-        chunk[:, 0] = (chunk[:, 0] / hamming_window).astype(np.int32)
-        chunk[:, 1] = (chunk[:, 1] / hamming_window).astype(np.int32)
-
-        # Split the chunk into multiple parts and apply the FFT to each part
+    def analyze_hamming_fft(self, chunk):
+        # Split the chunk into multiple parts
         split = minimal.args.split
         split_chunks = np.array_split(chunk, split, axis=0)
-        fft_chunks = [np.fft.fft(split_chunk) for split_chunk in split_chunks]
+
+        # Apply the hamming window to each part of the chunk
+        for i in range(len(split_chunks)):
+            hamming_window = np.hamming(len(split_chunks[i]))
+            split_chunks[i][:, 0] = (
+                split_chunks[i][:, 0] / hamming_window).astype(np.int32)
+            split_chunks[i][:, 1] = (
+                split_chunks[i][:, 1] / hamming_window).astype(np.int32)
+
+        # Apply the FFT to each part of the chunk
+        fft_chunks = [np.fft.fft(split_chunk)
+                      for split_chunk in split_chunks]
 
         return np.concatenate(fft_chunks, axis=0)
 
@@ -41,38 +45,38 @@ class AdvancedTreshhold(Treshold):
 
         # Quantize the subbands
         chunk_DWT[self.slices[0][0]] = (self.analyze_hamming_fft(
-            chunk_DWT[self.slices[0][0]], chunk_DWT[self.slices[0][0]].shape[0]) / self.quantization_steps[0]).astype(np.int32)
+            chunk_DWT[self.slices[0][0]]) / self.quantization_steps[0]).astype(np.int32)
         for i in range(self.dwt_levels):
             chunk_DWT[self.slices[i+1]['d'][0]] = (
                 self.analyze_hamming_fft(
-                    chunk_DWT[self.slices[i+1]['d'][0]], chunk_DWT[self.slices[i+1]['d'][0]].shape[0]) / self.quantization_steps[i+1]).astype(np.int32)
+                    chunk_DWT[self.slices[i+1]['d'][0]]) / self.quantization_steps[i+1]).astype(np.int32)
 
         return chunk_DWT
 
-    def synthesize_hamming_fft(self, chunk, size):
-        hamming_window = np.hamming(size)
-
+    def synthesize_hamming_fft(self, chunk):
         # Split the chunk into multiple parts and apply the IFFT to each part
         split = minimal.args.split
         split_chunks = np.array_split(chunk, split, axis=0)
         fft_chunks = [np.fft.ifft(split_chunk) for split_chunk in split_chunks]
-        combined_chunk = np.concatenate(fft_chunks, axis=0)
 
-        # Apply the inverse of the Hamming window to the combined chunk
-        combined_chunk[:, 0] = (combined_chunk[:, 0] *
-                                hamming_window).astype(np.int32)
-        combined_chunk[:, 1] = (combined_chunk[:, 1] *
-                                hamming_window).astype(np.int32)
-        return combined_chunk
+        # Apply the inverse of the Hamming window to each part of the chunk
+        for i in range(len(fft_chunks)):
+            hamming_window = np.hamming(len(fft_chunks[i]))
+            fft_chunks[i][:, 0] = (
+                fft_chunks[i][:, 0] * hamming_window).astype(np.int32)
+            fft_chunks[i][:, 1] = (
+                fft_chunks[i][:, 1] * hamming_window).astype(np.int32)
+
+        return np.concatenate(fft_chunks, axis=0)
 
     def synthesize(self, chunk_DWT):
 
         # Dequantize the subbands
         chunk_DWT[self.slices[0][0]] = self.synthesize_hamming_fft(
-            chunk_DWT[self.slices[0][0]], chunk_DWT[self.slices[0][0]].shape[0]) * self.quantization_steps[0]
+            chunk_DWT[self.slices[0][0]]) * self.quantization_steps[0]
         for i in range(self.dwt_levels):
             chunk_DWT[self.slices[i+1]['d'][0]] = self.synthesize_hamming_fft(
-                chunk_DWT[self.slices[i+1]['d'][0]], chunk_DWT[self.slices[i+1]['d'][0]].shape[0]) * self.quantization_steps[i+1]
+                chunk_DWT[self.slices[i+1]['d'][0]]) * self.quantization_steps[i+1]
 
         return Temporal_Overlapped_DWT.synthesize(self, chunk_DWT)
 
