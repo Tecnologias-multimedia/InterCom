@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
+
 import numpy as np
 import scipy.fft as sp
 import sounddevice as sd
@@ -9,13 +10,13 @@ import minimal
 from basic_ToH import Treshold
 from basic_ToH import Treshold__verbose
 
-minimal.parser.add_argument("-nfftb", "--number_fft_bands", type=int, default=3, help="Number of FFT bands for each wavelet band");
+minimal.parser.add_argument("-nfftb", "--number_fft_bands", type=int, default=-1, help="Number of FFT bands for each wavelet band");
 
 class Advance_Threshold(Treshold):
     def __init__(self):
         super().__init__();
 
-    def calculate_quantization_steps(self,max_q,nFBands=3):
+    def calculate_quantization_steps(self,max_q,nFBands=-1):
 
         def obtain_qss(average_SPLs,max_q):
             # Map the SPL values to quantization steps, from 1 to max_q
@@ -62,7 +63,7 @@ class Advance_Threshold(Treshold):
 
                 if text == "y":
                     imperceptible = False;
-                    return 20*np.log10(np.sqrt(np.mean(np.power(noise,2)))); # Obtain RMS of the audio signal
+                    return 20*np.log10(np.sqrt(np.mean(np.power(Noise,2)))); # Obtain RMS of the audio signal
                 else:
                     amplitude+=0.0002;
         
@@ -99,17 +100,20 @@ class Advance_Threshold(Treshold):
 
                 if text == "y":
                     imperceptible = False;
-                    return 20*np.log10(np.sqrt(np.mean(np.power(noise,2)))); # Obtain RMS of the audio signal
+                    return 20*np.log10(np.sqrt(np.mean(np.power(Noise,2)))); # Obtain RMS of the audio signal
                 else:
                     amplitude+=0.002;
+
+        # Obtain user parameter
+        nFBands = minimal.args.number_fft_bands;
+
+        if nFBands==-1:
+            return super().calculate_quantization_steps(max_q);
 
         # White noise properties
         duration = 2;
         fs = 44100;
         maxFreq = fs/2;
-
-        # Obtain user parameter
-        nFBands = minimal.args.number_fft_bands;
 
         # Decibels array
         SPLs = [];
@@ -121,7 +125,7 @@ class Advance_Threshold(Treshold):
 
         # Loop for the first wavelet band
         for j in range(nFBands):
-            if maxFreqCut<=1378.125:
+            if maxFreqCut<=1300:
                 SPLs.append(obtain_db_border_frequency(duration,fs,minFreqCut,maxFreqCut,maxFreq));
             else:
                 SPLs.append(obtain_db_centered_frequency(duration,fs,minFreqCut,maxFreqCut,maxFreq));
