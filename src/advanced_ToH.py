@@ -63,7 +63,7 @@ class Advance_Threshold(Treshold):
 
                 if text == "y":
                     imperceptible = False;
-                    return 20*np.log10(np.sqrt(np.mean(np.power(Noise,2)))); # Obtain RMS of the audio signal
+                    return 20*np.log10(np.sqrt(np.mean(np.power(noise,2)))); # Obtain RMS of the audio signal
                 else:
                     amplitude+=0.0002;
         
@@ -100,7 +100,7 @@ class Advance_Threshold(Treshold):
 
                 if text == "y":
                     imperceptible = False;
-                    return 20*np.log10(np.sqrt(np.mean(np.power(Noise,2)))); # Obtain RMS of the audio signal
+                    return 20*np.log10(np.sqrt(np.mean(np.power(noise,2)))); # Obtain RMS of the audio signal
                 else:
                     amplitude+=0.002;
 
@@ -125,7 +125,7 @@ class Advance_Threshold(Treshold):
 
         # Loop for the first wavelet band
         for j in range(nFBands):
-            if maxFreqCut<=1300:
+            if maxFreqCut<=1378.125:
                 SPLs.append(obtain_db_border_frequency(duration,fs,minFreqCut,maxFreqCut,maxFreq));
             else:
                 SPLs.append(obtain_db_centered_frequency(duration,fs,minFreqCut,maxFreqCut,maxFreq));
