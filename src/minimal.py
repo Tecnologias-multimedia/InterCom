@@ -43,7 +43,7 @@ parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My l
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
-parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is requested)")
+parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)")
 
 class Minimal:
     # Some default values:
@@ -130,12 +130,12 @@ class Minimal:
 
         time : CData
 
-            Time-stamps of the first frame in indata, in outdata (that
+            Time-stamps of the first frame in indata, and in outdata (that
             is time at which the callback function was called.
 
         status : CallbackFlags
 
-            Indicates if underflow or overflow conditions happened
+            Indicates if underflow or overflow (underrrun) conditions happened
             during the last call to the callbak function.
 
         '''
@@ -266,7 +266,7 @@ class Minimal__verbose(Minimal):
         self.received_messages_count = 0
         self.sent_KBPS = 0
         self.received_KBPS = 0
-        # All counters are reset at the end of each cycle.
+        # All these counters are reset at the end of each cycle.
 
         self.average_sent_messages = 0
         self.average_received_messages = 0
