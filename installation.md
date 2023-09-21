@@ -28,7 +28,7 @@ Follow these steps to install and configure the project:
 
 
    ```bash
-   pip install requirements.txt
+   pip install -r requirements.txt
    # If you are an ubuntu user, you need to run this command 'sudo apt install portaudio19-dev python3-pyaudio' without the quotes,
    # for downloading correctly pyaudio, a module needed for PortAudio.
    
