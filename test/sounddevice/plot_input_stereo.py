@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plot the live microphone signal(s) with matplotlib.
 
-Matplotlib and NumPy have to be installed (using pip), and also python3-tk (through the system installer).
+Matplotlib and NumPy have to be installed (using pip), and also python3-tk (through the system installer in Ubuntu) or tk (in Arch).
 
 """
 import argparse
