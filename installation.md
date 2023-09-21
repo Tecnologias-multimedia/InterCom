@@ -33,6 +33,7 @@ Follow these steps to install and configure the project:
    # for downloading correctly pyaudio, a module needed for PortAudio.
    
 3. **Run the first program**
+
    Run the minimal.py for example.
 
    ```bash
