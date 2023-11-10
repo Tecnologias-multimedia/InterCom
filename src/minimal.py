@@ -6,7 +6,7 @@
 import os
 import signal
 import argparse
-import sounddevice as sd # If "pip install sounddevice" fails, intall "libportaudio2"
+import sounddevice as sd # If "pip install sounddevice" fails, install the "libportaudio2" system package
 import numpy as np
 import socket
 import time
@@ -43,13 +43,13 @@ parser.add_argument("-l", "--listening_port", type=int, default=4444, help="My l
 parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening) address")
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
-parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is requested)")
+parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)")
 
 class Minimal:
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
     #SAMPLE_TYPE = np.int16    # The number of bits per sample.
-    NUMBER_OF_CHANNELS = 2    # The number of channels.
+    NUMBER_OF_CHANNELS = 2    # The number of channels. Currently, in OSX systems NUMBER_OF_CHANNELS must be 1.
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
@@ -62,14 +62,13 @@ class Minimal:
         logging.info(f"chunk_time = {self.chunk_time} seconds")
         self.zero_chunk = self.generate_zero_chunk()
 
-
         if args.filename:
             logging.info(f"Using \"{args.filename}\" as input")
             self.wavfile = sf.SoundFile(args.filename, 'r')
-            self._handler = self._read_io_and_play
+            self._handler = self._read_IO_and_play
             self.stream = self.file_stream
         else:
-            self._handler = self._record_io_and_play
+            self._handler = self._record_IO_and_play
             self.stream = self.mic_stream
 
         #self.input_exhausted = False
@@ -81,7 +80,8 @@ class Minimal:
     def unpack(self, packed_chunk):
         '''Unpack a packed_chunk.'''
 
-        # We need to reshape a numpy array, that comes without shape.
+        # We need to reshape packed_chunk, that comes as sequence of
+        # bytes, as a NumPy array.
         chunk = np.frombuffer(packed_chunk, np.int16)
         chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk
@@ -108,7 +108,7 @@ class Minimal:
         '''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
 
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, indata, outdata, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
         chunk, sends the packet, receives a packet, unpacks it to get
         a chunk, and plays the chunk.
@@ -130,12 +130,12 @@ class Minimal:
 
         time : CData
 
-            Time-stamps of the first frame in indata, in outdata (that
+            Time-stamps of the first frame in indata, and in outdata (that
             is time at which the callback function was called.
 
         status : CallbackFlags
 
-            Indicates if underflow or overflow conditions happened
+            Indicates if underflow or overflow (underrrun) conditions happened
             during the last call to the callbak function.
 
         '''
@@ -176,7 +176,7 @@ class Minimal:
             #self.input_exhausted = True
         return chunk
             
-    def _read_io_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, outdata, frames, time, status):
         chunk = self.read_chunk_from_file()
         packed_chunk = self.pack(chunk)
         self.send(packed_chunk)
@@ -266,7 +266,7 @@ class Minimal__verbose(Minimal):
         self.received_messages_count = 0
         self.sent_KBPS = 0
         self.received_KBPS = 0
-        # All counters are reset at the end of each cycle.
+        # All these counters are reset at the end of each cycle.
 
         self.average_sent_messages = 0
         self.average_received_messages = 0
@@ -453,23 +453,23 @@ class Minimal__verbose(Minimal):
         self.show_data(outdata)
         print("\033[m")
 
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, indata, outdata, frames, time, status):
         # Notice that in each call to this method, a (different) chunk is processed.
 
         if args.show_samples:
             self.show_indata(indata)
 
-        super()._record_io_and_play(indata, outdata, frames, time, status)
+        super()._record_IO_and_play(indata, outdata, frames, time, status)
 
         if args.show_samples:
             self.show_outdata(outdata)
 
-    def _read_io_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, outdata, frames, time, status):
         
         if args.show_samples:
             self.show_indata(indata)
 
-        super()._read_io_and_play(outdata, frames, time, status)
+        super()._read_IO_and_play(outdata, frames, time, status)
 
         if args.show_samples:
             self.show_outdata(outdata)
