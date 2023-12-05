@@ -22,10 +22,9 @@ class BR_Control_Add_Lost(BR_control_no.BR_Control_No):
     def data_flow_control(self):
         while True:
             self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks
-            self.quantization_step_size += self.number_of_lost_packets
+            self.quantization_step_size += (self.number_of_lost_packets - 1)
             if self.quantization_step_size < minimal.args.minimal_quantization_step_size:
                 self.quantization_step_size = minimal.args.minimal_quantization_step_size
-            self.number_of_lost_packets = self.number_of_sent_chunks - self.number_of_received_chunks - 1
             self.number_of_sent_chunks = 0
             self.number_of_received_chunks = 0
             time.sleep(self.rate_control_period)
