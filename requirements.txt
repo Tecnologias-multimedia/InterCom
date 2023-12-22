@@ -1,6 +1,7 @@
 argcomplete
-PyWavelets
+pywavelets
 sounddevice
 soundfile
 matplotlib
 scipy
+spectrum
