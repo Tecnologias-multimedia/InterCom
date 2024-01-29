@@ -42,6 +42,8 @@ try:
             print(status)
         outdata[:] = indata
 
+    print("blocksize =", args.blocksize)
+
     with sd.Stream(device=(args.input_device, args.output_device),
                    samplerate=args.samplerate, blocksize=args.blocksize,
                    dtype=args.dtype, latency=args.latency,

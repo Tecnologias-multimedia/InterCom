@@ -1,0 +1,7 @@
+argcomplete
+pywavelets
+sounddevice
+soundfile
+matplotlib
+scipy
+spectrum

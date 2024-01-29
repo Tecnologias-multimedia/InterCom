@@ -1,14 +1,13 @@
-# The same as wire3.py, but using NumPy arrays.
+# Basic ADC/DAC-wiring using non-blocking I/O. Python buffers are used.
 
 import sounddevice as sd
-import numpy as np
 
-CHUNK_SIZE = 1024
-
-stream = sd.Stream(samplerate=44100, channels=2, dtype='int16')
+stream = sd.RawStream(samplerate=44100, channels=2, dtype='int16')
 stream.start()
+
 while True:
-    chunk, overflowed = stream.read(CHUNK_SIZE)
+    chunk, overflowed = stream.read(stream.read_available)
+    #print(len(chunk), end=' ', flush=True)
     if overflowed:
         print("Overflow")
     stream.write(chunk)
