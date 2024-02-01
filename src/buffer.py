@@ -159,6 +159,8 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_outdata(outdata)
 
+        self.audio_data = outdata
+
     def _read_io_and_play(self, outdata, frames, time, status):
         if minimal.args.show_samples:
             self.show_indata(indata) # OJO, indata undefined
@@ -182,6 +184,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
                 self.receive_and_buffer()
+                self.update_plot()
             #self.print_final_averages()
        # except KeyboardInterrupt:
        #     self.print_final_averages()

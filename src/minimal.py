@@ -240,6 +240,9 @@ class Minimal:
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
 
+import pygame
+import queue
+
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
 
@@ -290,6 +293,27 @@ class Minimal__verbose(Minimal):
         logging.info(f"seconds_per_cycle = {self.seconds_per_cycle}")            
         logging.info(f"chunks_per_cycle = {self.chunks_per_cycle}")
         logging.info(f"frames_per_cycle = {self.frames_per_cycle}")
+        
+        # Queue for communicating with self.update_plot()
+        self.q = queue.Queue()
+
+        # PyGame stuff
+        self.window_heigh = 256
+        self.display = pygame.display.set_mode((256, self.window_heigh))
+
+    def update_plot(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+                break
+        self.display.fill((0, 0, 0))
+        matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[:,0], -128, 127) + 128]
+        surf = pygame.surfarray.make_surface(matrix)
+        #for i in range(256):
+        #    self.display.set_at((i, self.audio_data[i][0] + 128), (255, 0, 0))
+        #    self.display.set_at((i, self.audio_data[i][1] + 128), (0, 0, 255))
+        self.display.blit(surf, (0, 0))
+        pygame.display.update()
 
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
@@ -464,6 +488,10 @@ class Minimal__verbose(Minimal):
         if args.show_samples:
             self.show_outdata(outdata)
 
+        #self.q.put(outdata[:128])
+        self.audio_data = outdata
+        #print(".")
+
     def _read_IO_and_play(self, outdata, frames, time, status):
         
         if args.show_samples:
@@ -481,9 +509,11 @@ class Minimal__verbose(Minimal):
         self.print_header()
 
         with self.stream(self._handler):
+
             while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
                 time.sleep(self.seconds_per_cycle)
                 self.cycle_feedback()
+                self.update_plot()
                 #self.print_final_averages()
         #except KeyboardInterrupt:
         #except:
