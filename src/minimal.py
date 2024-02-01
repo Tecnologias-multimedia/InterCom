@@ -295,11 +295,12 @@ class Minimal__verbose(Minimal):
         logging.info(f"frames_per_cycle = {self.frames_per_cycle}")
         
         # Queue for communicating with self.update_plot()
-        self.q = queue.Queue()
+        #self.q = queue.Queue()
 
         # PyGame stuff
         self.window_heigh = 256
         self.display = pygame.display.set_mode((256, self.window_heigh))
+        self.surface = pygame.surface.Surface((256, self.window_heigh)).convert()
 
     def update_plot(self):
         for event in pygame.event.get():
@@ -307,12 +308,18 @@ class Minimal__verbose(Minimal):
                 done = True
                 break
         self.display.fill((0, 0, 0))
-        matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[:,0], -128, 127) + 128]
-        surf = pygame.surfarray.make_surface(matrix)
+        red_matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[0:256,0]>>8, -128, 127) + 128]
+        blue_matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[0:256,1]>>8, -128, 127) + 128]
+        RGB_matrix = np.zeros((256, 256, 3), dtype=np.uint8)
+        RGB_matrix[:, :, 0] = red_matrix
+        RGB_matrix[:, :, 2] = blue_matrix
+        surface = pygame.surfarray.make_surface(RGB_matrix)
+        #surf = pygame.surfarray.blit_array(self.surface, self.audio_data[:,0])
         #for i in range(256):
         #    self.display.set_at((i, self.audio_data[i][0] + 128), (255, 0, 0))
         #    self.display.set_at((i, self.audio_data[i][1] + 128), (0, 0, 255))
-        self.display.blit(surf, (0, 0))
+        self.display.blit(surface, (0, 0))
+        #pygame.surfarray.blit_array(self.surface, (0, 0))
         pygame.display.update()
 
     def send(self, packed_chunk):
