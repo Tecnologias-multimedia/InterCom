@@ -120,20 +120,20 @@ class Buffering(minimal.Minimal):
 
             while True:# and not self.input_exhausted:
                 self.receive_and_buffer()
-            
+
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
         super().__init__()
 
-        thread = threading.Thread(target=self.feedback)
-        thread.daemon = True # To obey CTRL+C interruption.
-        thread.start()
+        #thread = threading.Thread(target=self.feedback)
+        #thread.daemon = True # To obey CTRL+C interruption.
+        #thread.start()
 
-    def feedback(self):
-        while True:
-            time.sleep(self.seconds_per_cycle)
-            self.cycle_feedback()
+    #def feedback(self):
+    #    while True:
+    #        time.sleep(self.seconds_per_cycle)
+    #        self.cycle_feedback()
 
     def send(self, packed_chunk):
         '''Computes the number of sent bytes and the number of sent
@@ -174,23 +174,24 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
 
         return read_chunk
 
+    def loop_receive_and_buffer(self):
+        first_received_chunk_number = self.receive_and_buffer()
+        if __debug__:
+            print("first_received_chunk_number =", first_received_chunk_number)
+        self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
+        while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            self.receive_and_buffer()
+            self.update_plot() # PyGame cannot run in a thread :-/
+
     def run(self):
-        '''Run the verbose Buffering.'''
+        cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
+        cycle_feedback_thread.daemon = True        
         self.print_running_info()
         super().print_header()
-        #try:
         self.played_chunk_number = 0
         with self.stream(self._handler):
-            first_received_chunk_number = self.receive_and_buffer()
-            if __debug__:
-                print("first_received_chunk_number =", first_received_chunk_number)
-            self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
-                self.receive_and_buffer()
-                self.update_plot()
-            #self.print_final_averages()
-       # except KeyboardInterrupt:
-       #     self.print_final_averages()
+            cycle_feedback_thread.start()
+            self.loop_receive_and_buffer()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -216,6 +217,7 @@ if __name__ == "__main__":
         intercom = Buffering__verbose()
     else:
         intercom = Buffering()
+
     try:
         intercom.run()
     except KeyboardInterrupt:

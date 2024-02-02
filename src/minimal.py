@@ -241,7 +241,7 @@ parser.add_argument("--show_stats", action="store_true", help="shows bandwith, C
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
 
 import pygame
-import queue
+import threading
 
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
@@ -512,23 +512,27 @@ class Minimal__verbose(Minimal):
 
         self.audio_data = outdata
 
+    def loop_update_plot(self):
+        while True:
+            time.sleep(0.1)
+            self.update_plot()
+
+    def loop_cycle_feedback(self):
+        while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            time.sleep(self.seconds_per_cycle)
+            self.cycle_feedback()
+
     def run(self):
-        ''' Runs the verbose InterCom. '''
+        ''' Run the verbose Minimal. '''
+
+        cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
+        cycle_feedback_thread.daemon = True
         self.sock.settimeout(0)
         self.print_running_info()
         self.print_header()
-
         with self.stream(self._handler):
-
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
-                time.sleep(self.seconds_per_cycle)
-                self.cycle_feedback()
-                self.update_plot()
-                #self.print_final_averages()
-        #except KeyboardInterrupt:
-        #except:
-        #    raise
-        #    self.print_final_averages()
+            cycle_feedback_thread.start()
+            self.loop_update_plot()
 
 try:
     import argcomplete  # <tab> completion for argparse.
