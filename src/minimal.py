@@ -300,20 +300,21 @@ class Minimal__verbose(Minimal):
         # PyGame stuff
         self.window_heigh = 256
         self.display = pygame.display.set_mode((256, self.window_heigh))
+        #self.display.fill((0, 0, 0))
         self.surface = pygame.surface.Surface((256, self.window_heigh)).convert()
+        self.RGB_matrix = np.zeros((256, 256, 3), dtype=np.uint8)
+        self.eye = 255*np.eye(256, dtype=int)
 
     def update_plot(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
                 break
-        self.display.fill((0, 0, 0))
-        red_matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[0:256,0]>>8, -128, 127) + 128]
-        blue_matrix = 255*np.eye(256, dtype=int)[np.clip(self.audio_data[0:256,1]>>8, -128, 127) + 128]
-        RGB_matrix = np.zeros((256, 256, 3), dtype=np.uint8)
-        RGB_matrix[:, :, 0] = red_matrix
-        RGB_matrix[:, :, 2] = blue_matrix
-        surface = pygame.surfarray.make_surface(RGB_matrix)
+        R_matrix = self.eye[(self.audio_data[::4, 0]>>8) + 128]
+        B_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
+        self.RGB_matrix[:, :, 0] = R_matrix
+        self.RGB_matrix[:, :, 2] = B_matrix
+        surface = pygame.surfarray.make_surface(self.RGB_matrix)
         #surf = pygame.surfarray.blit_array(self.surface, self.audio_data[:,0])
         #for i in range(256):
         #    self.display.set_at((i, self.audio_data[i][0] + 128), (255, 0, 0))
@@ -508,6 +509,8 @@ class Minimal__verbose(Minimal):
 
         if args.show_samples:
             self.show_outdata(outdata)
+
+        self.audio_data = outdata
 
     def run(self):
         ''' Runs the verbose InterCom. '''

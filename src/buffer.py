@@ -169,6 +169,9 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
 
         if minimal.args.show_samples:
             self.show_outdata(outdata)
+
+        self.audio_data = outdata
+
         return read_chunk
 
     def run(self):
