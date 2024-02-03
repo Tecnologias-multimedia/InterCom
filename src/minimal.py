@@ -300,7 +300,7 @@ class Minimal__verbose(Minimal):
         # PyGame stuff
         self.window_heigh = 256
         self.display = pygame.display.set_mode((256, self.window_heigh))
-        #self.display.fill((0, 0, 0))
+        self.display.fill((0, 0, 0))
         self.surface = pygame.surface.Surface((256, self.window_heigh)).convert()
         self.RGB_matrix = np.zeros((256, 256, 3), dtype=np.uint8)
         self.eye = 255*np.eye(256, dtype=int)
@@ -311,9 +311,9 @@ class Minimal__verbose(Minimal):
                 done = True
                 break
         R_matrix = self.eye[(self.audio_data[::4, 0]>>8) + 128]
-        B_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
+        G_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
         self.RGB_matrix[:, :, 0] = R_matrix
-        self.RGB_matrix[:, :, 2] = B_matrix
+        self.RGB_matrix[:, :, 1] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
         #surf = pygame.surfarray.blit_array(self.surface, self.audio_data[:,0])
         #for i in range(256):
@@ -497,7 +497,7 @@ class Minimal__verbose(Minimal):
             self.show_outdata(outdata)
 
         #self.q.put(outdata[:128])
-        self.audio_data = outdata
+        self.audio_data = indata
         #print(".")
 
     def _read_IO_and_play(self, outdata, frames, time, status):
@@ -523,8 +523,6 @@ class Minimal__verbose(Minimal):
             self.cycle_feedback()
 
     def run(self):
-        ''' Run the verbose Minimal. '''
-
         cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
         cycle_feedback_thread.daemon = True
         self.sock.settimeout(0)

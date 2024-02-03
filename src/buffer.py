@@ -159,7 +159,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_outdata(outdata)
 
-        self.audio_data = outdata
+        self.audio_data = indata
 
     def _read_io_and_play(self, outdata, frames, time, status):
         if minimal.args.show_samples:
@@ -170,7 +170,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_outdata(outdata)
 
-        self.audio_data = outdata
+        self.audio_data = read_chunk
 
         return read_chunk
 
