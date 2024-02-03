@@ -47,6 +47,7 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
         surface = pygame.surfarray.make_surface(matrix)
         self.screen.blit(surface, (0, 0))
         pygame.display.update()
+        #super().update_plot()
 
     def _get_correlation(self, a, v):
         mean_a = np.mean(a)
@@ -104,7 +105,7 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
 
     def pack(self, chunk_number, chunk):
         #chunk = chunk - np.roll(self.audio_data, -4)
-        chunk = chunk - (0.5*np.roll(self.audio_data, -4)).astype(np.int16)
+        chunk = chunk - (0.3*np.roll(self.audio_data, -4)).astype(np.int16)
         packed_chunk = super().pack(chunk_number, chunk)
         return packed_chunk
 

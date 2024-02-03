@@ -126,15 +126,6 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     def __init__(self):
         super().__init__()
 
-        #thread = threading.Thread(target=self.feedback)
-        #thread.daemon = True # To obey CTRL+C interruption.
-        #thread.start()
-
-    #def feedback(self):
-    #    while True:
-    #        time.sleep(self.seconds_per_cycle)
-    #        self.cycle_feedback()
-
     def send(self, packed_chunk):
         '''Computes the number of sent bytes and the number of sent
         packets.'''
