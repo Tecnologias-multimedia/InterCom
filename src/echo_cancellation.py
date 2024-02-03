@@ -105,7 +105,7 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
 
     def pack(self, chunk_number, chunk):
         #chunk = chunk - np.roll(self.audio_data, -4)
-        chunk = chunk - (0.3*np.roll(self.audio_data, -4)).astype(np.int16)
+        chunk = chunk - (0.5*np.roll(self.audio_data, -0)).astype(np.int16)
         packed_chunk = super().pack(chunk_number, chunk)
         return packed_chunk
 

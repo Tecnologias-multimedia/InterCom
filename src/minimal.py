@@ -242,6 +242,7 @@ parser.add_argument("--show_samples", action="store_true", help="shows samples v
 
 import pygame
 import threading
+import spectrum
 
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
@@ -298,20 +299,33 @@ class Minimal__verbose(Minimal):
         #self.q = queue.Queue()
 
         # PyGame stuff
-        self.window_heigh = 256
-        self.display = pygame.display.set_mode((256, self.window_heigh))
+        self.window_heigh = 513
+        self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
         self.display.fill((0, 0, 0))
-        self.surface = pygame.surface.Surface((256, self.window_heigh)).convert()
-        self.RGB_matrix = np.zeros((256, 256, 3), dtype=np.uint8)
-        self.eye = 255*np.eye(256, dtype=int)
+        self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
+        self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
+        self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
+        self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
 
-    def update_plot(self):
+    def update_display(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
                 break
-        R_matrix = self.eye[(self.audio_data[::4, 0]>>8) + 128]
-        G_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
+        le_channel = self.audio_data[:, 0]
+        ri_channel = self.audio_data[:, 1]
+        le_windowed_channel = le_channel * self.hamming_window
+        ri_windowed_channel = ri_channel * self.hamming_window
+        le_FFT = np.fft.rfft(le_windowed_channel)
+        ri_FFT = np.fft.rfft(ri_windowed_channel)
+        le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
+        ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        le_spectrum = le_spectrum.astype(np.uint16)
+        ri_spectrum = ri_spectrum.astype(np.uint16)
+        #R_matrix = self.eye[(self.audio_data[::4, 0]>>8) + 128]
+        #G_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
+        R_matrix = self.eye[511 - le_spectrum]
+        G_matrix = self.eye[511 - ri_spectrum]
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
@@ -512,10 +526,10 @@ class Minimal__verbose(Minimal):
 
         self.audio_data = outdata
 
-    def loop_update_plot(self):
+    def loop_update_display(self):
         while True:
             time.sleep(0.1)
-            self.update_plot()
+            self.update_display()
 
     def loop_cycle_feedback(self):
         while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
@@ -530,7 +544,7 @@ class Minimal__verbose(Minimal):
         self.print_header()
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            self.loop_update_plot()
+            self.loop_update_display()
 
 try:
     import argcomplete  # <tab> completion for argparse.

@@ -172,7 +172,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
         while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
             self.receive_and_buffer()
-            self.update_plot() # PyGame cannot run in a thread :-/
+            self.update_display() # PyGame cannot run in a thread :-/
 
     def run(self):
         cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
