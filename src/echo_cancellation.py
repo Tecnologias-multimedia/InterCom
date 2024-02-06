@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Simple echo cancellation.'''
+'''Simple echo cancellation. Substract an attenuated version of the chunk that has been played from the recorded chunk, delayed some miliseconds. Substract to the played chunk an attenuated version of the chunk that was sent to the interlocutor "buffering_time" ms before.'''
 
 import numpy as np
 import struct
@@ -12,6 +12,7 @@ import pygame
 
 import minimal
 import buffer
+import queue
 
 from scipy import signal
 
@@ -21,17 +22,23 @@ class Echo_Cancellation(buffer.Buffering):
         logging.info(__doc__)
         self.delay = 500 # In frames
         self.attenuation = 0.2
+        #self.sent_chunks = queue.Queue()
+        #for i in range(self.chunks_to_buffer):
+        #    self.sent_chunks.put(self.zero_chunk)
 
     def __record_io_and_play(self, indata, outdata, frames, time, status):
         super()._record_io_and_play(indata, outdata, frames, time, status)
         self.audio_data = outdata
+
+    def __record_io_and_play(self, recorded_chunk, played_chunk, frames, time, status):
+        super()._record_io_and_play(recorded_chunk, played_chunk, frames, time, status)
         
 class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
-        self.window_heigh = 512
-        self.screen = pygame.display.set_mode((minimal.args.frames_per_chunk, self.window_heigh))
-        self.eye = 255*np.eye(minimal.args.frames_per_chunk, dtype=int)
+        #self.window_heigh = 512
+        #self.screen = pygame.display.set_mode((minimal.args.frames_per_chunk, self.window_heigh))
+        #self.eye = 255*np.eye(minimal.args.frames_per_chunk, dtype=int)
         self.corr_data = self.generate_zero_chunk()[:, 0]
 
         self.audio_data = self.generate_zero_chunk()
@@ -83,8 +90,10 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
     def play_chunk(self, DAC, chunk):
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
         chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
-        a = self.audio_data[:, 1] #chunk[:, 0]
-        #v = chunk[:, 1]
+        a = chunk[:, 1]
+        #a = self.audio_data[:, 1] #chunk[:, 0]
+        #old_sent_chunk = self.sent_chunks.get()
+        #v = old_sent_chunk[:, 1]
         v = self._buffer[(self.played_chunk_number - 2) % self.cells_in_buffer].reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)[:, 1]
         #v = a
         #v = np.concatenate([0.5*a[:100].astype(np.int16), a])
@@ -101,12 +110,22 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
             print(lag)
         #DAC[:] = (chunk - 0.2*self.audio_data).astype(np.int16) #- np.roll(chunk, 0)
         #DAC[:] = (chunk - 0.3*np.roll(self.audio_data,8)).astype(np.int16) #- np.roll(chunk, 0)
+        #chunk_without_echo = chunk - (0.5*np.roll(old_sent_chunk, -0)).astype(np.int16)
+        #chunk_without_echo = chunk - (0.99*old_sent_chunk).astype(np.int16)
+        #chunk_without_echo = old_sent_chunk
+        #chunk_without_echo = chunk
+        #print(chunk, old_sent_chunk)
+        #DAC[:] = chunk_without_echo
+        #DAC[:] = self.zero_chunk
         DAC[:] = chunk
 
-    def pack(self, chunk_number, chunk):
+    def pack(self, chunk_number, recorded_chunk):
         #chunk = chunk - np.roll(self.audio_data, -4)
-        chunk = chunk - (0.5*np.roll(self.audio_data, -0)).astype(np.int16)
-        packed_chunk = super().pack(chunk_number, chunk)
+        #chunk = chunk - (0.9*np.roll(self.audio_data, 24)).astype(np.int16)
+        #print(self.audio_data)
+        #print(chunk)
+        packed_chunk = super().pack(chunk_number, recorded_chunk)
+        #self.sent_chunks.put(recorded_chunk)
         return packed_chunk
 
 try:

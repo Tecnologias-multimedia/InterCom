@@ -43,10 +43,10 @@ class Buffering(minimal.Minimal):
         if minimal.args.filename:
             logging.info(f"Using \"{minimal.args.filename}\" as input")
             self.wavfile = sf.SoundFile(minimal.args.filename, 'r')
-            self._handler = self._read_io_and_play
+            self._handler = self._read_IO_and_play
             self.stream = self.file_stream
         else:
-            self._handler = self._record_io_and_play
+            self._handler = self._record_IO_and_play
             self.stream = self.mic_stream
 
     def pack(self, chunk_number, chunk):
@@ -86,21 +86,21 @@ class Buffering(minimal.Minimal):
         chunk_number, chunk = self.unpack(packed_chunk)
         self.buffer_chunk(chunk_number, chunk)
         return chunk_number
-        
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
-        packed_chunk = self.pack(self.chunk_number, indata)
+        packed_chunk = self.pack(self.chunk_number, ADC)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
-        self.play_chunk(outdata, chunk)
+        self.play_chunk(DAC, chunk)
 
-    def _read_io_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
         read_chunk = self.read_chunk_from_file()
         packed_chunk = self.pack(self.chunk_number, read_chunk)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
-        self.play_chunk(outdata, chunk)
+        self.play_chunk(DAC, chunk)
         return read_chunk
 
     def run(self):
@@ -141,27 +141,25 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.received_messages_count += 1
         return packed_chunk
 
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         if minimal.args.show_samples:
-            self.show_indata(indata)
+            self.show_recorded_chunk(ADC)
 
-        super()._record_io_and_play(indata, outdata, frames, time, status)
-
-        if minimal.args.show_samples:
-            self.show_outdata(outdata)
-
-        self.audio_data = indata
-
-    def _read_io_and_play(self, outdata, frames, time, status):
-        if minimal.args.show_samples:
-            self.show_indata(indata) # OJO, indata undefined
-
-        read_chunk = super()._read_io_and_play(outdata, frames, time, status)
+        super()._record_IO_and_play(ADC, DAC, frames, time, status)
 
         if minimal.args.show_samples:
-            self.show_outdata(outdata)
+            self.show_played_chunk(DAC)
 
-        self.audio_data = read_chunk
+        self.audio_data = DAC
+
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        read_chunk = super()._read_IO_and_play(DAC, frames, time, status)
+
+        if minimal.args.show_samples:
+            self.show_recorded_chunk(read_chunk)
+            self.show_played_chunk(DAC)
+
+        self.audio_data = DAC
 
         return read_chunk
 

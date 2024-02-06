@@ -108,7 +108,7 @@ class Minimal:
         '''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
 
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
         chunk, sends the packet, receives a packet, unpacks it to get
         a chunk, and plays the chunk.
@@ -116,22 +116,23 @@ class Minimal:
         Parameters
         ----------
 
-        indata : numpy.ndarray
+        ADC : numpy.ndarray
 
-            The chunk of audio with the recorded data.
+            Holds the last recorded chunk.
 
-        outdata : numpy.ndarray
+        DAC : numpy.ndarray
 
-            The chunk of audio with the data to play.
+            Accepts a chunk to play.
 
         frames : int16
 
-            The number of frames in indata and outdata.
+            The number of frames in a chunk handled by ADC and DAC.
 
         time : CData
 
-            Time-stamps of the first frame in indata, and in outdata (that
-            is time at which the callback function was called.
+            Time-stamps of the first frame in chunk returned by the
+            ADC, and accepted by the DAC (that is time at which the
+            callback function was called).
 
         status : CallbackFlags
 
@@ -140,10 +141,10 @@ class Minimal:
 
         '''
         if __debug__:
-            data = indata.copy()
+            data = ADC.copy()
             packed_chunk = self.pack(data)
         else:
-            packed_chunk = self.pack(indata)
+            packed_chunk = self.pack(ADC)
         self.send(packed_chunk)
         try:
             packed_chunk = self.receive()
@@ -152,10 +153,10 @@ class Minimal:
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
-        outdata[:] = chunk
+        DAC[:] = chunk
         if __debug__:
-            #if not np.array_equal(indata, outdata):
-            #    print("indata[0] =", indata[0], "outdata[0] =", outdata[0])
+            #if not np.array_equal(ADC, DAC):
+            #    print("ADC[0] =", ADC[0], "DAC[0] =", DAC[0])
             print(next(spinner), end='\b', flush=True)
 
     def read_chunk_from_file(self):
@@ -176,7 +177,9 @@ class Minimal:
             #self.input_exhausted = True
         return chunk
             
-    def _read_IO_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        '''Similar to _record_IO_and_play, but the recorded chunk comes from a file.
+        '''
         chunk = self.read_chunk_from_file()
         packed_chunk = self.pack(chunk)
         self.send(packed_chunk)
@@ -186,9 +189,10 @@ class Minimal:
         except (socket.timeout, BlockingIOError, ValueError):
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
-        outdata[:] = chunk
+        DAC[:] = chunk
         if __debug__:
             print(next(spinner), end='\b', flush=True)
+        return chunk
 
     def mic_stream(self, callback_function):
         '''Creates the stream.
@@ -489,42 +493,39 @@ class Minimal__verbose(Minimal):
         for i in range(args.frames_per_chunk-4, args.frames_per_chunk):
             print(data[i], end=' ')
 
-    def show_indata(self, indata):
+    def show_recorded_chunk(self, recorded_chunk):
         print("I =", end=' ')
-        self.show_data(indata)
+        self.show_data(recorded_chunk)
         print()
 
-    def show_outdata(self, outdata):
+    def show_played_chunk(self, played_chunk):
         print("\033[7mO =", end=' ')
-        self.show_data(outdata)
+        self.show_data(played_chunk)
         print("\033[m")
 
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         # Notice that in each call to this method, a (different) chunk is processed.
 
         if args.show_samples:
-            self.show_indata(indata)
+            self.show_recorded_chunk(ADC)
 
-        super()._record_IO_and_play(indata, outdata, frames, time, status)
+        super()._record_IO_and_play(ADC, DAC, frames, time, status)
 
         if args.show_samples:
-            self.show_outdata(outdata)
+            self.show_played_chunk(DAC)
 
-        #self.q.put(outdata[:128])
-        self.audio_data = indata
+        #self.q.put(DAC[:128])
+        self.audio_data = ADC
         #print(".")
 
-    def _read_IO_and_play(self, outdata, frames, time, status):
-        
-        if args.show_samples:
-            self.show_indata(indata)
-
-        super()._read_IO_and_play(outdata, frames, time, status)
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        chunk = super()._read_IO_and_play(DAC, frames, time, status)
 
         if args.show_samples:
-            self.show_outdata(outdata)
+            self.show_recorded_chunk(chunk)
+            self.show_played_chunk(DAC)
 
-        self.audio_data = outdata
+        self.audio_data = DAC
 
     def loop_update_display(self):
         while True:
