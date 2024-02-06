@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Simple echo cancellation. Substract an attenuated version of the chunk that has been played from the recorded chunk, delayed some miliseconds. Substract to the played chunk an attenuated version of the chunk that was sent to the interlocutor "buffering_time" ms before.'''
+'''Simple echo cancellation. Substract an attenuated version of the last chunk that has been played from the last recorded chunk, delaying the played chunk the propagation time from the speaker to the mic. Substract to the played chunk an attenuated version of the chunk that was sent to the interlocutor "buffering_time" ms before.'''
 
 import numpy as np
 import struct
@@ -24,7 +24,8 @@ class Echo_Cancellation(buffer.Buffering):
         self.attenuation = 0.2
         #self.sent_chunks = queue.Queue()
         #for i in range(self.chunks_to_buffer):
-        #    self.sent_chunks.put(self.zero_chunk)
+        #    self.sent_chunks.put(self.zero_chunk)ç
+        self.last_played_chunk = self.zero_chunk
 
     def __record_io_and_play(self, indata, outdata, frames, time, status):
         super()._record_io_and_play(indata, outdata, frames, time, status)
@@ -118,13 +119,18 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
         #DAC[:] = chunk_without_echo
         #DAC[:] = self.zero_chunk
         DAC[:] = chunk
+        self.last_played_chunk = chunk
 
-    def pack(self, chunk_number, recorded_chunk):
+    def pack(self, chunk_number, last_recorded_chunk):
         #chunk = chunk - np.roll(self.audio_data, -4)
         #chunk = chunk - (0.9*np.roll(self.audio_data, 24)).astype(np.int16)
         #print(self.audio_data)
         #print(chunk)
-        packed_chunk = super().pack(chunk_number, recorded_chunk)
+        #print(last_recorded_chunk)
+        last_recorded_chunk = last_recorded_chunk - (0.5*np.roll(self.last_played_chunk, 8)).astype(np.int16)
+        #print(last_recorded_chunk)
+
+        packed_chunk = super().pack(chunk_number, last_recorded_chunk)
         #self.sent_chunks.put(recorded_chunk)
         return packed_chunk
 
