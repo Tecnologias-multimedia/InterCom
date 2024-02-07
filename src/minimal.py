@@ -245,6 +245,7 @@ parser.add_argument("--show_stats", action="store_true", help="shows bandwith, C
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
 
 import pygame
+import pygame_widgets
 import threading
 import spectrum
 
@@ -304,6 +305,7 @@ class Minimal__verbose(Minimal):
 
         # PyGame stuff
         self.window_heigh = 513
+        pygame.init()
         self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
         self.display.fill((0, 0, 0))
         self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
@@ -312,12 +314,13 @@ class Minimal__verbose(Minimal):
         self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
 
     def update_display(self):
-        for event in pygame.event.get():
+        events = pygame.event.get()
+        for event in events:
             if event.type == pygame.QUIT:
                 done = True
                 break
-        le_channel = self.audio_data[:, 0]
-        ri_channel = self.audio_data[:, 1]
+        le_channel = self.recorded_chunk[:, 0]
+        ri_channel = self.recorded_chunk[:, 1]
         le_windowed_channel = le_channel * self.hamming_window
         ri_windowed_channel = ri_channel * self.hamming_window
         le_FFT = np.fft.rfft(le_windowed_channel)
@@ -326,19 +329,20 @@ class Minimal__verbose(Minimal):
         ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
         le_spectrum = le_spectrum.astype(np.uint16)
         ri_spectrum = ri_spectrum.astype(np.uint16)
-        #R_matrix = self.eye[(self.audio_data[::4, 0]>>8) + 128]
-        #G_matrix = self.eye[(self.audio_data[::4, 1]>>8) + 128]
+        #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
+        #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
         R_matrix = self.eye[511 - le_spectrum]
         G_matrix = self.eye[511 - ri_spectrum]
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
-        #surf = pygame.surfarray.blit_array(self.surface, self.audio_data[:,0])
+        #surf = pygame.surfarray.blit_array(self.surface, self.recorded_chunk[:,0])
         #for i in range(256):
-        #    self.display.set_at((i, self.audio_data[i][0] + 128), (255, 0, 0))
-        #    self.display.set_at((i, self.audio_data[i][1] + 128), (0, 0, 255))
+        #    self.display.set_at((i, self.recorded_chunk[i][0] + 128), (255, 0, 0))
+        #    self.display.set_at((i, self.recorded_chunk[i][1] + 128), (0, 0, 255))
         self.display.blit(surface, (0, 0))
         #pygame.surfarray.blit_array(self.surface, (0, 0))
+        pygame_widgets.update(events)
         pygame.display.update()
 
     def send(self, packed_chunk):
@@ -515,7 +519,7 @@ class Minimal__verbose(Minimal):
             self.show_played_chunk(DAC)
 
         #self.q.put(DAC[:128])
-        self.audio_data = ADC
+        self.recorded_chunk = ADC
         #print(".")
 
     def _read_IO_and_play(self, DAC, frames, time, status):
@@ -525,7 +529,7 @@ class Minimal__verbose(Minimal):
             self.show_recorded_chunk(chunk)
             self.show_played_chunk(DAC)
 
-        self.audio_data = DAC
+        self.recorded_chunk = DAC
 
     def loop_update_display(self):
         while True:

@@ -150,7 +150,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_played_chunk(DAC)
 
-        self.audio_data = DAC
+        self.recorded_chunk = DAC
 
     def _read_IO_and_play(self, DAC, frames, time, status):
         read_chunk = super()._read_IO_and_play(DAC, frames, time, status)
@@ -159,7 +159,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             self.show_recorded_chunk(read_chunk)
             self.show_played_chunk(DAC)
 
-        self.audio_data = DAC
+        self.recorded_chunk = DAC
 
         return read_chunk
 
