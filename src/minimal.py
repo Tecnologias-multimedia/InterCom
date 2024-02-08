@@ -108,7 +108,7 @@ class Minimal:
         '''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
 
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
         chunk, sends the packet, receives a packet, unpacks it to get
         a chunk, and plays the chunk.
@@ -116,22 +116,23 @@ class Minimal:
         Parameters
         ----------
 
-        indata : numpy.ndarray
+        ADC : numpy.ndarray
 
-            The chunk of audio with the recorded data.
+            Holds the last recorded chunk.
 
-        outdata : numpy.ndarray
+        DAC : numpy.ndarray
 
-            The chunk of audio with the data to play.
+            Accepts a chunk to play.
 
         frames : int16
 
-            The number of frames in indata and outdata.
+            The number of frames in a chunk handled by ADC and DAC.
 
         time : CData
 
-            Time-stamps of the first frame in indata, and in outdata (that
-            is time at which the callback function was called.
+            Time-stamps of the first frame in chunk returned by the
+            ADC, and accepted by the DAC (that is time at which the
+            callback function was called).
 
         status : CallbackFlags
 
@@ -140,10 +141,10 @@ class Minimal:
 
         '''
         if __debug__:
-            data = indata.copy()
+            data = ADC.copy()
             packed_chunk = self.pack(data)
         else:
-            packed_chunk = self.pack(indata)
+            packed_chunk = self.pack(ADC)
         self.send(packed_chunk)
         try:
             packed_chunk = self.receive()
@@ -152,10 +153,10 @@ class Minimal:
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
-        outdata[:] = chunk
+        DAC[:] = chunk
         if __debug__:
-            #if not np.array_equal(indata, outdata):
-            #    print("indata[0] =", indata[0], "outdata[0] =", outdata[0])
+            #if not np.array_equal(ADC, DAC):
+            #    print("ADC[0] =", ADC[0], "DAC[0] =", DAC[0])
             print(next(spinner), end='\b', flush=True)
 
     def read_chunk_from_file(self):
@@ -176,7 +177,9 @@ class Minimal:
             #self.input_exhausted = True
         return chunk
             
-    def _read_IO_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        '''Similar to _record_IO_and_play, but the recorded chunk comes from a file.
+        '''
         chunk = self.read_chunk_from_file()
         packed_chunk = self.pack(chunk)
         self.send(packed_chunk)
@@ -186,9 +189,10 @@ class Minimal:
         except (socket.timeout, BlockingIOError, ValueError):
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
-        outdata[:] = chunk
+        DAC[:] = chunk
         if __debug__:
             print(next(spinner), end='\b', flush=True)
+        return chunk
 
     def mic_stream(self, callback_function):
         '''Creates the stream.
@@ -240,6 +244,11 @@ class Minimal:
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
 
+import pygame
+import pygame_widgets
+import threading
+import spectrum
+
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
 
@@ -290,6 +299,51 @@ class Minimal__verbose(Minimal):
         logging.info(f"seconds_per_cycle = {self.seconds_per_cycle}")            
         logging.info(f"chunks_per_cycle = {self.chunks_per_cycle}")
         logging.info(f"frames_per_cycle = {self.frames_per_cycle}")
+        
+        # Queue for communicating with self.update_plot()
+        #self.q = queue.Queue()
+
+        # PyGame stuff
+        self.window_heigh = 513
+        pygame.init()
+        self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
+        self.display.fill((0, 0, 0))
+        self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
+        self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
+        self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
+        self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
+
+    def update_display(self):
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                done = True
+                break
+        le_channel = self.recorded_chunk[:, 0]
+        ri_channel = self.recorded_chunk[:, 1]
+        le_windowed_channel = le_channel * self.hamming_window
+        ri_windowed_channel = ri_channel * self.hamming_window
+        le_FFT = np.fft.rfft(le_windowed_channel)
+        ri_FFT = np.fft.rfft(ri_windowed_channel)
+        le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
+        ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        le_spectrum = le_spectrum.astype(np.uint16)
+        ri_spectrum = ri_spectrum.astype(np.uint16)
+        #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
+        #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
+        R_matrix = self.eye[511 - le_spectrum]
+        G_matrix = self.eye[511 - ri_spectrum]
+        self.RGB_matrix[:, :, 0] = R_matrix
+        self.RGB_matrix[:, :, 1] = G_matrix
+        surface = pygame.surfarray.make_surface(self.RGB_matrix)
+        #surf = pygame.surfarray.blit_array(self.surface, self.recorded_chunk[:,0])
+        #for i in range(256):
+        #    self.display.set_at((i, self.recorded_chunk[i][0] + 128), (255, 0, 0))
+        #    self.display.set_at((i, self.recorded_chunk[i][1] + 128), (0, 0, 255))
+        self.display.blit(surface, (0, 0))
+        #pygame.surfarray.blit_array(self.surface, (0, 0))
+        pygame_widgets.update(events)
+        pygame.display.update()
 
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
@@ -443,52 +497,59 @@ class Minimal__verbose(Minimal):
         for i in range(args.frames_per_chunk-4, args.frames_per_chunk):
             print(data[i], end=' ')
 
-    def show_indata(self, indata):
+    def show_recorded_chunk(self, recorded_chunk):
         print("I =", end=' ')
-        self.show_data(indata)
+        self.show_data(recorded_chunk)
         print()
 
-    def show_outdata(self, outdata):
+    def show_played_chunk(self, played_chunk):
         print("\033[7mO =", end=' ')
-        self.show_data(outdata)
+        self.show_data(played_chunk)
         print("\033[m")
 
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         # Notice that in each call to this method, a (different) chunk is processed.
 
         if args.show_samples:
-            self.show_indata(indata)
+            self.show_recorded_chunk(ADC)
 
-        super()._record_IO_and_play(indata, outdata, frames, time, status)
-
-        if args.show_samples:
-            self.show_outdata(outdata)
-
-    def _read_IO_and_play(self, outdata, frames, time, status):
-        
-        if args.show_samples:
-            self.show_indata(indata)
-
-        super()._read_IO_and_play(outdata, frames, time, status)
+        super()._record_IO_and_play(ADC, DAC, frames, time, status)
 
         if args.show_samples:
-            self.show_outdata(outdata)
+            self.show_played_chunk(DAC)
+
+        #self.q.put(DAC[:128])
+        self.recorded_chunk = ADC
+        #print(".")
+
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        chunk = super()._read_IO_and_play(DAC, frames, time, status)
+
+        if args.show_samples:
+            self.show_recorded_chunk(chunk)
+            self.show_played_chunk(DAC)
+
+        self.recorded_chunk = DAC
+
+    def loop_update_display(self):
+        while True:
+            time.sleep(0.1)
+            self.update_display()
+
+    def loop_cycle_feedback(self):
+        while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            time.sleep(self.seconds_per_cycle)
+            self.cycle_feedback()
 
     def run(self):
-        ''' Runs the verbose InterCom. '''
+        cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
+        cycle_feedback_thread.daemon = True
         self.sock.settimeout(0)
         self.print_running_info()
         self.print_header()
-
         with self.stream(self._handler):
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
-                time.sleep(self.seconds_per_cycle)
-                self.cycle_feedback()
-                #self.print_final_averages()
-        #except KeyboardInterrupt:
-        #except:
-        #    raise
-        #    self.print_final_averages()
+            cycle_feedback_thread.start()
+            self.loop_update_display()
 
 try:
     import argcomplete  # <tab> completion for argparse.

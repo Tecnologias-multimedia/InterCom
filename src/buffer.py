@@ -43,10 +43,10 @@ class Buffering(minimal.Minimal):
         if minimal.args.filename:
             logging.info(f"Using \"{minimal.args.filename}\" as input")
             self.wavfile = sf.SoundFile(minimal.args.filename, 'r')
-            self._handler = self._read_io_and_play
+            self._handler = self._read_IO_and_play
             self.stream = self.file_stream
         else:
-            self._handler = self._record_io_and_play
+            self._handler = self._record_IO_and_play
             self.stream = self.mic_stream
 
     def pack(self, chunk_number, chunk):
@@ -86,21 +86,21 @@ class Buffering(minimal.Minimal):
         chunk_number, chunk = self.unpack(packed_chunk)
         self.buffer_chunk(chunk_number, chunk)
         return chunk_number
-        
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
-        packed_chunk = self.pack(self.chunk_number, indata)
+        packed_chunk = self.pack(self.chunk_number, ADC)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
-        self.play_chunk(outdata, chunk)
+        self.play_chunk(DAC, chunk)
 
-    def _read_io_and_play(self, outdata, frames, time, status):
+    def _read_IO_and_play(self, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
         read_chunk = self.read_chunk_from_file()
         packed_chunk = self.pack(self.chunk_number, read_chunk)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
-        self.play_chunk(outdata, chunk)
+        self.play_chunk(DAC, chunk)
         return read_chunk
 
     def run(self):
@@ -120,20 +120,11 @@ class Buffering(minimal.Minimal):
 
             while True:# and not self.input_exhausted:
                 self.receive_and_buffer()
-            
+
 class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
         super().__init__()
-
-        thread = threading.Thread(target=self.feedback)
-        thread.daemon = True # To obey CTRL+C interruption.
-        thread.start()
-
-    def feedback(self):
-        while True:
-            time.sleep(self.seconds_per_cycle)
-            self.cycle_feedback()
 
     def send(self, packed_chunk):
         '''Computes the number of sent bytes and the number of sent
@@ -150,41 +141,47 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.received_messages_count += 1
         return packed_chunk
 
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         if minimal.args.show_samples:
-            self.show_indata(indata)
+            self.show_recorded_chunk(ADC)
 
-        super()._record_io_and_play(indata, outdata, frames, time, status)
-
-        if minimal.args.show_samples:
-            self.show_outdata(outdata)
-
-    def _read_io_and_play(self, outdata, frames, time, status):
-        if minimal.args.show_samples:
-            self.show_indata(indata) # OJO, indata undefined
-
-        read_chunk = super()._read_io_and_play(outdata, frames, time, status)
+        super()._record_IO_and_play(ADC, DAC, frames, time, status)
 
         if minimal.args.show_samples:
-            self.show_outdata(outdata)
+            self.show_played_chunk(DAC)
+
+        self.recorded_chunk = DAC
+        #self.recorded_chunk[512:,:]=20000 # <--------------------------------------------
+
+    def _read_IO_and_play(self, DAC, frames, time, status):
+        read_chunk = super()._read_IO_and_play(DAC, frames, time, status)
+
+        if minimal.args.show_samples:
+            self.show_recorded_chunk(read_chunk)
+            self.show_played_chunk(DAC)
+
+        self.recorded_chunk = DAC
+
         return read_chunk
 
+    def loop_receive_and_buffer(self):
+        first_received_chunk_number = self.receive_and_buffer()
+        if __debug__:
+            print("first_received_chunk_number =", first_received_chunk_number)
+        self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
+        while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            self.receive_and_buffer()
+            self.update_display() # PyGame cannot run in a thread :-/
+
     def run(self):
-        '''Run the verbose Buffering.'''
+        cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
+        cycle_feedback_thread.daemon = True        
         self.print_running_info()
         super().print_header()
-        #try:
         self.played_chunk_number = 0
         with self.stream(self._handler):
-            first_received_chunk_number = self.receive_and_buffer()
-            if __debug__:
-                print("first_received_chunk_number =", first_received_chunk_number)
-            self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
-                self.receive_and_buffer()
-            #self.print_final_averages()
-       # except KeyboardInterrupt:
-       #     self.print_final_averages()
+            cycle_feedback_thread.start()
+            self.loop_receive_and_buffer()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -210,6 +207,7 @@ if __name__ == "__main__":
         intercom = Buffering__verbose()
     else:
         intercom = Buffering()
+
     try:
         intercom.run()
     except KeyboardInterrupt:
