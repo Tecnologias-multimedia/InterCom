@@ -50,7 +50,7 @@ class Echo_Cancellation(buffer.Buffering):
         super().__init__()
         logging.info(__doc__)
         self.delay = 20 # In frames
-        self.attenuation = 0.2
+        self.attenuation = 0.5
         #self.sent_chunks = queue.Queue()
         #for i in range(self.chunks_to_buffer):
         #    self.sent_chunks.put(self.zero_chunk)
@@ -88,8 +88,8 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
         #app = Delay_Slider(self.root)
         #self.root.mainloop()
 
-        self.slider = Slider(self.display, 100, 100, 800, 40, min=0, max=1023, step=1)
-        self.output = TextBox(self.display, 475, 200, 50, 50, fontSize=30)
+        self.slider = Slider(self.display, 100, 100, 800, 40, min=0, max=1023, step=1, initial=0)
+        self.output = TextBox(self.display, x=0, y=200, width=75, height=50, fontSize=30)
         self.output.disable()  # Act as label instead of textbox
     
     def loop_input_delay(self):
