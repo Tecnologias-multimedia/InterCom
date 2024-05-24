@@ -5,3 +5,9 @@ soundfile
 matplotlib
 scipy
 spectrum
+numpy
+psutil
+opencv-python
+pygame
+pygame_widgets
+setuptools
