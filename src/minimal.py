@@ -244,7 +244,7 @@ class Minimal:
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
 
-import pygame
+import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
 import pygame_widgets
 import threading
 import spectrum
@@ -325,14 +325,16 @@ class Minimal__verbose(Minimal):
         ri_windowed_channel = ri_channel * self.hamming_window
         le_FFT = np.fft.rfft(le_windowed_channel)
         ri_FFT = np.fft.rfft(ri_windowed_channel)
-        le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
-        ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        #le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
+        #ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        le_spectrum = np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1
+        ri_spectrum = np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1
         le_spectrum = le_spectrum.astype(np.uint16)
         ri_spectrum = ri_spectrum.astype(np.uint16)
         #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
         #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
-        R_matrix = self.eye[511 - le_spectrum]
-        G_matrix = self.eye[511 - ri_spectrum]
+        R_matrix = self.eye[np.clip(511 - le_spectrum, 0, 511)]
+        G_matrix = self.eye[np.clip(511 - ri_spectrum, 0, 511)]            
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
