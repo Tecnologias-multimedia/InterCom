@@ -241,14 +241,11 @@ class Minimal:
     def print_final_averages(self):
         pass
 
-parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
-parser.add_argument("--show_samples", action="store_true", help="shows samples values")
-parser.add_argument("--show_spectrum", action="store_true", help="shows Fourier spectrum")
+parser.add_argument("--show_stats", action="store_true", help="Shows bandwith, CPU and quality statistics")
+parser.add_argument("--show_samples", action="store_true", help="Shows samples values")
+parser.add_argument("--show_spectrum", action="store_true", help="Shows Fourier spectrum")
 
-import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
-import pygame_widgets
 import threading
-import spectrum
 
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
@@ -264,10 +261,11 @@ class Minimal__verbose(Minimal):
 
     seconds_per_cycle = 1
     
-    def __init__(self):
+    def __init__(self, args):
         ''' Defines the stuff for providing running information. '''
         super().__init__()
-        
+
+        self.args = args
 
         self.cycle = 1 # An infinite cycle's counter.
 
@@ -305,15 +303,16 @@ class Minimal__verbose(Minimal):
         # Queue for communicating with self.update_plot()
         #self.q = queue.Queue()
 
-        # PyGame stuff
-        self.window_heigh = 513
-        pygame.init()
-        self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
-        self.display.fill((0, 0, 0))
-        self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
-        self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
-        self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
-        self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
+        if args.show_spectrum:
+            # PyGame stuff
+            self.window_heigh = 513
+            pygame.init()
+            self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
+            self.display.fill((0, 0, 0))
+            self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
+            self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
+            self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
+            self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
 
     def update_display(self):
         events = pygame.event.get()
@@ -553,7 +552,10 @@ class Minimal__verbose(Minimal):
         self.print_header()
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            self.loop_update_display()
+            if self.args.show_spectrum:
+                self.loop_update_display()
+            else:
+                input()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -573,8 +575,13 @@ if __name__ == "__main__":
         print(sd.query_devices())
         quit()
 
-    if args.show_stats or args.show_samples:
-        intercom = Minimal__verbose()
+    if args.show_stats or args.show_samples or args.show_spectrum:
+        if args.show_spectrum:
+            import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
+            import pygame_widgets
+            import spectrum # If fails, update setuptools with "pip install setuptools"
+
+        intercom = Minimal__verbose(args)
     else:
         intercom = Minimal()
 
