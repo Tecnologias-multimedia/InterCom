@@ -579,7 +579,7 @@ if __name__ == "__main__":
         if args.show_spectrum:
             import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
             import pygame_widgets
-            import spectrum # If fails, update setuptools with "pip install setuptools"
+            import spectrum # If fails (DOLPHINS.WAV not found), update setuptools with "pip install setuptools"
 
         intercom = Minimal__verbose(args)
     else:
