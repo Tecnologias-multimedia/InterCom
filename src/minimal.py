@@ -243,6 +243,7 @@ class Minimal:
 
 parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
 parser.add_argument("--show_samples", action="store_true", help="shows samples values")
+parser.add_argument("--show_spectrum", action="store_true", help="shows Fourier spectrum")
 
 import pygame
 import pygame_widgets
@@ -264,8 +265,9 @@ class Minimal__verbose(Minimal):
     seconds_per_cycle = 1
     
     def __init__(self):
-        ''' Defines the stuff for providing the running information. '''
+        ''' Defines the stuff for providing running information. '''
         super().__init__()
+        
 
         self.cycle = 1 # An infinite cycle's counter.
 
