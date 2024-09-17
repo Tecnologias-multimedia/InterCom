@@ -140,12 +140,16 @@ class Minimal:
             during the last call to the callbak function.
 
         '''
+        # (1) record() implicit
+        # (2) pack()
         if __debug__:
             data = ADC.copy()
             packed_chunk = self.pack(data)
         else:
             packed_chunk = self.pack(ADC)
+        # (3) send()
         self.send(packed_chunk)
+        # (4) receive() and (5) unpack()
         try:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
@@ -153,6 +157,7 @@ class Minimal:
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
+        # (6) play()
         DAC[:] = chunk
         if __debug__:
             #if not np.array_equal(ADC, DAC):
