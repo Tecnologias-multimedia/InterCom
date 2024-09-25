@@ -309,6 +309,7 @@ class Minimal__verbose(Minimal):
         #self.q = queue.Queue()
 
         if args.show_spectrum:
+            self.recorded_chunk = self.generate_zero_chunk()
             # PyGame stuff
             self.window_heigh = 513
             pygame.init()
