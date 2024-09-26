@@ -311,13 +311,16 @@ class Minimal__verbose(Minimal):
         if args.show_spectrum:
             self.recorded_chunk = self.generate_zero_chunk()
             # PyGame stuff
-            self.window_heigh = 513
+            self.eye_size = args.frames_per_chunk//2
+            self.window_heigh = self.eye_size + 1
             pygame.init()
             self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
             self.display.fill((0, 0, 0))
             self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
             self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
-            self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
+            #self.RGB_matrix = np.zeros((self.window_heigh, 512, 3), dtype=np.uint8)
+            #self.eye = 255*np.eye(512, dtype=int)
+            self.eye = 255*np.eye(self.eye_size, dtype=int)
             self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
 
     def update_display(self):
@@ -340,10 +343,18 @@ class Minimal__verbose(Minimal):
         ri_spectrum = ri_spectrum.astype(np.uint16)
         #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
         #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
-        R_matrix = self.eye[np.clip(511 - le_spectrum, 0, 511)]
-        G_matrix = self.eye[np.clip(511 - ri_spectrum, 0, 511)]            
+        #R_matrix = self.eye[np.clip(511 - le_spectrum, 0, 511)]
+        #G_matrix = self.eye[np.clip(511 - ri_spectrum, 0, 511)]
+        #R_matrix = self.eye[np.clip(self.eye_size-1 - le_spectrum, 0, self.eye_size-1)]
+        #G_matrix = self.eye[np.clip(self.eye_size-1 - ri_spectrum, 0, self.eye_size-1)]
+        le_spectrum = np.clip(self.eye_size - le_spectrum, 0, self.eye_size-1)
+        ri_spectrum = np.clip(self.eye_size - ri_spectrum, 0, self.eye_size-1)
+        R_matrix = self.eye[le_spectrum]
+        G_matrix = self.eye[ri_spectrum]
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
+        #self.RGB_matrix[0:R_matrix.shape[0], 0:R_matrix.shape[1], 0] = R_matrix
+        #self.RGB_matrix[0:G_matrix.shape[0], 0:G_matrix.shape[1], 0] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
         #surf = pygame.surfarray.blit_array(self.surface, self.recorded_chunk[:,0])
         #for i in range(256):
