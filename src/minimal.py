@@ -251,6 +251,9 @@ parser.add_argument("--show_samples", action="store_true", help="Shows samples v
 parser.add_argument("--show_spectrum", action="store_true", help="Shows Fourier spectrum")
 
 import threading
+import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
+import pygame_widgets
+#import spectrum # If fails (DOLPHINS.WAV not found), update setuptools with "pip install setuptools"
 
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
@@ -266,11 +269,12 @@ class Minimal__verbose(Minimal):
 
     seconds_per_cycle = 1
     
-    def __init__(self, args):
+    #def __init__(self, args):
+    def __init__(self):
         ''' Defines the stuff for providing running information. '''
         super().__init__()
 
-        self.args = args
+        #self.args = args
 
         self.cycle = 1 # An infinite cycle's counter.
 
@@ -321,7 +325,8 @@ class Minimal__verbose(Minimal):
             #self.RGB_matrix = np.zeros((self.window_heigh, 512, 3), dtype=np.uint8)
             #self.eye = 255*np.eye(512, dtype=int)
             self.eye = 255*np.eye(self.eye_size, dtype=int)
-            self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
+            #self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
+            self.hamming_window = np.hamming(args.frames_per_chunk)
 
     def update_display(self):
         events = pygame.event.get()
@@ -569,7 +574,8 @@ class Minimal__verbose(Minimal):
         self.print_header()
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            if self.args.show_spectrum:
+            #if self.args.show_spectrum:
+            if args.show_spectrum:
                 self.loop_update_display()
             else:
                 input()
@@ -593,12 +599,8 @@ if __name__ == "__main__":
         quit()
 
     if args.show_stats or args.show_samples or args.show_spectrum:
-        if args.show_spectrum:
-            import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
-            import pygame_widgets
-            import spectrum # If fails (DOLPHINS.WAV not found), update setuptools with "pip install setuptools"
-
-        intercom = Minimal__verbose(args)
+        #intercom = Minimal__verbose(args)
+        intercom = Minimal__verbose()
     else:
         intercom = Minimal()
 

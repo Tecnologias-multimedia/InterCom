@@ -7,21 +7,19 @@ import numpy as np
 import struct
 import math
 import logging
-
-#import pygame_widgets
-import pygame
-from pygame_widgets.slider import Slider
-from pygame_widgets.textbox import TextBox
-
-import minimal
-import buffer
-#import queue
-
 import threading
 
 from scipy import signal
 import tkinter as tk
 #from tkinter import ttk
+#import queue
+import pygame
+#import pygame_widgets
+from pygame_widgets.slider import Slider
+from pygame_widgets.textbox import TextBox
+
+import minimal
+import buffer
 
 class Delay_Slider():
     def __init__(self, root):
@@ -34,7 +32,6 @@ class Delay_Slider():
         # Create UI elements
         #self.create_widgets()
         self.delay_slider = ttk.Scale(self.root, from_=0.1, to=5.0, length=200, orient=tk.HORIZONTAL, variable=self.delay, command=self.refresh)
-
 
     def refresh(self, event=None):
         delay = self.delay.get()
