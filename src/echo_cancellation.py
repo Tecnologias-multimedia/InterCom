@@ -63,6 +63,7 @@ class Echo_Cancellation(buffer.Buffering):
 class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
+        pygame.init()
         #self.window_heigh = 512
         #self.screen = pygame.display.set_mode((minimal.args.frames_per_chunk, self.window_heigh))
         #self.eye = 255*np.eye(minimal.args.frames_per_chunk, dtype=int)
