@@ -85,7 +85,7 @@ class Minimal:
         chunk = np.frombuffer(packed_chunk, np.int16)
         chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
         return chunk
-    
+
     def send(self, packed_chunk):
         '''Sends an UDP packet.'''
         try:
@@ -314,6 +314,7 @@ class Minimal__verbose(Minimal):
 
         if args.show_spectrum:
             self.recorded_chunk = self.generate_zero_chunk()
+            self.played_chunk = self.generate_zero_chunk()
             # PyGame stuff
             self.eye_size = args.frames_per_chunk//2
             self.window_heigh = self.eye_size + 1
@@ -334,28 +335,42 @@ class Minimal__verbose(Minimal):
             if event.type == pygame.QUIT:
                 done = True
                 break
-        le_channel = self.recorded_chunk[:, 0]
-        ri_channel = self.recorded_chunk[:, 1]
-        le_windowed_channel = le_channel * self.hamming_window
-        ri_windowed_channel = ri_channel * self.hamming_window
-        le_FFT = np.fft.rfft(le_windowed_channel)
-        ri_FFT = np.fft.rfft(ri_windowed_channel)
+        le_channel_rec = self.recorded_chunk[:, 0]
+        ri_channel_rec = self.recorded_chunk[:, 1]
+        le_channel_pla = self.played_chunk[:, 0]
+        ri_channel_pla = self.played_chunk[:, 1]
+        le_windowed_channel_rec = le_channel_rec * self.hamming_window
+        ri_windowed_channel_rec = ri_channel_rec * self.hamming_window
+        le_windowed_channel_pla = le_channel_pla * self.hamming_window
+        ri_windowed_channel_pla = ri_channel_pla * self.hamming_window
+        le_FFT_rec = np.fft.rfft(le_windowed_channel_rec)
+        ri_FFT_rec = np.fft.rfft(ri_windowed_channel_rec)
+        le_FFT_pla = np.fft.rfft(le_windowed_channel_pla)
+        ri_FFT_pla = np.fft.rfft(ri_windowed_channel_pla)
         #le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
         #ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
-        le_spectrum = np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1
-        ri_spectrum = np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1
-        le_spectrum = le_spectrum.astype(np.uint16)
-        ri_spectrum = ri_spectrum.astype(np.uint16)
+        le_spectrum_rec = np.sqrt(le_FFT_rec.real*le_FFT_rec.real + le_FFT_rec.imag*le_FFT_rec.imag) / args.frames_per_chunk + 1
+        ri_spectrum_rec = np.sqrt(ri_FFT_rec.real*ri_FFT_rec.real + ri_FFT_rec.imag*ri_FFT_rec.imag) / args.frames_per_chunk + 1
+        le_spectrum_pla = np.sqrt(le_FFT_pla.real*le_FFT_pla.real + le_FFT_pla.imag*le_FFT_pla.imag) / args.frames_per_chunk + 1
+        ri_spectrum_pla = np.sqrt(ri_FFT_pla.real*ri_FFT_pla.real + ri_FFT_pla.imag*ri_FFT_pla.imag) / args.frames_per_chunk + 1
+        le_spectrum_rec = le_spectrum_rec.astype(np.uint16)
+        ri_spectrum_rec = ri_spectrum_rec.astype(np.uint16)
+        le_spectrum_pla = le_spectrum_pla.astype(np.uint16)
+        ri_spectrum_pla = ri_spectrum_pla.astype(np.uint16)
         #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
         #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
         #R_matrix = self.eye[np.clip(511 - le_spectrum, 0, 511)]
         #G_matrix = self.eye[np.clip(511 - ri_spectrum, 0, 511)]
         #R_matrix = self.eye[np.clip(self.eye_size-1 - le_spectrum, 0, self.eye_size-1)]
         #G_matrix = self.eye[np.clip(self.eye_size-1 - ri_spectrum, 0, self.eye_size-1)]
-        le_spectrum = np.clip(self.eye_size - le_spectrum, 0, self.eye_size-1)
-        ri_spectrum = np.clip(self.eye_size - ri_spectrum, 0, self.eye_size-1)
-        R_matrix = self.eye[le_spectrum]
-        G_matrix = self.eye[ri_spectrum]
+        le_spectrum_rec = np.clip(self.eye_size - le_spectrum_rec, 0, self.eye_size-1)
+        ri_spectrum_rec = np.clip(self.eye_size - ri_spectrum_rec, 0, self.eye_size-1)
+        le_spectrum_pla = np.clip(le_spectrum_pla, 0, self.eye_size-1)
+        ri_spectrum_pla = np.clip(ri_spectrum_pla, 0, self.eye_size-1)
+        R_matrix = self.eye[le_spectrum_rec]
+        G_matrix = self.eye[ri_spectrum_rec]
+        R_matrix += self.eye[le_spectrum_pla]
+        G_matrix += self.eye[ri_spectrum_pla]
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
         #self.RGB_matrix[0:R_matrix.shape[0], 0:R_matrix.shape[1], 0] = R_matrix
@@ -532,6 +547,11 @@ class Minimal__verbose(Minimal):
         self.show_data(played_chunk)
         print("\033[m")
 
+    def __unpack(self, packed_chunk):
+        chunk = super().unpack(packed_chunk)
+        self.played_chunk = chunk
+        return chunk
+
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         # Notice that in each call to this method, a (different) chunk is processed.
 
@@ -545,6 +565,7 @@ class Minimal__verbose(Minimal):
 
         #self.q.put(DAC[:128])
         self.recorded_chunk = ADC
+        self.played_chunk = DAC
         #print(".")
 
     def _read_IO_and_play(self, DAC, frames, time, status):
@@ -555,6 +576,7 @@ class Minimal__verbose(Minimal):
             self.show_played_chunk(DAC)
 
         self.recorded_chunk = DAC
+        self.played_chunk = DAC
 
     def loop_update_display(self):
         while True:

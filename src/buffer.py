@@ -154,6 +154,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             self.show_played_chunk(DAC)
 
         self.recorded_chunk = DAC
+        self.played_chunk = ADC
         #self.recorded_chunk[512:,:]=20000 # <--------------------------------------------
 
     def _read_IO_and_play(self, DAC, frames, time, status):
