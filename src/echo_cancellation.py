@@ -3,25 +3,10 @@
 
 '''Echo cancellation (template).'''
 
-import numpy as np
-import struct
-import math
 import logging
-
-#import pygame_widgets
-import pygame
-from pygame_widgets.slider import Slider
-from pygame_widgets.textbox import TextBox
 
 import minimal
 import buffer
-#import queue
-
-import threading
-
-from scipy import signal
-import tkinter as tk
-#from tkinter import ttk
         
 class Echo_Cancellation(buffer.Buffering):
     def __init__(self):

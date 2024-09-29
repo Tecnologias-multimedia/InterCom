@@ -203,7 +203,7 @@ if __name__ == "__main__":
         print(sd.query_devices())
         quit()
 
-    if minimal.args.show_stats or minimal.args.show_samples:
+    if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
         intercom = Buffering__verbose()
     else:
         intercom = Buffering()
