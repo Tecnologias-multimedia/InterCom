@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide will help you set up and run this Python project in your local environment. Make sure to follow the steps carefully to avoid installation issues.
+This guide will help you set up and run this Python project in your local environment.
 
 ## Prerequisites
 
@@ -17,14 +17,16 @@ Follow these steps to install and configure the project:
    Open your terminal and follow these steps.
 
    ```bash
-   mkdir environments
-   cd environments
+   mkdir repos
+   cd repos
    git clone https://github.com/Tecnologias-multimedia/InterCom.git
-   cd Intercom
-   git checkout 20XX # Changing the XX by the year of the course, like for example 'git checkout 2023'
-   sudo apt install python3.10-venv
-   python3 -m venv ~/enviroments/intercom
-   source ~/enviroments/intercom/bin/activate
+   cd
+   mkdir envs
+   cd envs
+   python3 -m venv InterCom
+   cd
+   source ~/envs/InterCom/bin/activate
+   ```
    
 2. **Install easily the dependencies/modules**
 
@@ -34,12 +36,10 @@ Follow these steps to install and configure the project:
    # If you are an ubuntu user, you need to run this command 'sudo apt install portaudio19-dev python3-pyaudio' without the quotes,
    # for downloading correctly pyaudio, a module needed for PortAudio.
    
-3. **Run the first program**
-
-   For example, you can run the minimal.py.
+3. **Run**
 
    ```bash
-   cd src
-   python3 minimal.py
-   
-   
+   cd repos/src
+   python minimal.py
+   ```
+

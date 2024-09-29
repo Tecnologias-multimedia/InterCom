@@ -140,12 +140,16 @@ class Minimal:
             during the last call to the callbak function.
 
         '''
+        # (1) record() implicit
+        # (2) pack()
         if __debug__:
             data = ADC.copy()
             packed_chunk = self.pack(data)
         else:
             packed_chunk = self.pack(ADC)
+        # (3) send()
         self.send(packed_chunk)
+        # (4) receive() and (5) unpack()
         try:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
@@ -153,6 +157,7 @@ class Minimal:
             #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
+        # (6) play()
         DAC[:] = chunk
         if __debug__:
             #if not np.array_equal(ADC, DAC):
@@ -241,13 +246,11 @@ class Minimal:
     def print_final_averages(self):
         pass
 
-parser.add_argument("--show_stats", action="store_true", help="shows bandwith, CPU and quality statistics")
-parser.add_argument("--show_samples", action="store_true", help="shows samples values")
+parser.add_argument("--show_stats", action="store_true", help="Shows bandwith, CPU and quality statistics")
+parser.add_argument("--show_samples", action="store_true", help="Shows samples values")
+parser.add_argument("--show_spectrum", action="store_true", help="Shows Fourier spectrum")
 
-import pygame
-import pygame_widgets
 import threading
-import spectrum
 
 class Minimal__verbose(Minimal):
     ''' Verbose version of Minimal.
@@ -263,9 +266,11 @@ class Minimal__verbose(Minimal):
 
     seconds_per_cycle = 1
     
-    def __init__(self):
-        ''' Defines the stuff for providing the running information. '''
+    def __init__(self, args):
+        ''' Defines the stuff for providing running information. '''
         super().__init__()
+
+        self.args = args
 
         self.cycle = 1 # An infinite cycle's counter.
 
@@ -303,15 +308,20 @@ class Minimal__verbose(Minimal):
         # Queue for communicating with self.update_plot()
         #self.q = queue.Queue()
 
-        # PyGame stuff
-        self.window_heigh = 513
-        pygame.init()
-        self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
-        self.display.fill((0, 0, 0))
-        self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
-        self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
-        self.eye = 255*np.eye(args.frames_per_chunk//2, dtype=int)
-        self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
+        if args.show_spectrum:
+            self.recorded_chunk = self.generate_zero_chunk()
+            # PyGame stuff
+            self.eye_size = args.frames_per_chunk//2
+            self.window_heigh = self.eye_size + 1
+            pygame.init()
+            self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
+            self.display.fill((0, 0, 0))
+            self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
+            self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
+            #self.RGB_matrix = np.zeros((self.window_heigh, 512, 3), dtype=np.uint8)
+            #self.eye = 255*np.eye(512, dtype=int)
+            self.eye = 255*np.eye(self.eye_size, dtype=int)
+            self.hamming_window = spectrum.window.Window(args.frames_per_chunk, "hamming").data
 
     def update_display(self):
         events = pygame.event.get()
@@ -325,16 +335,26 @@ class Minimal__verbose(Minimal):
         ri_windowed_channel = ri_channel * self.hamming_window
         le_FFT = np.fft.rfft(le_windowed_channel)
         ri_FFT = np.fft.rfft(ri_windowed_channel)
-        le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
-        ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        #le_spectrum = 100*np.log10(np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1)
+        #ri_spectrum = 100*np.log10(np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1)
+        le_spectrum = np.sqrt(le_FFT.real*le_FFT.real + le_FFT.imag*le_FFT.imag) / args.frames_per_chunk + 1
+        ri_spectrum = np.sqrt(ri_FFT.real*ri_FFT.real + ri_FFT.imag*ri_FFT.imag) / args.frames_per_chunk + 1
         le_spectrum = le_spectrum.astype(np.uint16)
         ri_spectrum = ri_spectrum.astype(np.uint16)
         #R_matrix = self.eye[(self.recorded_chunk[::4, 0]>>8) + 128]
         #G_matrix = self.eye[(self.recorded_chunk[::4, 1]>>8) + 128]
-        R_matrix = self.eye[511 - le_spectrum]
-        G_matrix = self.eye[511 - ri_spectrum]
+        #R_matrix = self.eye[np.clip(511 - le_spectrum, 0, 511)]
+        #G_matrix = self.eye[np.clip(511 - ri_spectrum, 0, 511)]
+        #R_matrix = self.eye[np.clip(self.eye_size-1 - le_spectrum, 0, self.eye_size-1)]
+        #G_matrix = self.eye[np.clip(self.eye_size-1 - ri_spectrum, 0, self.eye_size-1)]
+        le_spectrum = np.clip(self.eye_size - le_spectrum, 0, self.eye_size-1)
+        ri_spectrum = np.clip(self.eye_size - ri_spectrum, 0, self.eye_size-1)
+        R_matrix = self.eye[le_spectrum]
+        G_matrix = self.eye[ri_spectrum]
         self.RGB_matrix[:, :, 0] = R_matrix
         self.RGB_matrix[:, :, 1] = G_matrix
+        #self.RGB_matrix[0:R_matrix.shape[0], 0:R_matrix.shape[1], 0] = R_matrix
+        #self.RGB_matrix[0:G_matrix.shape[0], 0:G_matrix.shape[1], 0] = G_matrix
         surface = pygame.surfarray.make_surface(self.RGB_matrix)
         #surf = pygame.surfarray.blit_array(self.surface, self.recorded_chunk[:,0])
         #for i in range(256):
@@ -549,7 +569,10 @@ class Minimal__verbose(Minimal):
         self.print_header()
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            self.loop_update_display()
+            if self.args.show_spectrum:
+                self.loop_update_display()
+            else:
+                input()
 
 try:
     import argcomplete  # <tab> completion for argparse.
@@ -569,8 +592,13 @@ if __name__ == "__main__":
         print(sd.query_devices())
         quit()
 
-    if args.show_stats or args.show_samples:
-        intercom = Minimal__verbose()
+    if args.show_stats or args.show_samples or args.show_spectrum:
+        if args.show_spectrum:
+            import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
+            import pygame_widgets
+            import spectrum # If fails (DOLPHINS.WAV not found), update setuptools with "pip install setuptools"
+
+        intercom = Minimal__verbose(args)
     else:
         intercom = Minimal()
 
