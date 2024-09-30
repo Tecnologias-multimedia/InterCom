@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Simple echo cancellation. Substract an attenuated version of the last chunk that has been played from the last recorded chunk, delaying the played chunk the propagation time from the speaker to the mic. Substract to the played chunk an attenuated version of the chunk that was sent to the interlocutor "buffering_time" ms before.'''
+'''Echo cancellation. Substract an attenuated version of the last chunk that has been played from the last recorded chunk, delaying the played chunk the propagation time from the speaker to the mic. Substract to the played chunk an attenuated version of the chunk that was sent to the interlocutor "buffering_time" ms before.'''
 
 import numpy as np
 import struct
@@ -86,7 +86,7 @@ class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
         #app = Delay_Slider(self.root)
         #self.root.mainloop()
 
-        self.slider = Slider(self.display, 100, 100, 800, 40, min=0, max=1023, step=1, initial=0)
+        self.slider = Slider(self.display, 100, 100, 800, 40, min=0, max=1023, step=1, initial=self.delay)
         self.output = TextBox(self.display, x=0, y=200, width=75, height=50, fontSize=30)
         self.output.disable()  # Act as label instead of textbox
     
