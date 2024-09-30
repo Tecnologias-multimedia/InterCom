@@ -13,7 +13,7 @@ import buffer
 from compress3_24 import Compression3_24 as Compression
 from br_control import BR_Control as BR_Control 
 import stereo_coding
-from stereo_coding import Stereo_Coding as Stereo_Coding
+from stereo_MST_coding import Stereo_MST_Coding as Stereo_Coding
 import temporal_coding
 import logging
 
