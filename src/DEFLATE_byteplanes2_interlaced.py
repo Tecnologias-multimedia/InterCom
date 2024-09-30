@@ -32,7 +32,7 @@ class DEFLATE_BytePlanes2_Interlaced(DEFLATE_raw.DEFLATE_Raw):
         compressed_LSB = packed_chunk[len_compressed_MSB+4:]
         MSB = np.frombuffer(zlib.decompress(compressed_MSB), dtype=np.int8).reshape((minimal.args.frames_per_chunk, 2))
         LSB = np.frombuffer(zlib.decompress(compressed_LSB), dtype=np.uint8).reshape((minimal.args.frames_per_chunk, 2))
-        chunk = MSB*256 + LSB
+        chunk = MSB.astype(np.uint16)*256 + LSB
         return chunk_number, chunk
 
 class DEFLATE_BytePlanes2_Interlaced__verbose(DEFLATE_BytePlanes2_Interlaced, DEFLATE_raw.DEFLATE_Raw__verbose):
