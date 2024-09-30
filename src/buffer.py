@@ -60,7 +60,7 @@ class Buffering(minimal.Minimal):
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        #chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        #chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
         return chunk_number, chunk
 
     def buffer_chunk(self, chunk_number, chunk):
@@ -72,7 +72,7 @@ class Buffering(minimal.Minimal):
 
     def play_chunk(self, DAC, chunk):
         self.played_chunk_number = (self.played_chunk_number + 1) % self.cells_in_buffer
-        chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
         DAC[:] = chunk
 
     def receive(self):

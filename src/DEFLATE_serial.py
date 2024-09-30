@@ -29,11 +29,11 @@ class DEFLATE_Serial(DEFLATE_raw.DEFLATE_Raw):
         compressed_chunk = packed_chunk[2:]
         chunk = zlib.decompress(compressed_chunk)
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        chunk = chunk.reshape((self.NUMBER_OF_CHANNELS, minimal.args.frames_per_chunk))
+        chunk = chunk.reshape((minimal.args.number_of_channels, minimal.args.frames_per_chunk))
         reordered_chunk = np.empty((minimal.args.frames_per_chunk*2, ), dtype=np.int16)
         reordered_chunk[0::2] = chunk[0, :]
         reordered_chunk[1::2] = chunk[1, :]
-        chunk = reordered_chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        chunk = reordered_chunk.reshape((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
         return chunk_number, chunk
 
 class DEFLATE_Serial__verbose(DEFLATE_Serial, DEFLATE_raw.DEFLATE_Raw__verbose):

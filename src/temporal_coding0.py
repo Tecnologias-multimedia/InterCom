@@ -4,7 +4,7 @@
 '''Removes the intra-channel redundancy between the samples of the same channel of each chunk using a non-overlapped DWT.'''
 
 import numpy as np
-import pywt
+import pywt  # pip install pywavelets
 import minimal
 #import buffer
 #from compress2 import Compression2 as Compression
