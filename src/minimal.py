@@ -44,17 +44,18 @@ parser.add_argument("-a", "--destination_address", type=int_or_str, default="loc
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)")
+parser.add_argument("-n", "--number_of_channels", type=int, default=2, help="Number of channels")
 
 class Minimal:
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
     #SAMPLE_TYPE = np.int16    # The number of bits per sample.
-    NUMBER_OF_CHANNELS = 2    # The number of channels. Currently, in OSX systems NUMBER_OF_CHANNELS must be 1.
+    #NUMBER_OF_CHANNELS = 2    # The number of channels. Currently, in OSX systems NUMBER_OF_CHANNELS must be 1.
 
     def __init__(self):
         ''' Constructor. Basically initializes the sockets stuff. '''
         logging.info(__doc__)
-        logging.info(f"NUMBER_OF_CHANNELS = {self.NUMBER_OF_CHANNELS}")
+        #logging.info(f"NUMBER_OF_CHANNELS = {self.NUMBER_OF_CHANNELS}")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.listening_endpoint = ("0.0.0.0", args.listening_port)
         self.sock.bind(self.listening_endpoint)
@@ -83,7 +84,7 @@ class Minimal:
         # We need to reshape packed_chunk, that comes as sequence of
         # bytes, as a NumPy array.
         chunk = np.frombuffer(packed_chunk, np.int16)
-        chunk = chunk.reshape(args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        chunk = chunk.reshape(args.frames_per_chunk, args.number_of_channels)
         return chunk
 
     def send(self, packed_chunk):
@@ -106,7 +107,7 @@ class Minimal:
         chunk is not available.
 
         '''
-        return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
+        return np.zeros((args.frames_per_chunk, args.number_of_channels), np.int16)
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
@@ -154,7 +155,7 @@ class Minimal:
             packed_chunk = self.receive()
             chunk = self.unpack(packed_chunk)
         except (socket.timeout, BlockingIOError):
-            #chunk = np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), self.SAMPLE_TYPE)
+            #chunk = np.zeros((args.frames_per_chunk, args.number_of_channels), self.SAMPLE_TYPE)
             chunk = self.zero_chunk
             logging.debug("playing zero chunk")
         # (6) play()
@@ -174,7 +175,7 @@ class Minimal:
             return self.zero_chunk
         chunk = np.frombuffer(chunk, dtype=np.int16)
         #try:
-        chunk = np.reshape(chunk, (args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+        chunk = np.reshape(chunk, (args.frames_per_chunk, args.number_of_channels))
         #except ValueError:
             #logging.warning("Input exhausted! :-/")
             #pid = os.getpid()
@@ -212,7 +213,7 @@ class Minimal:
                          dtype=np.int16,
                          samplerate=args.frames_per_second,
                          blocksize=args.frames_per_chunk,
-                         channels=self.NUMBER_OF_CHANNELS,
+                         channels=args.number_of_channels,
                          callback=callback_function)
 
     def file_stream(self, callback_function):
@@ -228,7 +229,7 @@ class Minimal:
             samplerate=args.frames_per_second,
             blocksize=args.frames_per_chunk,
             device=args.output_device,
-            channels=self.NUMBER_OF_CHANNELS,
+            channels=args.number_of_channels,
             callback=callback_function)
 
     def run(self):
@@ -388,7 +389,7 @@ class Minimal__verbose(Minimal):
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
         super().send(packed_chunk)
-        #self.sent_bytes_count += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*self.NUMBER_OF_CHANNELS
+        #self.sent_bytes_count += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*args.number_of_channels
         self.sent_bytes_count += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
         self.sent_messages_count += 1
 
