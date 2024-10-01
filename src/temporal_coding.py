@@ -4,7 +4,7 @@
 '''Base class. No DWT.'''
 
 import numpy as np
-import pywt
+import pywt  # pip install pywavelets
 import minimal
 from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 import logging

@@ -4,12 +4,12 @@
 '''Removes the intra-channel redundancy between the samples of the same channel of each chunk using a non-overlapped DWT.'''
 
 import numpy as np
-import pywt
+import pywt  # pip install pywavelets
 import minimal
 #import buffer
 #from compress2 import Compression2 as Compression
 #from br_control2 import BR_Control2 as BR_Control
-from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
 import logging
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
@@ -72,7 +72,7 @@ class Temporal_Coding(Stereo_Coding):
         #chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk_number, chunk
 
-from stereo_coding_32 import Stereo_Coding_32__verbose as Stereo_Coding__verbose
+from stereo_MST_coding_32 import Stereo_MST_Coding_32__verbose as Stereo_Coding__verbose
 #from br_control2 import BR_Control2__verbose as BR_Control__verbose
 
 class Temporal_Coding__verbose(Temporal_Coding, Stereo_Coding__verbose):

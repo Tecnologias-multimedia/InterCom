@@ -28,7 +28,7 @@ class DEFLATE_Raw(buffer.Buffering):
         chunk = zlib.decompress(compressed_chunk)
         chunk = np.frombuffer(chunk, dtype=np.int16)
         try:
-            chunk = chunk.reshape((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS))
+            chunk = chunk.reshape((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
         except ValueError:
             logging.warning("Input exhausted! :-/")
             self.input_exhausted = True
@@ -37,14 +37,14 @@ class DEFLATE_Raw(buffer.Buffering):
 class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
-        self.standard_deviation = np.zeros(self.NUMBER_OF_CHANNELS) # Standard_Deviation of the chunks_per_cycle chunks.
-        self.entropy = np.zeros(self.NUMBER_OF_CHANNELS) # Entropy of the chunks_per_cycle chunks.
-        self.bps = np.zeros(self.NUMBER_OF_CHANNELS) # Bits Per Symbol of the chunks_per_cycle compressed chunks.
+        self.standard_deviation = np.zeros(minimal.args.number_of_channels) # Standard_Deviation of the chunks_per_cycle chunks.
+        self.entropy = np.zeros(minimal.args.number_of_channels) # Entropy of the chunks_per_cycle chunks.
+        self.bps = np.zeros(minimal.args.number_of_channels) # Bits Per Symbol of the chunks_per_cycle compressed chunks.
         self.chunks_in_the_cycle = []
 
-        self.average_standard_deviation = np.zeros(self.NUMBER_OF_CHANNELS)
-        self.average_entropy = np.zeros(self.NUMBER_OF_CHANNELS)
-        self.average_bps = np.zeros(self.NUMBER_OF_CHANNELS)
+        self.average_standard_deviation = np.zeros(minimal.args.number_of_channels)
+        self.average_entropy = np.zeros(minimal.args.number_of_channels)
+        self.average_bps = np.zeros(minimal.args.number_of_channels)
 
     def stats(self):
         string = super().stats()
@@ -109,7 +109,7 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
 
         super().cycle_feedback()
         self.chunks_in_the_cycle = []
-        self.bps = np.zeros(self.NUMBER_OF_CHANNELS)
+        self.bps = np.zeros(minimal.args.number_of_channels)
         
     def _record_io_and_play(self, indata, outdata, frames, time, status):
         super()._record_io_and_play(indata, outdata, frames, time, status)

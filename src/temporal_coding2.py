@@ -5,7 +5,7 @@
 
 import numpy as np
 import sounddevice as sd
-import pywt
+import pywt  # pip install pywavelets
 import time
 import minimal
 import compress
@@ -13,7 +13,7 @@ import buffer
 from compress3_24 import Compression3_24 as Compression
 from br_control import BR_Control as BR_Control 
 import stereo_coding
-from stereo_coding import Stereo_Coding as Stereo_Coding
+from stereo_MST_coding import Stereo_MST_Coding as Stereo_Coding
 import temporal_coding
 import logging
 
@@ -43,8 +43,8 @@ class Temporal_Coding1(buffer.Buffering):
 
     def analyze(self, chunk):
         '''Forward DWT.'''
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
-        for c in range(self.NUMBER_OF_CHANNELS):
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
@@ -54,8 +54,8 @@ class Temporal_Coding1(buffer.Buffering):
 
     def synthesize(self, chunk_DWT):
         '''Inverse DWT.'''
-        chunk = np.empty((minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS), dtype=np.int32)
-        for c in range(self.NUMBER_OF_CHANNELS):
+        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
             chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return chunk

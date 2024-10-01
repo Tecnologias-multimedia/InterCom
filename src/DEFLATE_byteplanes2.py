@@ -39,8 +39,8 @@ class DEFLATE_BytePlanes2(DEFLATE_raw.DEFLATE_Raw):
         channel_MSB = np.frombuffer(buffer_MSB, dtype=np.int8)
         channel_LSB = np.frombuffer(buffer_LSB, dtype=np.uint8)
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int16)
-        chunk[:, 0] = channel_MSB[:len(channel_MSB)//2]*256 + channel_LSB[:len(channel_MSB)//2]
-        chunk[:, 1] = channel_MSB[len(channel_MSB)//2:]*256 + channel_LSB[len(channel_MSB)//2:]
+        chunk[:, 0] = channel_MSB[:len(channel_MSB)//2].astype(np.uint16)*256 + channel_LSB[:len(channel_MSB)//2]
+        chunk[:, 1] = channel_MSB[len(channel_MSB)//2:].astype(np.uint16)*256 + channel_LSB[len(channel_MSB)//2:]
         return chunk_number, chunk
 
 class DEFLATE_BytePlanes2__verbose(DEFLATE_BytePlanes2, DEFLATE_raw.DEFLATE_Raw__verbose):
