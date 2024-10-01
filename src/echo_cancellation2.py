@@ -25,8 +25,8 @@ class Echo_Cancellation(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        self.delay = 0 # In frames
-        self.attenuation = 0.95
+        self.delay = 128 # In frames
+        self.attenuation = 0.5
         self.last_recorded_chunk = self.zero_chunk
         self.prev_recorded_chunk = self.zero_chunk
         
@@ -36,11 +36,14 @@ class Echo_Cancellation(buffer.Buffering):
             self.last_sent_chunks.append(self.zero_chunk)
         self.LSC_counter = 0
         self.last_played_chunk = self.zero_chunk
-
+        self.ones = np.ones_like(self.last_played_chunk)
+        for i in range(len(self.ones)):
+            if i % 2:
+                self.ones[i] = -self.ones[i]
         pygame.init()
         self.win = pygame.display.set_mode((1000, 600))
 
-        self.slider = Slider(self.win, 100, 100, 800, 40, min=0, max=64, step=1, initial=self.delay)
+        self.slider = Slider(self.win, 100, 100, 800, 40, min=0, max=self.delay*2, step=1, initial=self.delay)
         self.output = TextBox(self.win, 475, 200, 50, 50, fontSize=30)
         self.slider2 = Slider(self.win, 100, 400, 800, 40, min=0.0, max=2.0, step=0.01, initial=self.attenuation)
         self.output2 = TextBox(self.win, 475, 500, 50, 50, fontSize=30)
@@ -87,6 +90,8 @@ class Echo_Cancellation(buffer.Buffering):
         #chunk_to_substract = (self.attenuation*np.roll(self.last_played_chunk, self.delay)).astype(np.int32)
         #chunk_to_substract = self.attenuation * np.concatenate(self.last_sent_chunks)[self.delay:self.delay+minimal.args.frames_per_chunk]
         chunk_to_substract = self.attenuation * np.concatenate([self.prev_recorded_chunk, self.last_recorded_chunk])[minimal.args.frames_per_chunk - self.delay : 2*minimal.args.frames_per_chunk - self.delay].astype(np.int32)
+        #chunk_to_substract *= self.ones
+        chunk_to_substract = np.random.rand(len
         #print(chunk_to_substract)
         #self.no_echo_chunk = last_recorded_chunk.astype(np.int32) - chunk_to_substract
         #self.no_echo_chunk = self.last_sent_chunks[self.LSC_counter] - chunk_to_substract

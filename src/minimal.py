@@ -61,6 +61,7 @@ class Minimal:
         self.chunk_time = args.frames_per_chunk / args.frames_per_second
         logging.info(f"chunk_time = {self.chunk_time} seconds")
         self.zero_chunk = self.generate_zero_chunk()
+        self.random_chunk = self.generate_random_chunk()
 
         if args.filename:
             logging.info(f"Using \"{args.filename}\" as input")
@@ -107,6 +108,9 @@ class Minimal:
 
         '''
         return np.zeros((args.frames_per_chunk, self.NUMBER_OF_CHANNELS), np.int16)
+
+    def generate_random_chunk(self):
+        pass
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the
