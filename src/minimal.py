@@ -109,7 +109,8 @@ class Minimal:
         return np.zeros((args.frames_per_chunk, args.number_of_channels), np.int16)
 
     def generate_random_chunk(self):
-        pass
+        ra = np.random.randint(low=-32768, high=32768, size=(args.frames_per_chunk, args.number_of_channels), dtype=np.int16)
+        return ra
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         '''Interruption handler that samples a chunk, builds a packet with the

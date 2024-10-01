@@ -3,6 +3,8 @@
 
 '''Echo cancellation. Substract an attenuated and delayed verion of the last recorded chunk to the last played chunk. The delayed version of the last recorded chunk takes the last samples of the previously (to the last) recorded chunk.'''
 
+# Restar al chunk actual el anterior
+
 import numpy as np
 import struct
 import math
@@ -25,7 +27,7 @@ class Echo_Cancellation(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        self.delay = 128 # In frames
+        self.delay = 512 # In frames
         self.attenuation = 0.5
         self.last_recorded_chunk = self.zero_chunk
         self.prev_recorded_chunk = self.zero_chunk
@@ -40,6 +42,7 @@ class Echo_Cancellation(buffer.Buffering):
         for i in range(len(self.ones)):
             if i % 2:
                 self.ones[i] = -self.ones[i]
+        self.random_chunk = self.generate_random_chunk()
         pygame.init()
         self.win = pygame.display.set_mode((1000, 600))
 
@@ -91,7 +94,7 @@ class Echo_Cancellation(buffer.Buffering):
         #chunk_to_substract = self.attenuation * np.concatenate(self.last_sent_chunks)[self.delay:self.delay+minimal.args.frames_per_chunk]
         chunk_to_substract = self.attenuation * np.concatenate([self.prev_recorded_chunk, self.last_recorded_chunk])[minimal.args.frames_per_chunk - self.delay : 2*minimal.args.frames_per_chunk - self.delay].astype(np.int32)
         #chunk_to_substract *= self.ones
-        chunk_to_substract = np.random.rand(len
+        #chunk_to_substract = self.random_chunk
         #print(chunk_to_substract)
         #self.no_echo_chunk = last_recorded_chunk.astype(np.int32) - chunk_to_substract
         #self.no_echo_chunk = self.last_sent_chunks[self.LSC_counter] - chunk_to_substract
@@ -111,7 +114,7 @@ class Echo_Cancellation(buffer.Buffering):
 
     def play_chunk(self, DAC, chunk):
         super().play_chunk(DAC, chunk)
-        self.last_played_chunk = chunk.reshape(minimal.args.frames_per_chunk, self.NUMBER_OF_CHANNELS)
+        self.last_played_chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
