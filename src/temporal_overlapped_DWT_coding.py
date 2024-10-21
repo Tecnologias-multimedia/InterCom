@@ -144,7 +144,7 @@ class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Over
             print("\033[32mbr_control: ", end=''); self.show_indata(recorded_chunk.astype(np.int))
             print("\033[m", end='')
             # Remember that
-            # buffer.Buffering__verbose._record_io_and_play shows also
+            # buffer.Buffering__verbose._record_IO_and_play shows also
             # indata and outdata.
 
             print("\033[32mbr_control: ", end=''); self.show_outdata(played_chunk.astype(np.int))

@@ -91,6 +91,7 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         for i in probs:
             entropy -= i * math.log(i, 2)
 
+        #print(sequence_of_symbols)
         return entropy
 
     def cycle_feedback(self):
@@ -111,14 +112,14 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         self.chunks_in_the_cycle = []
         self.bps = np.zeros(minimal.args.number_of_channels)
         
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
-        super()._record_io_and_play(indata, outdata, frames, time, status)
+    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+        super()._record_IO_and_play(indata, outdata, frames, time, status)
         self.chunks_in_the_cycle.append(indata)
         # Remember: indata contains the recorded chunk and outdata,
         # the played chunk.
 
-    def _read_io_and_play(self, outdata, frames, time, status):
-        read_chunk = super()._read_io_and_play(outdata, frames, time, status)
+    def _read_IO_and_play(self, outdata, frames, time, status):
+        read_chunk = super()._read_IO_and_play(outdata, frames, time, status)
         self.chunks_in_the_cycle.append(read_chunk)
         return read_chunk
 

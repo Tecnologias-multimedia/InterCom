@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Compress the least significant byte planes of the chunks using DEFLATE. The channels are consecutive (serialized). 2 code-streams (one per byte-plane) are generated.'''
+'''Compress the least significant byte planes of the chunks using DEFLATE. The channels are consecutive (serialized). 2 code-streams (one per byte-plane) are generated. Notice that now, if you use --show_stats, the number of bits/sample will be wrong because now in one channel contains the LSB and other the MSB'''
 
 import zlib
 import numpy as np

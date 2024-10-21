@@ -18,12 +18,12 @@ class DEFLATE_BytePlanes4(DEFLATE_raw.DEFLATE_Raw):
         logging.info(__doc__)
 
     def pack(self, chunk_number, chunk):
-        channel_0_MSB2 = (chunk[:, 0] // (1<<24)).astype(np.int8)
-        channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.uint8) # Get LSB
+        channel_0_MSB2 = (chunk[:, 0].astype(np.int32) // (1<<24)).astype(np.int8)
+        channel_0_MSB1 = (chunk[:, 0].astype(np.int32) // (1<<16)).astype(np.uint8) # Get LSB
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
-        channel_1_MSB2 = (chunk[:, 1] // (1<<24)).astype(np.int8)
-        channel_1_MSB1 = (chunk[:, 1] // (1<<16)).astype(np.uint8)
+        channel_1_MSB2 = (chunk[:, 1].astype(np.int32) // (1<<24)).astype(np.int8)
+        channel_1_MSB1 = (chunk[:, 1].astype(np.int32) // (1<<16)).astype(np.uint8)
         channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.uint8)
         channel_1_LSB  = (chunk[:, 1] % (1<<8)).astype(np.uint8)
         MSB2 = np.concatenate([channel_0_MSB2, channel_1_MSB2])

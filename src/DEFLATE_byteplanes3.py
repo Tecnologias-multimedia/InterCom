@@ -19,10 +19,10 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
 
     def pack(self, chunk_number, chunk):
         assert np.all( abs(chunk) < (1<<24) )
-        channel_0_MSB1 = (chunk[:, 0] // (1<<16)).astype(np.int8)
+        channel_0_MSB1 = (chunk[:, 0].astype(np.int32) // (1<<16)).astype(np.int8)
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
-        channel_1_MSB1 = (chunk[:, 1] // (1<<16)).astype(np.int8)
+        channel_1_MSB1 = (chunk[:, 1].astype(np.int32) // (1<<16)).astype(np.int8)
         channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.uint8)
         channel_1_LSB  = (chunk[:, 1] % (1<<8)).astype(np.uint8)
         MSB1 = np.concatenate([channel_0_MSB1, channel_1_MSB1])

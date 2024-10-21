@@ -161,7 +161,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
             print("\033[32mbr_control: ", end=''); self.show_indata(recorded_chunk.astype(np.int))
             print("\033[m", end='')
             # Remember that
-            # buffer.Buffering__verbose._record_io_and_play shows also
+            # buffer.Buffering__verbose._record_IO_and_play shows also
             # indata and outdata.
         
             print("\033[32mbr_control: ", end=''); self.show_outdata(played_chunk.astype(np.int))
@@ -213,12 +213,12 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
                     SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
                     self.accumulated_SNR_per_cycle[c] += SNR[c]
 
-    def _record_io_and_play(self, indata, outdata, frames, time, status):
-        super()._record_io_and_play(indata, outdata, frames, time, status)
+    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+        super()._record_IO_and_play(indata, outdata, frames, time, status)
         self.compute(indata, outdata)
 
-    def _read_io_and_play(self, outdata, frames, time, status):
-        chunk = super()._read_io_and_play(outdata, frames, time, status)
+    def _read_IO_and_play(self, outdata, frames, time, status):
+        chunk = super()._read_IO_and_play(outdata, frames, time, status)
         self.compute(chunk, outdata)
 
     def print_final_averages(self):
