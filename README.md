@@ -18,13 +18,11 @@ See [Getting Started with Python in VS Code](https://code.visualstudio.com/docs/
 
 ### Jupyter-lab install
 
-#### Linux (in a Python virtual environment)
+Required only to run the notebooks, not the InterCom.
 
-     mkdir envs                # Only once
-     cd envs                   # Only once
-     python3 -m venv TM        # Only once
-     source ~/TM/bin/activate  # Run this always you want to use the virtual environment
-     pip install jupyter_lab   # Only once
+#### Linux (better in a [virtual Python environment](https://docs.python.org/3/library/venv.html))
+
+     pip install jupyterlab
 
 #### Visual Studio Code (all platforms)
 
