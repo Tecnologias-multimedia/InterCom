@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Considering the threshold of human hearing. '''
+'''Considering the threshold of human hearing. '''
 
 import numpy as np
 import math
@@ -50,6 +50,7 @@ class Threshold(Temporal_Overlapped_DWT):
         for i in range(len(average_SPLs)):
             quantization_steps.append( round((average_SPLs[i]-min_SPL)/(max_SPL-min_SPL)*(max_q-1)+1) )
 
+        logging.info(f"Quantization step sizes: {quantization_steps}")
         return quantization_steps
 
     def analyze(self, chunk):
