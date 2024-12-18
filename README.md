@@ -14,17 +14,17 @@ Python is already installed in Linux.
 
 #### Visual Studio Code (all platforms)
 
-See [Getting Started with Python in VS Code](https://code.visualstudio.com/docs/python/python-tutorial#_install-a-python-interpreter)
+See [Getting Started with Python in VS Code](https://code.visualstudio.com/docs/python/python-tutorial#_install-a-python-interpreter).
 
 ### Jupyter-lab install
 
-#### Linux
+#### Linux (in a Python virtual environment)
 
-     mkdir envs
-     cd envs
-     python3 -m venv TM
-     source TM/bin/activate
-     pip install jupyter_lab
+     mkdir envs                # Only once
+     cd envs                   # Only once
+     python3 -m venv TM        # Only once
+     source ~/TM/bin/activate  # Run this always you want to use the virtual environment
+     pip install jupyter_lab   # Only once
 
 #### Visual Studio Code (all platforms)
 
