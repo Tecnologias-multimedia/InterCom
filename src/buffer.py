@@ -174,11 +174,11 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
             print("first_received_chunk_number =", first_received_chunk_number)
         self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
         if minimal.args.show_spectrum:
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            while self.total_number_of_sent_chunks < self.chunks_to_send:# and not self.input_exhausted:
                 self.receive_and_buffer()
                 self.update_display() # PyGame cannot run in a thread :-/
         else:
-            while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+            while self.total_number_of_sent_chunks < self.chunks_to_send:# and not self.input_exhausted:
                 self.receive_and_buffer()
 
     def run(self):

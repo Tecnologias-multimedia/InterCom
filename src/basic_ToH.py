@@ -11,7 +11,7 @@ import logging
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose
 
-class Treshold(Temporal_Overlapped_DWT):
+class Threshold(Temporal_Overlapped_DWT):
 
     def __init__(self):
         super().__init__()
@@ -73,7 +73,7 @@ class Treshold(Temporal_Overlapped_DWT):
         return super().synthesize(chunk_DWT)
         
 
-class Treshold__verbose(Treshold, Temporal_Overlapped_DWT__verbose):
+class Threshold__verbose(Threshold, Temporal_Overlapped_DWT__verbose):
     pass
 
 try:
@@ -89,9 +89,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = Treshold__verbose()
+        intercom = Threshold__verbose()
     else:
-        intercom = Treshold()
+        intercom = Threshold()
     try:
         intercom.run()
     except KeyboardInterrupt:

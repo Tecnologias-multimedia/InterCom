@@ -71,6 +71,7 @@ class Minimal:
             self.stream = self.mic_stream
 
         #self.input_exhausted = False
+        self.end = False
 
     def pack(self, chunk):
         '''Builds a packet's payloads with a chunk.'''
@@ -300,9 +301,9 @@ class Minimal__verbose(Minimal):
         self.old_CPU_time = psutil.Process().cpu_times()[0]
 
         self.total_number_of_sent_chunks = 0
-        self.chunks_to_sent = 999999
+        self.chunks_to_send = 999999
         if args.reading_time:
-            self.chunks_to_sent = int(args.reading_time)/self.chunk_time
+            self.chunks_to_send = int(args.reading_time)/self.chunk_time
 
         logging.info(f"seconds_per_cycle = {self.seconds_per_cycle}")            
         logging.info(f"chunks_per_cycle = {self.chunks_per_cycle}")
@@ -583,9 +584,10 @@ class Minimal__verbose(Minimal):
             self.update_display()
 
     def loop_cycle_feedback(self):
-        while self.total_number_of_sent_chunks < self.chunks_to_sent:# and not self.input_exhausted:
+        while self.total_number_of_sent_chunks < self.chunks_to_send:# and not self.input_exhausted:
             time.sleep(self.seconds_per_cycle)
             self.cycle_feedback()
+        self.end = True
 
     def run(self):
         cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
@@ -599,7 +601,8 @@ class Minimal__verbose(Minimal):
             if args.show_spectrum:
                 self.loop_update_display()
             else:
-                input()
+                while not self.end:
+                    time.sleep(1)
 
 try:
     import argcomplete  # <tab> completion for argparse.
