@@ -104,6 +104,7 @@ try:
                   loc='upper right', ncol=len(args.channels))
     ax.axis((0, len(plotdata), 0, 1))
     ax.set_yticks([0])
+    #ax.set_xscale("linear")
     ax.yaxis.grid(True)
     ax.tick_params(bottom=False, top=False, labelbottom=False,
                    right=False, left=False, labelleft=False)

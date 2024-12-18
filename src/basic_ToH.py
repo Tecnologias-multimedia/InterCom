@@ -52,7 +52,6 @@ class Treshold(Temporal_Overlapped_DWT):
 
         return quantization_steps
 
-
     def analyze(self, chunk):
         chunk_DWT = super().analyze(chunk)
 
