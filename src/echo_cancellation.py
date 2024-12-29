@@ -37,22 +37,6 @@ class Echo_Cancellation(buffer.Buffering):
             y[:, i], e[:, i], w = nlms(speaker_signal[:, i].astype(np.float32), microphone_signal[:, i].astype(np.float32), M, step)
 
         return y
-
-    def cancel_echo(self, microphone_signal, speaker_signal):
-        M = 256
-        step = 0.1
-        padding = np.zeros((M-1, 2))
-        padded_SP = np.vstack([padding, speaker_signal])
-        padded_MS = np.vstack([padding, microphone_signal])
-        y = np.zeros((1024,2))
-        e = np.zeros((1024,2))
-        #print(np.max(microphone_signal))
-        #print(np.max(speaker_signal))
-
-        for i in range(microphone_signal.shape[1]):
-            y[:, i], e[:, i], w = nlms(padded_SP[:, i].astype(np.float32), padded_MS[:, i].astype(np.float32), M, step)
-
-        return y
         
     def cancel_echo_old(self, microphone_signal, speaker_signal):
         M = 256
@@ -70,6 +54,24 @@ class Echo_Cancellation(buffer.Buffering):
 
         return y
 
+    def cancel_echo(self, microphone_signal, speaker_signal):
+        M = 128
+        step = 0.1
+        padding = np.zeros((M-1, 2))
+        padded_SP = np.vstack([padding, speaker_signal.copy()])
+        padded_MS = np.vstack([padding, microphone_signal.copy()])
+        y = np.zeros((1024,2))
+        e = np.zeros((1024,2))
+        #print(np.max(microphone_signal))
+        #print(np.max(speaker_signal))
+
+        for i in range(2):
+            y[:, i], e[:, i], w = nlms(padded_SP[:, i].astype(np.float32), padded_MS[:, i].astype(np.float32), M, step)
+
+        print(np.max(y))
+        y = np.clip(y, -32768, 32767)
+        return y.astype(np.int16)
+
     def _record_IO_and_play_old(self, indata, outdata, frames, time, status):
         echo_signal = self.cancel_echo(indata, outdata)
         padding = np.zeros((1024 - echo_signal.shape[0], 2))
@@ -78,7 +80,7 @@ class Echo_Cancellation(buffer.Buffering):
         indata[:] = echo_signal
         super()._record_IO_and_play(indata, outdata, frames, time, status)
 
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    def _record_IO_and_play_old(self, indata, outdata, frames, time, status):
         ECS = self.cancel_echo(indata, outdata)
         #print(np.max(ECS))
         padding = np.zeros((1024 - ECS.shape[0], 2))
@@ -87,8 +89,10 @@ class Echo_Cancellation(buffer.Buffering):
         super()._record_IO_and_play(indata, outdata, frames, time, status)
 
     def _record_IO_and_play(self, indata, outdata, frames, time, status):
-        ECS = self.cancel_echo(indata, outdata)
-        super()._record_IO_and_play(indata, outdata, frames, time, status)
+        ECS = self.cancel_echo(indata.copy(), outdata.copy())
+        #indata[:] = ECS
+        #indata[:] = indata
+        #super()._record_IO_and_play(indata, outdata, frames, time, status)
 
 class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
     def __init__(self):
