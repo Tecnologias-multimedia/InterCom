@@ -12,12 +12,18 @@ import logging
 import minimal
 import DEFLATE_raw
 
-class DEFLATE_Serial2(DEFLATE_raw.DEFLATE_Raw):
+class DEFLATE_Serial_Reset(DEFLATE_raw.DEFLATE_Raw):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
+        if minimal.args.number_of_channels != 2:
+            self.pack = self.pack_mono
+            self.unpack = self.unpack_mono
+        else:
+            self.pack = self.pack_stereo
+            self.unpack = self.unpack_stereo
 
-    def pack(self, chunk_number, chunk):
+    def pack_stereo(self, chunk_number, chunk):
         channel_0 = chunk[:, 0].copy()
         channel_1 = chunk[:, 1].copy()
         compressed_channel_0 = zlib.compress(channel_0)
@@ -25,7 +31,12 @@ class DEFLATE_Serial2(DEFLATE_raw.DEFLATE_Raw):
         packed_chunk = struct.pack("!HH", chunk_number, len(compressed_channel_0)) + compressed_channel_0 + compressed_channel_1
         return packed_chunk
 
-    def unpack(self, packed_chunk):
+    def pack_mono(self, chunk_number, chunk):
+        compressed_chunk = zlib.compress(chunk)
+        packed_chunk = struct.pack("!HH", chunk_number, len(compressed_chunk)) + compressed_chunk
+        return packed_chunk
+
+    def unpack_stereo(self, packed_chunk):
         (chunk_number, len_compressed_channel_0) = struct.unpack("!HH", packed_chunk[:4])
 
         compressed_channel_0 = packed_chunk[4:len_compressed_channel_0+4]
@@ -41,7 +52,16 @@ class DEFLATE_Serial2(DEFLATE_raw.DEFLATE_Raw):
 
         return chunk_number, chunk
 
-class DEFLATE_Serial2__verbose(DEFLATE_Serial2, DEFLATE_raw.DEFLATE_Raw__verbose):
+    def unpack_mono(self, packed_chunk):
+        (chunk_number, len_compressed_chunk) = struct.unpack("!HH", packed_chunk[:4])
+
+        compressed_chunk = packed_chunk[4:len_compressed_chunk+4]
+        chunk = zlib.decompress(compressed_chunk)
+        chunk = np.frombuffer(chunk, dtype=np.int16)
+
+        return chunk_number, chunk
+
+class DEFLATE_Serial_Reset__verbose(DEFLATE_Serial_Reset, DEFLATE_raw.DEFLATE_Raw__verbose):
     def __init__(self):
         super().__init__()
 
@@ -66,9 +86,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples:
-        intercom = DEFLATE_Serial2__verbose()
+        intercom = DEFLATE_Serial_Reset__verbose()
     else:
-        intercom = DEFLATE_Serial2()
+        intercom = DEFLATE_Serial_Reset()
     try:
         intercom.run()
     except KeyboardInterrupt:
