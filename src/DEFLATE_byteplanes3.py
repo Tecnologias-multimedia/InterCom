@@ -16,24 +16,19 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        if minimal.args.number_of_channels != 2:
-            self.pack = self.pack_mono
-            self.unpack = self.unpack_mono
-        else:
-            self.pack = self.pack_stereo
-            self.unpack = self.unpack_stereo
 
-    def pack_stereo(self, chunk_number, chunk):
+    def pack(self, chunk_number, chunk):
         #assert np.all( abs(chunk) < (1<<24) )
-        channel_0_MSB1 = (chunk[:, 0].astype(np.int32) // (1<<16)).astype(np.int8)
-        channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
-        channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
-        channel_1_MSB1 = (chunk[:, 1].astype(np.int32) // (1<<16)).astype(np.int8)
-        channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.uint8)
-        channel_1_LSB  = (chunk[:, 1] % (1<<8)).astype(np.uint8)
-        MSB1 = np.concatenate([channel_0_MSB1, channel_1_MSB1])
-        MSB0 = np.concatenate([channel_0_MSB0, channel_1_MSB0])
-        LSB  = np.concatenate([channel_0_LSB, channel_1_LSB])
+        channel_LSB  = [None]*minimal.args.number_of_channels
+        channel_MSB0 = [None]*minimal.args.number_of_channels
+        channel_MSB1 = [None]*minimal.args.number_of_channels
+        for i in range(minimal.args.number_of_channels):
+            channel_MSB1[i] = (chunk[:, i].astype(np.int32) // (1<<16)).astype(np.int8)
+            channel_MSB0[i] = (chunk[:, i] // (1<<8)).astype(np.uint8)
+            channel_LSB [i] = (chunk[:, i] % (1<<8)).astype(np.uint8)
+        MSB1 = np.concatenate(channel_MSB1)
+        MSB0 = np.concatenate(channel_MSB0)
+        LSB  = np.concatenate(channel_LSB )
         compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_BEST_COMPRESSION)
         #compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_DEFAULT_COMPRESSION)
         compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_BEST_COMPRESSION)
@@ -43,24 +38,7 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
         packed_chunk = struct.pack("!HHH", chunk_number, len(compressed_MSB1), len(compressed_MSB0)) + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
         return packed_chunk
 
-    def pack_mono(self, chunk_number, chunk):
-        #assert np.all( abs(chunk) < (1<<24) )
-        channel_0_MSB1 = (chunk.astype(np.int32) // (1<<16)).astype(np.int8)
-        channel_0_MSB0 = (chunk // (1<<8)).astype(np.uint8)
-        channel_0_LSB  = (chunk % (1<<8)).astype(np.uint8)
-        MSB1 = channel_0_MSB1
-        MSB0 = channel_0_MSB0
-        LSB  = channel_0_LSB
-        compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_BEST_COMPRESSION)
-        #compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_DEFAULT_COMPRESSION)
-        compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_BEST_COMPRESSION)
-        #compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_DEFAULT_COMPRESSION)
-        compressed_LSB  = zlib.compress(LSB, level=zlib.Z_BEST_COMPRESSION)
-        #compressed_LSB  = zlib.compress(LSB, level=zlib.Z_DEFAULT_COMPRESSION)
-        packed_chunk = struct.pack("!HHH", chunk_number, len(compressed_MSB1), len(compressed_MSB0)) + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
-        return packed_chunk
-
-    def unpack_stereo(self, packed_chunk):
+    def unpack(self, packed_chunk):
         offset = 6 # Header size
         (chunk_number, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHH", packed_chunk[:offset])
         compressed_MSB1 = packed_chunk[offset : len_compressed_MSB1 + offset]
@@ -74,26 +52,12 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
         channel_MSB1 = np.frombuffer(buffer_MSB1, dtype=np.int8)
         channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
         channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
-        chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int32)
-        chunk[:, 0] = channel_MSB1[:len(channel_MSB1)//2].astype(np.uint32)*(1<<16) + channel_MSB0[:len(channel_MSB0)//2].astype(np.uint16)*(1<<8) + channel_LSB[:len(channel_LSB)//2]
-        chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:].astype(np.uint32)*(1<<16) + channel_MSB0[len(channel_MSB0)//2:].astype(np.uint16)*(1<<8) + channel_LSB[len(channel_LSB)//2:]
-        return chunk_number, chunk
-
-    def unpack_mono(self, packed_chunk):
-        offset = 6 # Header size
-        (chunk_number, len_compressed_MSB1, len_compressed_MSB0) = struct.unpack("!HHH", packed_chunk[:offset])
-        compressed_MSB1 = packed_chunk[offset : len_compressed_MSB1 + offset]
-        offset += len_compressed_MSB1 
-        compressed_MSB0 = packed_chunk[offset : len_compressed_MSB0 + offset]
-        offset += len_compressed_MSB0 
-        compressed_LSB = packed_chunk[offset :]
-        buffer_MSB1 = zlib.decompress(compressed_MSB1)
-        buffer_MSB0 = zlib.decompress(compressed_MSB0)
-        buffer_LSB  = zlib.decompress(compressed_LSB)
-        channel_MSB1 = np.frombuffer(buffer_MSB1, dtype=np.int8)
-        channel_MSB0 = np.frombuffer(buffer_MSB0, dtype=np.uint8)
-        channel_LSB  = np.frombuffer(buffer_LSB, dtype=np.uint8)
-        chunk = channel_MSB1[:len(channel_MSB1)].astype(np.uint32)*(1<<16) + channel_MSB0[:len(channel_MSB0)].astype(np.uint16)*(1<<8) + channel_LSB[:len(channel_LSB)]
+        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        for i in range(minimal.args.number_of_channels):
+            chunk[:, i] = \
+                channel_MSB1[:len(channel_MSB1)//minimal.args.number_of_channels].astype(np.uint32)*(1<<16) + \
+                channel_MSB0[:len(channel_MSB0)//minimal.args.number_of_channels].astype(np.uint16)*(1<<8) + \
+                channel_LSB[:len(channel_LSB)//minimal.args.number_of_channels]
         return chunk_number, chunk
 
 class DEFLATE_BytePlanes3__verbose(DEFLATE_BytePlanes3, DEFLATE_raw.DEFLATE_Raw__verbose):
