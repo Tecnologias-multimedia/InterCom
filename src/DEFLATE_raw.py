@@ -45,6 +45,12 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         self.average_standard_deviation = np.zeros(minimal.args.number_of_channels)
         self.average_entropy = np.zeros(minimal.args.number_of_channels)
         self.average_bps = np.zeros(minimal.args.number_of_channels)
+        if minimal.args.number_of_channels != 2:
+            self.unpack = self.unpack_mono
+            self.compute_entropy = self.compute_entropy_mono
+        else:
+            self.unppack = self.unpack_stereo
+            self.compute_entropy = self.compute_entropy_stereo
 
     def stats(self):
         string = super().stats()
@@ -94,6 +100,13 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         #print(sequence_of_symbols)
         return entropy
 
+    def compute_entropy_stereo(self, concatenated_chunks):
+        self.entropy[0] = self.entropy_in_bits_per_symbol(concatenated_chunks[:, 0])
+        self.entropy[1] = self.entropy_in_bits_per_symbol(concatenated_chunks[:, 1])
+
+    def compute_entropy_mono(self, concatenated_chunks):
+        self.entropy[0] = self.entropy_in_bits_per_symbol(concatenated_chunks[:, 0])
+
     def cycle_feedback(self):
         try:
             concatenated_chunks = np.vstack(self.chunks_in_the_cycle)
@@ -102,8 +115,7 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         self.standard_deviation = np.sqrt(np.var(concatenated_chunks, axis=0))
         self.average_standard_deviation = self.moving_average(self.average_standard_deviation, self.standard_deviation, self.cycle)
 
-        self.entropy[0] = self.entropy_in_bits_per_symbol(concatenated_chunks[:, 0])
-        self.entropy[1] = self.entropy_in_bits_per_symbol(concatenated_chunks[:, 1])
+        self.compute_entropy(concatenated_chunks)
         self.average_entropy = self.moving_average(self.average_entropy, self.entropy, self.cycle)
 
         self.average_bps = self.moving_average(self.average_bps, self.bps, self.cycle)
@@ -123,7 +135,7 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         self.chunks_in_the_cycle.append(read_chunk)
         return read_chunk
 
-    def unpack(self, packed_chunk):
+    def unpack_stereo(self, packed_chunk):
         len_packed_chunk = len(packed_chunk)
         self.bps[0] += len_packed_chunk*4
         self.bps[1] += len_packed_chunk*4
@@ -131,6 +143,11 @@ class DEFLATE_Raw__verbose(DEFLATE_Raw, buffer.Buffering__verbose):
         return DEFLATE_Raw.unpack(self, packed_chunk)
         #except ValueError:
         #pass
+
+    def unpack_mono(self, packed_chunk):
+        len_packed_chunk = len(packed_chunk)
+        self.bps[0] += len_packed_chunk*4
+        return DEFLATE_Raw.unpack(self, packed_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.
