@@ -10,6 +10,7 @@ import logging
 
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose
+from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
 class Threshold(Temporal_Overlapped_DWT):
 
@@ -48,31 +49,32 @@ class Threshold(Temporal_Overlapped_DWT):
         min_SPL = np.min(average_SPLs)
         max_SPL = np.max(average_SPLs)
         for i in range(len(average_SPLs)):
-            quantization_steps.append( round((average_SPLs[i]-min_SPL)/(max_SPL-min_SPL)*(max_q-1)+1) )
+            quantization_steps.append(round((average_SPLs[i]-min_SPL)/(max_SPL-min_SPL)*(max_q-1)+1)*minimal.args.minimal_quantization_step_size)
 
         logging.info(f"Quantization step sizes: {quantization_steps}")
         return quantization_steps
 
-    def analyze(self, chunk):
-        chunk_DWT = super().analyze(chunk)
-
+    def pack(self, chunk_number, chunk):
+        analyzed_chunk = super().analyze(chunk)
+        '''Quantize and pack a chunk.'''
+        #self.quantize(analyzed_chunk)
         # Quantize the subbands
-        chunk_DWT[self.slices[0][0]] = (chunk_DWT[self.slices[0][0]] / self.quantization_steps[0]).astype(np.int32)
+        analyzed_chunk[self.slices[0][0]] = (analyzed_chunk[self.slices[0][0]] / self.quantization_steps[0]).astype(np.int32)
         for i in range (self.dwt_levels):
-            chunk_DWT[self.slices[i+1]['d'][0]] = (chunk_DWT[self.slices[i+1]['d'][0]] / self.quantization_steps[i+1]).astype(np.int32)
+            analyzed_chunk[self.slices[i+1]['d'][0]] = (analyzed_chunk[self.slices[i+1]['d'][0]] / (self.quantization_steps[i+1])).astype(np.int32)
 
-        return chunk_DWT
+        packed_chunk = EC.pack(self, chunk_number, analyzed_chunk)
+        return packed_chunk
 
-
-    def synthesize(self, chunk_DWT):
-
+    def unpack(self, packed_chunk):
+        '''Dequantize and unpack a chunk.'''
+        chunk_number, analyzed_chunk = EC.unpack(self, packed_chunk)
         # Dequantize the subbands
-        chunk_DWT[self.slices[0][0]] = chunk_DWT[self.slices[0][0]] * self.quantization_steps[0]
+        analyzed_chunk[self.slices[0][0]] = analyzed_chunk[self.slices[0][0]] * self.quantization_steps[0]
         for i in range (self.dwt_levels):
-            chunk_DWT[self.slices[i+1]['d'][0]] = chunk_DWT[self.slices[i+1]['d'][0]] * self.quantization_steps[i+1]
-
-        return super().synthesize(chunk_DWT)
-        
+            analyzed_chunk[self.slices[i+1]['d'][0]] = analyzed_chunk[self.slices[i+1]['d'][0]] * self.quantization_steps[i+1]
+        chunk = super().synthesize(analyzed_chunk)
+        return chunk_number, chunk
 
 class Threshold__verbose(Threshold, Temporal_Overlapped_DWT__verbose):
     pass
