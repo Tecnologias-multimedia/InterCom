@@ -2,7 +2,8 @@
 # PYTHON_ARGCOMPLETE_OK
 
 """
-Using Wavelet Packets a for better frequency resolution. Chunks are not overlapped.
+Create a custom (personal) ToH.
+U N F I N I S H E D !
 """
 
 import numpy as np
