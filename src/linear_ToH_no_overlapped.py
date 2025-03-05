@@ -14,11 +14,11 @@ from dyadic_ToH import Dyadic_ToH, Dyadic_ToH__verbose
 from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
-class Linear_ToH(Dyadic_ToH):
+class Linear_ToH_NO(Dyadic_ToH):
 
     def __init__(self):
         super().__init__()
-        self.quantization_steps = Linear_ToH.calculate_quantization_steps(self, max_expected_q=1024)
+        self.quantization_steps = Linear_ToH_NO.calculate_quantization_steps(self, max_expected_q=1024)
 
     def calculate_quantization_steps(self, max_expected_q):
         """
@@ -149,15 +149,8 @@ class Linear_ToH(Dyadic_ToH):
 
         return dummy_wp
 
-class Linear_ToH__verbose(Linear_ToH, Dyadic_ToH__verbose):
+class Linear_ToH_NO__verbose(Linear_ToH_NO, Dyadic_ToH__verbose):
     pass
-    #def __init__(self):
-    #    """
-    #    Initialize the verbose version of AdvancedThreshold.
-    #    """
-    #    #AdvancedThreshold.__init__(self)
-    #    Threshold__verbose.__init__(self)
-
 
 try:
     import argcomplete
@@ -174,9 +167,9 @@ if __name__ == "__main__":
 
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Linear_ToH__verbose()
+        intercom = Linear_ToH_NO__verbose()
     else:
-        intercom = Linear_ToH()
+        intercom = Linear_ToH_NO()
 
     try:
         intercom.run()
