@@ -21,12 +21,7 @@ class AdvancedThreshold(Threshold):
         Initialize the AdvancedThreshold class with Wavelet Packets and levels.
         """
         super().__init__()
-
-        self.args = minimal.args
-        self.WPT_levels = 6
-        print(self.WPT_levels)
-
-        self.quantization_steps = self.calculate_quantization_steps(max_q=64)
+        self.quantization_steps = self.calculate_quantization_steps(max_q=1024)
 
     def calculate_quantization_steps(self, max_q):
         """
@@ -36,19 +31,44 @@ class AdvancedThreshold(Threshold):
         def calc(f):
             return 3.64 * (f / 1000) ** (-0.8) - 6.5 * np.exp(-0.6 * (f / 1000 - 3.3) ** 2) + 1e-3 * (f / 1000) ** 4
 
+        def print_shape(start_freq=50, end_freq=22050, num_points=2**self.dwt_levels, max_width=100):
+            """
+            Prints a text-based representation of the shape described by the calc function,
+            including a first column with the frequency.
+
+            Args:
+                start_freq (int): Starting frequency.
+                end_freq (int): Ending frequency.
+                num_points (int): Number of frequency points to evaluate.
+                max_width (int): Maximum width of the printed shape.
+            """
+
+            frequencies = np.linspace(start_freq, end_freq, num_points)
+            values = np.array([calc(f) for f in frequencies])
+
+            # Normalize values to the range [0, 1]
+            min_val = np.min(values)
+            max_val = np.max(values)
+            normalized_values = (values - min_val) / (max_val - min_val)
+
+            i = 1
+            for freq, val in zip(frequencies, normalized_values):
+                num_stars = int(val * max_width)
+                print(f"{i:3} | {freq:5.0f} | {num_stars+1:2} | {'*' * (num_stars+1)}")
+                i += 1
+
+
         f = 22050
         subbands = 2 ** self.dwt_levels
+        print_shape(end_freq=f, num_points = subbands)
         frequencies = [(f / subbands) * (i + 0.5) for i in range(subbands)]
-
-        spl_values = [calc(f) for f in frequencies]
-        min_SPL = min(spl_values)
-        max_SPL = max(spl_values)
-        quantization_steps = [
-            round((spl - min_SPL) / (max_SPL - min_SPL) * (max_q - 1) + 1) * minimal.args.minimal_quantization_step_size
-            #round((spl - min_SPL) / (max_SPL - min_SPL) * (max_q - 1) + 1) * 10
-            for spl in spl_values
-        ]
-        #quantization_steps = [1 for spl in spl_values]
+        SPL_values = np.array([calc(f) for f in frequencies])
+        min_SPL = min(SPL_values)
+        max_SPL = max(SPL_values)
+        quantization_steps = np.array([
+            round(((SPL - min_SPL) / (max_SPL - min_SPL) * (max_q - 1) + 1) * minimal.args.minimal_quantization_step_size)
+            for SPL in SPL_values
+        ])
         logging.info(f"Quantization steps: {quantization_steps}")
         return quantization_steps
 
@@ -140,7 +160,7 @@ class AdvancedThreshold__verbose(AdvancedThreshold, Threshold__verbose):
         """
         Initialize the verbose version of AdvancedThreshold.
         """
-        AdvancedThreshold.__init__(self)
+        #AdvancedThreshold.__init__(self)
         Threshold__verbose.__init__(self)
 
 
