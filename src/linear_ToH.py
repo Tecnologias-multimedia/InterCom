@@ -10,26 +10,20 @@ import sounddevice as sd
 import pywt
 import logging
 import minimal
-from dyadic_ToH import Threshold, Threshold__verbose
+from dyadic_ToH import Dyadic_ToH, Dyadic_ToH__verbose
 from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
-class AdvancedThreshold(Threshold):
+class Linear_ToH(Dyadic_ToH):
 
     def __init__(self):
-        """
-        Initialize the AdvancedThreshold class with Wavelet Packets and levels.
-        """
         super().__init__()
-        self.quantization_steps = self.calculate_quantization_steps(max_q=1024)
+        self.quantization_steps = Linear_ToH.calculate_quantization_steps(self, max_expected_q=1024)
 
-    def calculate_quantization_steps(self, max_q):
+    def calculate_quantization_steps(self, max_expected_q):
         """
         Calculate Quantization Step Sizes (QSS) for each subband based on Wavelet Packet decomposition.
         """
-
-        def calc(f):
-            return 3.64 * (f / 1000) ** (-0.8) - 6.5 * np.exp(-0.6 * (f / 1000 - 3.3) ** 2) + 1e-3 * (f / 1000) ** 4
 
         def print_shape(start_freq=50, end_freq=22050, num_points=2**self.dwt_levels, max_width=100):
             """
@@ -44,7 +38,7 @@ class AdvancedThreshold(Threshold):
             """
 
             frequencies = np.linspace(start_freq, end_freq, num_points)
-            values = np.array([calc(f) for f in frequencies])
+            values = np.array([self.calc(f) for f in frequencies])
 
             # Normalize values to the range [0, 1]
             min_val = np.min(values)
@@ -62,11 +56,11 @@ class AdvancedThreshold(Threshold):
         subbands = 2 ** self.dwt_levels
         print_shape(end_freq=f, num_points = subbands)
         frequencies = [(f / subbands) * (i + 0.5) for i in range(subbands)]
-        SPL_values = np.array([calc(f) for f in frequencies])
+        SPL_values = np.array([self.calc(f) for f in frequencies])
         min_SPL = min(SPL_values)
         max_SPL = max(SPL_values)
         quantization_steps = np.array([
-            round(((SPL - min_SPL) / (max_SPL - min_SPL) * (max_q - 1) + 1) * minimal.args.minimal_quantization_step_size)
+            round(((SPL - min_SPL) / (max_SPL - min_SPL) * (max_expected_q - 1) + 1) * minimal.args.minimal_quantization_step_size)
             for SPL in SPL_values
         ])
         logging.info(f"Quantization steps: {quantization_steps}")
@@ -155,13 +149,14 @@ class AdvancedThreshold(Threshold):
 
         return dummy_wp
 
-class AdvancedThreshold__verbose(AdvancedThreshold, Threshold__verbose):
-    def __init__(self):
-        """
-        Initialize the verbose version of AdvancedThreshold.
-        """
-        #AdvancedThreshold.__init__(self)
-        Threshold__verbose.__init__(self)
+class Linear_ToH__verbose(Linear_ToH, Dyadic_ToH__verbose):
+    pass
+    #def __init__(self):
+    #    """
+    #    Initialize the verbose version of AdvancedThreshold.
+    #    """
+    #    #AdvancedThreshold.__init__(self)
+    #    Threshold__verbose.__init__(self)
 
 
 try:
@@ -179,9 +174,9 @@ if __name__ == "__main__":
 
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = AdvancedThreshold__verbose()
+        intercom = Linear_ToH__verbose()
     else:
-        intercom = AdvancedThreshold()
+        intercom = Linear_ToH()
 
     try:
         intercom.run()

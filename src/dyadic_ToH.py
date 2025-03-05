@@ -12,7 +12,7 @@ from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
 from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
-class Threshold(Temporal_Overlapped_DWT):
+class Dyadic_ToH(Temporal_Overlapped_DWT):
 
     def __init__(self):
         super().__init__()
@@ -20,13 +20,13 @@ class Threshold(Temporal_Overlapped_DWT):
 
         # Calculate quantization step for each subband
         # Modify max_q to change the amount of quantization
-        self.quantization_steps = self.calculate_quantization_steps(max_q=64)
+        self.quantization_steps = Dyadic_ToH.calculate_quantization_steps(self, max_q=64)
+
+    # Threshold of human hearing formula
+    def calc(self, f):
+        return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
 
     def calculate_quantization_steps(self, max_q):
-
-        # Threshold of human hearing formula
-        def calc(f):
-            return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
 
         f=22050
         average_SPLs = []
@@ -35,12 +35,12 @@ class Threshold(Temporal_Overlapped_DWT):
         for i in range(self.dwt_levels):
             mean = 0
             for j in np.arange(f/2,f,1):
-                mean += calc(j)
+                mean += self.calc(j)
             f = f/2
             average_SPLs.insert(0,mean/f)
         mean = 0
         for j in np.arange(1,f,1):
-            mean += calc(j)
+            mean += self.calc(j)
         average_SPLs.insert(0,mean/f)
 
         # Map the SPL values to quantization steps, from 1 to max_q
@@ -76,7 +76,7 @@ class Threshold(Temporal_Overlapped_DWT):
         chunk = super().synthesize(analyzed_chunk)
         return chunk_number, chunk
 
-class Threshold__verbose(Threshold, Temporal_Overlapped_DWT__verbose):
+class Dyadic_ToH__verbose(Dyadic_ToH, Temporal_Overlapped_DWT__verbose):
     pass
 
 try:
@@ -92,9 +92,9 @@ if __name__ == "__main__":
         logging.warning("argcomplete not working :-/")
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Threshold__verbose()
+        intercom = Dyadic_ToH__verbose()
     else:
-        intercom = Threshold()
+        intercom = Dyadic_ToH()
     try:
         intercom.run()
     except KeyboardInterrupt:
