@@ -30,9 +30,34 @@ See [Jupyter Notebooks in VS Code](https://code.visualstudio.com/docs/datascienc
 
 ## Implementation details
 
-'''
-Minimal   --> Minimal__verbose
-   |
-   v
-Buffering --> Buffering__verbose
-'''
+                      Minimal --> Minimal__verbose
+                         |                  |
+                         v                  v
+                    Buffering --> Buffering__verbose
+                         |                  |
+                         v                  v
+                     DEFLATE_Row --> DEFLATE_Row__verbose
+                         |                  |
+                         v                  v
+             DEFLATE_BytePlanes3 --> DEFLATE_BytePlanes3__verbose
+                         |                  |
+                         v                  v
+                   BR_Control_No --> BR_Control_No__verbose
+                         |                  |
+                         v                  v
+         BR_Control_Conservative --> BR_Control_Conservative__verbose
+                         |                  |
+                         v                  v
+                Stereo_Coding_32 --> Stereo_Coding_32__verbose
+                         |                  |
+                         v                  v
+      Temporal_No_Overlapped_DWT --> Temporal_No_Overlapped_DWT__verbose
+                         |                  |
+                         v                  v
+         Temporal_Overlapped_DWT --> Temporal_Overlapped_DWT__verbose
+                         |                  |
+                         v                  v
+                      Dyadic_ToH --> Dyadic_ToH__verbose
+                         |                  |
+                         v                  v
+                   Linear_ToH_NO --> Linear_ToH_NO__verbose
