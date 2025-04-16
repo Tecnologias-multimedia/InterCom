@@ -28,3 +28,11 @@ Required only to run the notebooks, not the InterCom.
 
 See [Jupyter Notebooks in VS Code](https://code.visualstudio.com/docs/datascience/jupyter-notebooks).
 
+## Implementation details
+
+'''
+Minimal   --> Minimal__verbose
+   |
+   v
+Buffering --> Buffering__verbose
+'''
