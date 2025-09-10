@@ -219,6 +219,7 @@ class Minimal:
         # Device supports the requested number of channels.
         if reported_in_ch == target_ch:
             return sd.Stream(device=(args.input_device, args.output_device),
+                            #dtype=self.SAMPLE_TYPE,
                             dtype=np.int16,
                             samplerate=args.frames_per_second,
                             blocksize=args.frames_per_chunk,
@@ -241,6 +242,7 @@ class Minimal:
                 callback_function(ADC, outdata, frames, time, status)
 
             return sd.Stream(device=(args.input_device, args.output_device),
+                            #dtype=self.SAMPLE_TYPE,
                             dtype=np.int16,
                             samplerate=args.frames_per_second,
                             blocksize=args.frames_per_chunk,
