@@ -246,7 +246,7 @@ class Minimal:
                             dtype=np.int16,
                             samplerate=args.frames_per_second,
                             blocksize=args.frames_per_chunk,
-                            channels=(1, target_ch),
+                            channels=(reported_in_ch, target_ch),
                             callback=adapter_callback)
         
     def file_stream(self, callback_function):
