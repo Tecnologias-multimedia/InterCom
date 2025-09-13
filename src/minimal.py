@@ -217,7 +217,7 @@ class Minimal:
         target_ch = int(args.number_of_channels)
 
         # Device supports the requested number of channels.
-        if reported_in_ch == target_ch:
+        if reported_in_ch >= target_ch:
             return sd.Stream(device=(args.input_device, args.output_device),
                             #dtype=self.SAMPLE_TYPE,
                             dtype=np.int16,
