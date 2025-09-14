@@ -44,7 +44,7 @@ parser.add_argument("-a", "--destination_address", type=int_or_str, default="loc
 parser.add_argument("-p", "--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data")
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)")
-parser.add_argument("-n", "--number_of_channels", type=int, default=2, help="Number of channels") # Notice that, currently, in OSX systems, the number of channels must be 1.
+parser.add_argument("-n", "--number_of_channels", type=int, default=2, help="Number of channels")
 
 class Minimal:
     # Some default values:
@@ -207,14 +207,48 @@ class Minimal:
         sounddevice.Stream
            The object that records and plays audio represented in numpy arrays.
         '''
-        return sd.Stream(device=(args.input_device, args.output_device),
-                         #dtype=self.SAMPLE_TYPE,
-                         dtype=np.int16,
-                         samplerate=args.frames_per_second,
-                         blocksize=args.frames_per_chunk,
-                         channels=args.number_of_channels,
-                         callback=callback_function)
+        # Check the number of channels supported by the input device.
+        try:
+            in_info = sd.query_devices(args.input_device, 'input')
+        except Exception:
+            raise RuntimeError("No se pudo determinar los canales del dispositivo de entrada")
+        
+        reported_in_ch = int(in_info['max_input_channels'])
+        target_ch = int(args.number_of_channels)
 
+        # Device supports the requested number of channels.
+        if reported_in_ch >= target_ch:
+            return sd.Stream(device=(args.input_device, args.output_device),
+                            #dtype=self.SAMPLE_TYPE,
+                            dtype=np.int16,
+                            samplerate=args.frames_per_second,
+                            blocksize=args.frames_per_chunk,
+                            channels=target_ch,
+                            callback=callback_function)
+
+        # Device supports fewer channels than requested (workaround)
+        if reported_in_ch < target_ch:
+            def adapter_callback(indata, outdata, frames, time, status):
+                if status:
+                    logging.debug(status)
+
+                # duplicate the single channel as many times as target_ch
+                # convert the input data (first column, mono audio) to int16 vector
+                mono = indata[:, 0].astype(np.int16)
+                # duplicate the array along the column axis
+                ADC = np.tile(mono.reshape(-1, 1), (1, target_ch))
+
+                # call the original callback with the adapted array
+                callback_function(ADC, outdata, frames, time, status)
+
+            return sd.Stream(device=(args.input_device, args.output_device),
+                            #dtype=self.SAMPLE_TYPE,
+                            dtype=np.int16,
+                            samplerate=args.frames_per_second,
+                            blocksize=args.frames_per_chunk,
+                            channels=(reported_in_ch, target_ch),
+                            callback=adapter_callback)
+        
     def file_stream(self, callback_function):
         '''Creates the stream.
 
