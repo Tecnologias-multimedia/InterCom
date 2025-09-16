@@ -11,3 +11,4 @@ opencv-python
 pygame
 pygame_widgets
 setuptools
+PyQt5

@@ -8,7 +8,6 @@ import argparse
 import queue
 import sys
 
-
 def int_or_str(text):
     """Helper function for argument parsing."""
     try:
@@ -74,12 +73,14 @@ def update_plot(frame):
         line.set_ydata(plotdata[:, column])
     return lines
 
-
 try:
-    from matplotlib.animation import FuncAnimation
+    import matplotlib
     import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
     import numpy as np
     import sounddevice as sd
+    
+    matplotlib.use('Qt5Agg')  # 'TkAgg' or 'Qt5Agg', or 'MacOSX' on macOS
 
     if args.list_devices:
         print(sd.query_devices())
@@ -106,7 +107,7 @@ try:
     stream = sd.InputStream(
         device=args.device, channels=max(args.channels),
         samplerate=args.samplerate, callback=audio_callback)
-    ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True)
+    ani = FuncAnimation(fig, update_plot, interval=args.interval, blit=True, cache_frame_data=False)
     with stream:
         plt.show()
 except Exception as e:

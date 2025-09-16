@@ -76,10 +76,13 @@ def update_plot(frame):
     return lines
 
 try:
+    import matplotlib
     from matplotlib.animation import FuncAnimation
     import matplotlib.pyplot as plt
     import numpy as np
     import sounddevice as sd
+    
+    matplotlib.use('Qt5Agg')  # 'TkAgg' or 'Qt5Agg', or 'MacOSX' on macOS
 
     if args.list_devices:
         print(sd.query_devices())

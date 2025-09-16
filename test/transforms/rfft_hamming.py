@@ -77,12 +77,15 @@ def update_plot(frame):
     return lines
 
 try:
+    import matplotlib
     from matplotlib.animation import FuncAnimation
     import matplotlib.pyplot as plt
     import numpy as np
     import sounddevice as sd
     import spectrum
 
+    matplotlib.use('Qt5Agg')  # 'TkAgg' or 'Qt5Agg', or 'MacOSX' on macOS
+    
     hamming = spectrum.window.Window(args.blocksize, "hamming").data
     
     if args.list_devices:
