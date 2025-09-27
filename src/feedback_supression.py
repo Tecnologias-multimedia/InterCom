@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Echo cancellation (template).'''
+'''Feedback supression (template).'''
 
 import logging
 
 import minimal
 import buffer
         
-class Echo_Cancellation(buffer.Buffering):
+class Feedback_Supression(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
         
-class Echo_Cancellation__verbose(Echo_Cancellation, buffer.Buffering__verbose):
+class Feedback_Supression__verbose(Feedback_Supression, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
 
@@ -31,9 +31,9 @@ if __name__ == "__main__":
     minimal.args = minimal.parser.parse_known_args()[0]
 
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Echo_Cancellation__verbose()
+        intercom = Feedback_Supression__verbose()
     else:
-        intercom = Echo_Cancellation()
+        intercom = Feedback_Supression()
     try:
         intercom.run()
     except KeyboardInterrupt:
