@@ -43,8 +43,8 @@ def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     if status:
         print(status, file=sys.stderr)
-    indata[:, 0] *= hamming
-    indata[:, 1] *= hamming
+    for c in range(len(args.channels)):
+        indata[:, c] *= hamming
     coeffs = []
     for c in range(len(args.channels)):
         coeffs.append(np.fft.rfft(indata[:, c]))
@@ -67,11 +67,8 @@ def update_plot(frame):
             data = q.get_nowait()
         except queue.Empty:
             break
-        shift = len(data[0])
-        plotdata = np.empty((shift*len(args.channels), ))
-        plotdata[0::2] = data[0, :]
-        plotdata[1::2] = data[1, :]
-        plotdata = plotdata.reshape((shift, len(args.channels)))
+        # data shape: (num_channels, spectrum_length)
+        plotdata = data.T  # shape: (spectrum_length, num_channels)
     for column, line in enumerate(lines):
         line.set_ydata(plotdata[:, column])
     return lines
