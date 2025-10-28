@@ -18,10 +18,11 @@ class Feedback_Supression(buffer.Buffering):
         super().__init__()
         logging.info(__doc__)
         self.played_chunk_history = []  # Lo que REPRODUCES (sale por altavoces)
-        
+
         self.delay_in_chunks = minimal.args.delay_chunks
         self.attenuation = minimal.args.attenuation
         self.attenuation = min(max(self.attenuation, 0.0), 0.99)
+ 
         
         self.max_history = max(self.delay_in_chunks + 5, 30)
         

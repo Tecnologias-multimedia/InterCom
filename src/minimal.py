@@ -46,6 +46,7 @@ parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file i
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)")
 parser.add_argument("-n", "--number_of_channels", type=int, default=2, help="Number of channels")
 
+
 class Minimal:
     # Some default values:
     MAX_PAYLOAD_BYTES = 32768 # The maximum UDP packet's payload.
