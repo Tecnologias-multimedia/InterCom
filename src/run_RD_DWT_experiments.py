@@ -1,7 +1,7 @@
 import subprocess
 import re
 import pandas as pd
-
+import sys
 
 quant_steps = [64, 256, 512, 1024, 2048, 4096, 8192, 16384]
 wavelets = ["db5"]
@@ -15,7 +15,7 @@ for wavelet in wavelets:
             print(f"\n>>> Ejecutando con wavelet={wavelet}, levels={lvl}, minimal_quantization_step={q}\n")
 
             cmd = [
-                "python", "temporal_no_overlapped_DWT_coding.py",
+                sys.executable, "temporal_no_overlapped_DWT_coding.py",
                 "--wavelet_name", wavelet,
                 "--levels", str(lvl),
                 "--minimal_quantization_step", str(q),
