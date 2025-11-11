@@ -5,7 +5,7 @@ import sys
 
 # Parámetros de prueba
 wavelets = ["db5"]
-levels = [3, 5, 7]
+levels = [3, 5, 6]
 quant_steps = [64, 256, 512, 1024, 2048, 4096, 8192, 16384]
 results = []
 
@@ -16,7 +16,7 @@ for wavelet in wavelets:
 
             # Comando a ejecutar
             cmd = [
-                sys.executable, "temporal_no_overlapped_DWT_coding.py",
+                sys.executable, "temporal_overlapped_DWT_coding.py",
                 "--wavelet_name", wavelet,
                 "--levels", str(lvl),
                 "--minimal_quantization_step", str(q),
@@ -64,5 +64,5 @@ print("\n==================== RESULTADOS ====================")
 print(df)
 
 # Guardar resultados a CSV
-df.to_csv("RD_DWT_results.csv", index=False)
-print("\n📁 Resultados guardados en RD_DWT_results.csv")
+df.to_csv("RD_DWT_overlapped_results.csv", index=False)
+print("\n📁 Resultados guardados en RD_DWT_overlapped_results.csv")
