@@ -11,7 +11,7 @@ for q in quant_steps:
     print(f"\n>>> Ejecutando con minimal_quantization_step = {q}\n")
 
     cmd = [
-        "./stereo_MST_coding_16.py",
+        "./stereo_MST_coding_32.py",
         "--minimal_quantization_step", str(q),
         "-t", "60",
         "--show_stats"
