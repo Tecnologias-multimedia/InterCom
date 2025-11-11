@@ -50,7 +50,7 @@ class Feedback_Supression(buffer.Buffering):
         else:
             delayed_chunk = self.zero_chunk
 
-        echo_estimation = self.attenuation * delayed_chunk
+        echo_estimation = (1.0 - self.attenuation) * delayed_chunk
 
         # Cancelar el eco en la señal del micrófono
         filtered_ADC = ADC.astype(np.float32) - echo_estimation.astype(np.float32)
@@ -61,9 +61,9 @@ class Feedback_Supression(buffer.Buffering):
         self.send(packed_chunk)
 
         # 🔊 Reproducir también el micrófono procesado localmente (para verificar que se escucha)
-        self.play_chunk(DAC, filtered_ADC)
+        #self.play_chunk(DAC, filtered_ADC)
 
-class Feedback_Supression__verbose(Feedback_Supression, buffer.Buffering__verbose):
+class Feedback_Supresssion__verbose(Feedback_Supression, buffer.Buffering__verbose):
     
     def __init__(self):
         super().__init__()
