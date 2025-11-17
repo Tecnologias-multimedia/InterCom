@@ -212,7 +212,7 @@ if __name__ == "__main__":
         quit()
 
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Buffering__verbose(minimal.args)
+        #intercom = Buffering__verbose(minimal.args)
         intercom = Buffering__verbose()
     else:
         intercom = Buffering()
