@@ -21,13 +21,12 @@ class Feedback_Supression(buffer.Buffering):
         
         self.played_chunk_history = []
     
-        eco_delay = 0.02
-        self.fir_length = math.ceil(eco_delay / self.chunk_time)
+        self.fir_length = minimal.args.fir_length
         self.fir_coeffs = np.zeros(self.fir_length, dtype=np.float32)
-        self.mu = 1e-4           
         self.mu = minimal.args.mu
         
         logging.info(f"AEC LMS FIR: fir_length={self.fir_length}, mu={self.mu}")
+        
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
         self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
 
@@ -37,8 +36,10 @@ class Feedback_Supression(buffer.Buffering):
             chunk = self.zero_chunk
 
         # Guardar historial
+        self.played_chunk_history.append(chunk.copy()) 
         if len(self.played_chunk_history) > self.fir_length:
             self.played_chunk_history.pop(0)
+
 
         # Convertir a float32 en [-1,1]
         ADC_float = ADC.astype(np.float32) / 32768.0 #señal de micrófono actual
@@ -61,7 +62,7 @@ class Feedback_Supression(buffer.Buffering):
         filtered_ADC = np.clip(error * 32768.0, -32768, 32767).astype(np.int16)
 
         # Atenuar chunk reproducido para reducir feedback directo
-        chunk_to_play = (chunk.astype(np.float32) * 0.2).astype(np.int16)
+        chunk_to_play = (chunk.astype(np.float32) * 0.1).astype(np.int16)
         self.play_chunk(DAC, chunk_to_play)
 
         # Enviar señal limpia
