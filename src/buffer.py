@@ -60,7 +60,7 @@ class Buffering(minimal.Minimal):
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
         chunk = np.frombuffer(chunk, dtype=np.int16)
-        chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
+        #chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
         return chunk_number, chunk
 
     def buffer_chunk(self, chunk_number, chunk):
