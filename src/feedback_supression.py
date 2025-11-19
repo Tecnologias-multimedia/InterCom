@@ -101,7 +101,7 @@ class Feedback_Supression(buffer.Buffering):
         filtered_ADC_stereo = (filtered_ADC_stereo * 32767).astype(np.int16)
 
         # Atenuar el chunk reproducido para reducir feedback
-        chunk_to_play = (chunk.astype(np.float32) * 0.2).astype(np.int16)
+        chunk_to_play = (chunk.astype(np.float32) * 0.4).astype(np.int16)
         self.play_chunk(DAC, chunk_to_play)
 
         # Enviar señal limpia
