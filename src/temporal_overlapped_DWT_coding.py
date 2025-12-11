@@ -52,6 +52,8 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
         # Build extended chunk
         extended_chunk = np.concatenate([self.e_chunk_list[0][-o : ], self.e_chunk_list[1], self.e_chunk_list[2][ : o]])
+        #print(extended_chunk.size)
+
 
         # Compute extended decomposition
         extended_DWT_chunk = self.extended_DWT_encode(extended_chunk)

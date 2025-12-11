@@ -65,7 +65,7 @@ class Temporal_Coding(Stereo_Coding):
     
     def unpack_(self, compressed_chunk):
         chunk_number, quantized_chunk = Compression.unpack(self, compressed_chunk)
-        print(quantized_chunk.shape)
+        #print(quantized_chunk.shape)
         chunk = self.dequantize(quantized_chunk)
         #chunk = br_control.BR_Control.dequantize(self, quantized_chunk)
         chunk = super().synthesize(chunk)
