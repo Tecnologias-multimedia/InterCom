@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
+# Probar a comprimir (logaritmicamente) la salida por los altavoces con una ganancia proporcional al parecido entre lo que sale por los altavoces (lo que llega a través de la red) y lo que captura el micrófono.
+
+
 '''Feedback supression (template).'''
 
 import logging
