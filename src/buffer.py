@@ -84,6 +84,8 @@ class Buffering(minimal.Minimal):
             print(next(minimal.spinner), end='\b', flush=True)
         packed_chunk = self.receive()
         chunk_number, chunk = self.unpack(packed_chunk)
+        chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
+        #print(chunk.shape)
         self.buffer_chunk(chunk_number, chunk)
         return chunk_number
 
