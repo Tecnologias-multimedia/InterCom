@@ -1,1 +1,3 @@
 libGL error: failed to load driver: iris -> declare -x LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
+temporal_overlapped_DWT_coding.py no muestra las muestras.
+comprobar feedback con dyadic_ToH.py

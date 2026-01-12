@@ -19,21 +19,27 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
 
     def pack(self, chunk_number, chunk):
         assert np.all( abs(chunk) < (1<<24) )
-        channel_0_MSB1 = (chunk[:, 0].astype(np.int32) // (1<<16)).astype(np.int8)
+        #chunk = chunk + (1<<20)
+        #print(np.max(chunk), np.min(chunk))
+        channel_0_MSB1 = (chunk[:, 0].astype(np.int32) // (1<<16)).astype(np.uint8)
         channel_0_MSB0 = (chunk[:, 0] // (1<<8)).astype(np.uint8)
         channel_0_LSB  = (chunk[:, 0] % (1<<8)).astype(np.uint8)
-        channel_1_MSB1 = (chunk[:, 1].astype(np.int32) // (1<<16)).astype(np.int8)
+        channel_1_MSB1 = (chunk[:, 1].astype(np.int32) // (1<<16)).astype(np.uint8)
         channel_1_MSB0 = (chunk[:, 1] // (1<<8)).astype(np.uint8)
         channel_1_LSB  = (chunk[:, 1] % (1<<8)).astype(np.uint8)
         MSB1 = np.concatenate([channel_0_MSB1, channel_1_MSB1])
         MSB0 = np.concatenate([channel_0_MSB0, channel_1_MSB0])
         LSB  = np.concatenate([channel_0_LSB, channel_1_LSB])
+        #print(MSB1)
+        #print(MSB0)
+        #print(LSB)        
         compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_BEST_COMPRESSION)
         #compressed_MSB1 = zlib.compress(MSB1, level=zlib.Z_DEFAULT_COMPRESSION)
         compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_BEST_COMPRESSION)
         #compressed_MSB0 = zlib.compress(MSB0, level=zlib.Z_DEFAULT_COMPRESSION)
         compressed_LSB  = zlib.compress(LSB, level=zlib.Z_BEST_COMPRESSION)
         #compressed_LSB  = zlib.compress(LSB, level=zlib.Z_DEFAULT_COMPRESSION)
+        #print(len(compressed_MSB1), len(compressed_MSB0), len(compressed_LSB))
         packed_chunk = struct.pack("!HHH", chunk_number, len(compressed_MSB1), len(compressed_MSB0)) + compressed_MSB1 + compressed_MSB0 + compressed_LSB 
         return packed_chunk
 
@@ -54,6 +60,7 @@ class DEFLATE_BytePlanes3(DEFLATE_raw.DEFLATE_Raw):
         chunk = np.empty((minimal.args.frames_per_chunk, 2), dtype=np.int32)
         chunk[:, 0] = channel_MSB1[:len(channel_MSB1)//2].astype(np.uint32)*(1<<16) + channel_MSB0[:len(channel_MSB0)//2].astype(np.uint16)*(1<<8) + channel_LSB[:len(channel_LSB)//2]
         chunk[:, 1] = channel_MSB1[len(channel_MSB1)//2:].astype(np.uint32)*(1<<16) + channel_MSB0[len(channel_MSB0)//2:].astype(np.uint16)*(1<<8) + channel_LSB[len(channel_LSB)//2:]
+        #chunk = chunk.astype(np.int32) - (1<<23)
         return chunk_number, chunk
 
 class DEFLATE_BytePlanes3__verbose(DEFLATE_BytePlanes3, DEFLATE_raw.DEFLATE_Raw__verbose):
