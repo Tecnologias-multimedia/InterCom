@@ -4,11 +4,12 @@ sounddevice
 soundfile
 matplotlib
 scipy
-spectrum
+# spectrum
 numpy
 psutil
-opencv-python
+# opencv-python
 pygame
 pygame_widgets
-setuptools
-PyQt5
+# setuptools
+# PyQt5
+# jupyterlab
