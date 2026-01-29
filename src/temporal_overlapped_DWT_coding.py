@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (removes intra-channel redundancy with a DWT (Discrete Wavelet Transform)). '''
+''' Real-time Audio Intercommunicator (removes intra-channel redundancy with a overlapped DWT (Discrete Wavelet Transform)). '''
 
 import numpy as np
 import pywt  # pip install pywavelets
@@ -35,13 +35,12 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
 
         # Extended slices
-        zero_array = np.zeros(shape=minimal.args.frames_per_chunk+2*self.number_of_overlapped_samples)
+        zero_array = np.zeros(shape=minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples)
         coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
         self.extended_slices = pywt.coeffs_to_array(coeffs)[1]
 
         logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
-        logging.info(f"extended chunk size = {minimal.args.frames_per_chunk+self.number_of_overlapped_samples*2}")
-
+        logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
 
     def analyze(self, chunk):
         fpc = minimal.args.frames_per_chunk
@@ -51,36 +50,55 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         self.e_chunk_list[2] = Stereo_Coding.analyze(self,chunk)
 
         # Build extended chunk
-        extended_chunk = np.concatenate([self.e_chunk_list[0][-o : ], self.e_chunk_list[1], self.e_chunk_list[2][ : o]])
-        #print(extended_chunk.size)
-
+        extended_chunk = np.concatenate(
+            (
+                self.e_chunk_list[0][-o:],
+                self.e_chunk_list[1],
+                self.e_chunk_list[2][:o]
+            )
+        )
 
         # Compute extended decomposition
         extended_DWT_chunk = self.extended_DWT_encode(extended_chunk)
 
         # Decomposition subset
         decomp_subset = np.zeros((0, minimal.args.number_of_channels), dtype=np.int32)
-        decomp_subset = np.concatenate(( decomp_subset, extended_DWT_chunk[self.extended_slices[0][0]] [o//2**self.dwt_levels : -o//2**self.dwt_levels] ))
+        decomp_subset = np.concatenate(
+            (
+                decomp_subset,
+                extended_DWT_chunk[self.extended_slices[0][0]][o//2**self.dwt_levels:-o//2**self.dwt_levels]
+            )
+        )
         for i in range(self.dwt_levels):
-            decomp_subset = np.concatenate(( decomp_subset, extended_DWT_chunk[self.extended_slices[i+1]['d'][0]] [o//2**(self.dwt_levels - i) : -o//2**(self.dwt_levels - i)] ))
+            decomp_subset = np.concatenate(
+                (
+                    decomp_subset,
+                    extended_DWT_chunk[self.extended_slices[i+1]['d'][0]][o//2**(self.dwt_levels - i):-o//2**(self.dwt_levels - i)]
+                )
+            )
 
         # C_i-1 <-- C_i
         self.e_chunk_list[0] = self.e_chunk_list[1]
+
         # C_i <-- C_i+1
         self.e_chunk_list[1] = self.e_chunk_list[2]
 
         return decomp_subset
 
     def extended_DWT_encode(self, chunk):
-        DWT_chunk = np.empty((minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples, minimal.args.number_of_channels), dtype=np.int32)
+        DWT_chunk = np.empty(
+            (
+                minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples,
+                minimal.args.number_of_channels
+            ),
+            dtype=np.int32
+        )
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk
 
-
-    # Uses overlapping
     def synthesize(self, chunk_DWT):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
@@ -88,7 +106,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         # Input D_i+1
         self.d_chunk_list[2] = chunk_DWT
 
-        # Build extended decomposition
+        # Build the extended decomposition
         extended_DWT_chunk = np.zeros((0, minimal.args.number_of_channels), dtype=np.int32)
         extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[0] [self.slices[0][0]] [ -o//2**(self.dwt_levels) : ] ))
         extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[1] [self.slices[0][0]] ))
@@ -98,11 +116,12 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[1] [self.slices[i+1]['d'][0]] ))
             extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.dwt_levels - i) ] ))
 
-        # Compute extended chunk
+        # Compute the extended chunk
         extended_chunk = self.extended_DWT_decode(extended_DWT_chunk)
 
         # D_i-1 <-- D_i
         self.d_chunk_list[0] = self.d_chunk_list[1]
+        
         # D_i <-- D_i+1
         self.d_chunk_list[1] = self.d_chunk_list[2]
 
@@ -115,7 +134,6 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return chunk
 
-
     '''
     # Ignores overlapping
     def synthesize(self, chunk_DWT):
@@ -126,7 +144,6 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         chunk = Stereo_Coding.synthesize(self,chunk)
         return chunk
     '''
-
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):
 
