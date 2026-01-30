@@ -36,7 +36,7 @@ import argparse
 
 # Argument Parsing (Robust)
 try:
-    minimal.parser.add_argument("--subbands", type=int, default=4, help="Number of subbands to create")
+    minimal.parser.add_argument("-l", "--log2_linear_levels", type=int, default=2, help="Logarithm base 2 of the number of linear subbands (per dyadic subband)")
 except argparse.ArgumentError: pass
 try:
     minimal.parser.add_argument("--advanced", action="store_true", help="Use the alternative advanced calculation for frequency processing")
@@ -55,8 +55,9 @@ class Dyadic_Linear_ToH(Threshold):
              minimal.args.filename = os.path.expanduser(minimal.args.filename)
 
         # --- FIX: INHERITANCE MISMATCH ---
-        target_subbands = getattr(minimal.args, 'subbands', 4)
-        self.dwt_levels = int(np.log2(target_subbands))
+        #target_subbands = getattr(minimal.args, 'linear_levels', 4)
+        #self.dwt_levels = int(np.log2(target_subbands))
+        self.dwt_levels = minimal.args.log2_linear_levels
         if self.dwt_levels < 1: self.dwt_levels = 1
         minimal.args.levels = str(self.dwt_levels)
 
