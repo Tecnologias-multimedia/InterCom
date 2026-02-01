@@ -22,6 +22,39 @@ class Dyadic_ToH(Temporal_Overlapped_DWT):
         # Modify max_q to change the amount of quantization
         self.quantization_steps = Dyadic_ToH.calculate_quantization_steps(self, max_q=64)
 
+        def print_shape(start_freq, end_freq, num_points, max_width=100):
+            """
+            Prints a text-based representation of the shape described by the calc function,
+            including a first column with the frequency.
+
+            Args:
+                start_freq (int): Starting frequency.
+                end_freq (int): Ending frequency.
+                num_points (int): Number of frequency points to evaluate.
+                max_width (int): Maximum width of the printed shape.
+            """
+
+            frequencies = np.linspace(start_freq, end_freq, num_points)
+            values = np.array([self.calc(f) for f in frequencies])
+
+            # Normalize values to the range [0, 1]
+            min_val = np.min(values)
+            max_val = np.max(values)
+            normalized_values = (values - min_val) / (max_val - min_val)
+
+            i = "SB"; freq = "freq"; num_stars = "attenuation"
+            print(f"{i:>3} | {freq:>5} | {num_stars}")
+            print("----+-------+-----------------------")
+            i = 1
+            for freq, val in zip(frequencies, normalized_values):
+                num_stars = int(val * max_width)
+                print(f"{i:3} | {freq:5.0f} | {num_stars+1:2} | {'*' * (num_stars+1)}")
+                i += 1
+
+        f = minimal.args.frames_per_second // 2
+        subbands = 2 ** self.dyadic_levels
+        print_shape(start_freq=50, end_freq=f, num_points = subbands)
+
     # Threshold of human hearing formula
     def calc(self, f):
         return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
