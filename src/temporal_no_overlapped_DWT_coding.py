@@ -14,7 +14,7 @@ from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
 #from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
-minimal.parser.add_argument("-d", "--DWT_levels", type=str, default="6", help="Number of levels of DWT")
+minimal.parser.add_argument("-l", "--levels", type=str, default="6", help="Number of levels of the wavelet transform")
 
 class Temporal_No_Overlapped_DWT(Stereo_Coding):
 
