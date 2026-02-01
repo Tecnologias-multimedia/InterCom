@@ -32,7 +32,7 @@ class Dyadic_ToH(Temporal_Overlapped_DWT):
         average_SPLs = []
 
         # Calculate average SPL[dB] for each frequency subband
-        for i in range(self.dwt_levels):
+        for i in range(self.dyadic_levels):
             mean = 0
             for j in np.arange(f/2,f,1):
                 mean += self.calc(j)
@@ -60,7 +60,7 @@ class Dyadic_ToH(Temporal_Overlapped_DWT):
         #self.quantize(analyzed_chunk)
         # Quantize the subbands
         analyzed_chunk[self.slices[0][0]] = (analyzed_chunk[self.slices[0][0]] / self.quantization_steps[0]).astype(np.int32)
-        for i in range (self.dwt_levels):
+        for i in range (self.dyadic_levels):
             analyzed_chunk[self.slices[i+1]['d'][0]] = (analyzed_chunk[self.slices[i+1]['d'][0]] / (self.quantization_steps[i+1])).astype(np.int32)
 
         packed_chunk = EC.pack(self, chunk_number, analyzed_chunk)
@@ -71,7 +71,7 @@ class Dyadic_ToH(Temporal_Overlapped_DWT):
         chunk_number, analyzed_chunk = EC.unpack(self, packed_chunk)
         # Dequantize the subbands
         analyzed_chunk[self.slices[0][0]] = analyzed_chunk[self.slices[0][0]] * self.quantization_steps[0]
-        for i in range (self.dwt_levels):
+        for i in range (self.dyadic_levels):
             analyzed_chunk[self.slices[i+1]['d'][0]] = analyzed_chunk[self.slices[i+1]['d'][0]] * self.quantization_steps[i+1]
         chunk = super().synthesize(analyzed_chunk)
         return chunk_number, chunk

@@ -36,7 +36,7 @@ def int_or_str(text):
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--input-device", type=int_or_str, help="Input device ID or substring")
 parser.add_argument("--output-device", type=int_or_str, help="Output device ID or substring")
-parser.add_argument("-d", "--list-devices", action="store_true", help="Print the available audio devices and quit")
+parser.add_argument("--list-devices", action="store_true", help="Print the available audio devices and quit")
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="sampling rate in frames/second")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk")
 parser.add_argument("--listening_port", type=int, default=4444, help="My listening port")

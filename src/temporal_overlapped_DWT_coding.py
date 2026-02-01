@@ -20,7 +20,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         super().__init__()
         logging.info(__doc__)
 
-        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.dwt_levels)
+        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.dyadic_levels)
 
         # Structure to keep chunks during encoding
         self.e_chunk_list = []
@@ -36,7 +36,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
         # Extended slices
         zero_array = np.zeros(shape=minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dyadic_levels, mode="per")
         self.extended_slices = pywt.coeffs_to_array(coeffs)[1]
 
         logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
@@ -66,14 +66,14 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         decomp_subset = np.concatenate(
             (
                 decomp_subset,
-                extended_DWT_chunk[self.extended_slices[0][0]][o//2**self.dwt_levels:-o//2**self.dwt_levels]
+                extended_DWT_chunk[self.extended_slices[0][0]][o//2**self.dyadic_levels:-o//2**self.dyadic_levels]
             )
         )
-        for i in range(self.dwt_levels):
+        for i in range(self.dyadic_levels):
             decomp_subset = np.concatenate(
                 (
                     decomp_subset,
-                    extended_DWT_chunk[self.extended_slices[i+1]['d'][0]][o//2**(self.dwt_levels - i):-o//2**(self.dwt_levels - i)]
+                    extended_DWT_chunk[self.extended_slices[i+1]['d'][0]][o//2**(self.dyadic_levels - i):-o//2**(self.dyadic_levels - i)]
                 )
             )
 
@@ -94,7 +94,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             dtype=np.int32
         )
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dyadic_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             DWT_chunk[:, c] = channel_DWT_chunk
         return DWT_chunk
@@ -108,13 +108,13 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
         # Build the extended decomposition
         extended_DWT_chunk = np.zeros((0, minimal.args.number_of_channels), dtype=np.int32)
-        extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[0] [self.slices[0][0]] [ -o//2**(self.dwt_levels) : ] ))
+        extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[0] [self.slices[0][0]] [ -o//2**(self.dyadic_levels) : ] ))
         extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[1] [self.slices[0][0]] ))
-        extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[2] [self.slices[0][0]] [ : o//2**(self.dwt_levels) ] ))        
-        for i in range(self.dwt_levels):
-            extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[0] [self.slices[i+1]['d'][0]] [ -o//2**(self.dwt_levels - i) : ] ))
+        extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[2] [self.slices[0][0]] [ : o//2**(self.dyadic_levels) ] ))        
+        for i in range(self.dyadic_levels):
+            extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[0] [self.slices[i+1]['d'][0]] [ -o//2**(self.dyadic_levels - i) : ] ))
             extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[1] [self.slices[i+1]['d'][0]] ))
-            extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.dwt_levels - i) ] ))
+            extended_DWT_chunk = np.concatenate(( extended_DWT_chunk, self.d_chunk_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.dyadic_levels - i) ] ))
 
         # Compute the extended chunk
         extended_chunk = self.extended_DWT_decode(extended_DWT_chunk)
