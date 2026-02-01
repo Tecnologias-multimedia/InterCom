@@ -14,7 +14,7 @@ from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
 #from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
-minimal.parser.add_argument("-d", "--dyadic_levels", type=str, default="6", help="Number of levels of DWT")
+minimal.parser.add_argument("-d", "--DWT_levels", type=str, default="6", help="Number of levels of DWT")
 
 class Temporal_No_Overlapped_DWT(Stereo_Coding):
 
@@ -24,27 +24,27 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
 
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
 
-        # Default dyadic_levels is based on the length of the chunk and the length of the filter
+        # Default DWT_levels is based on the length of the chunk and the length of the filter
         self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dyadic_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
-        if minimal.args.dyadic_levels:
-            self.dyadic_levels = int(minimal.args.dyadic_levels)
+        self.DWT_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
+        if minimal.args.DWT_levels:
+            self.DWT_levels = int(minimal.args.DWT_levels)
 
         # Structure used during the decoding
         zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dyadic_levels, mode="per")
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.DWT_levels, mode="per")
         self.slices = pywt.coeffs_to_array(coeffs)[1]
 
         logging.info(f"wavelet name = {minimal.args.wavelet_name}")
         logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
         logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
-        logging.info(f"DWT levels = {self.dyadic_levels}")
+        logging.info(f"DWT levels = {self.DWT_levels}")
 
     def analyze(self, chunk):
         chunk = super().analyze(chunk)
         DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dyadic_levels, mode="per")
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.DWT_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
             #assert np.all( abs(channel_DWT_chunk) < (1<<24) )
