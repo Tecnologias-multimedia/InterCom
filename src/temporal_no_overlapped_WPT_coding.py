@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""
-temporal_no_overlapped_WPT_coding.py: Using Wavelet Packets a for better frequency resolution.
-"""
+"""Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT."""
 
 import numpy as np
 import sounddevice as sd

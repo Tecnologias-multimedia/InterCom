@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Removes the temporal (intra-channel) redundancy using the DWT. First the spatial (inter-channel) redundancy is removed.'''
+'''Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the DWT.'''
 
 # Rename to temporal_coding0.py
 
