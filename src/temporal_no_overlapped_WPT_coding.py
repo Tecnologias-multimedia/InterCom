@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT."""
+"""Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT (no chunk overlapping)."""
 
 import numpy as np
 import sounddevice as sd
