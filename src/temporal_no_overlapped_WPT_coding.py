@@ -25,7 +25,7 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
         WPT_chunk = []
         analyzed_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
         for c in range(minimal.args.number_of_channels):
-            WPT_chunk.append(pywt.WaveletPacket(data=chunk[:, c], wavelet=self.wavelet, maxlevel=self.dwt_levels, mode="per"))
+            WPT_chunk.append(pywt.WaveletPacket(data=chunk[:, c], wavelet=self.wavelet, maxlevel=self.DWT_levels, mode="per"))
             analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq")])
         return analyzed_chunk
 
@@ -59,7 +59,7 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
         # Dequantize
         WPT_chunk = []
         for c in range(minimal.args.number_of_channels):
-            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.dwt_levels)
+            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.DWT_levels)
             i = 0
             #for node in WPT_channel.get_level(WPT_channel.maxlevel, order="freq"):
             for node in WPT_channel.get_level(WPT_channel.maxlevel, order="natural"):
@@ -85,17 +85,17 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
         """
 
         # Create a dummy WaveletPacket to get the structure.
-        dummy_wp = pywt.WaveletPacket(np.zeros_like(data), wavelet, mode, maxlevel=self.dwt_levels)
+        dummy_wp = pywt.WaveletPacket(np.zeros_like(data), wavelet, mode, maxlevel=self.DWT_levels)
 
         # Get the number of nodes at the finest level
-        num_nodes_at_level = 2**self.dwt_levels
+        num_nodes_at_level = 2**self.DWT_levels
 
         # Calculate the length of each node's data.
         node_length = len(data) // num_nodes_at_level
 
         # Traverse the tree and fill the nodes with data.
         current_index = 0
-        for node in dummy_wp.get_level(self.dwt_levels, order="freq"):
+        for node in dummy_wp.get_level(self.DWT_levels, order="freq"):
         #for node in dummy_wp.get_level(levels, order="natural"):
         #for node in dummy_wp.get_level(levels):
             node.data = data[current_index:current_index + node_length]

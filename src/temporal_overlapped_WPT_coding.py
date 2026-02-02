@@ -8,9 +8,12 @@ import sounddevice as sd
 import pywt
 import logging
 import minimal
-from dyadic_ToH import Dyadic_ToH, Dyadic_ToH__verbose
-from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
-from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
+
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
+from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT
+from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT__verbose
+
+#from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
 class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
@@ -35,22 +38,65 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
     def analyze(self, chunk):
         chunk = Stereo_Coding.analyze(self, chunk)
-        WPT_chunk = []
-        for c in range(minimal.args.number_of_channels):
-            WPT_chunk.append(pywt.WaveletPacket(data=chunk[:, c], wavelet=self.wavelet, maxlevel=self.dwt_levels, mode="per"))
+        self.e_chunk_list.pop(0)
+        self.e_chunk_list.append(chunk)
+        o = self.overlap; fpc = minimal.args.frames_per_chunk
+        extended_chunk = np.concatenate([self.e_chunk_list[0][-o:], self.e_chunk_list[1], self.e_chunk_list[2][:o]])
+        packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
 
-        return WPT_chunk # A list of two Wavelet Packet Transform
-                         # structures (see
-                         # https://pywavelets.readthedocs.io/en/latest/ref/wavelet-packets.html#pywt.WaveletPacket)
+        for c in range(chunk.shape[1]):
+            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
+            col_data = []
+            for i, node in enumerate(nodes):
+                data = node.data
+                #q = self.quantization_steps[i] if i < len(self.quantization_steps) else 1
+                #data = data / q
+                offset = o // (2**self.WPT_levels)
+                sliced = data[offset:-offset] if offset > 0 else data
+                col_data.append(sliced)
+            c_col = np.concatenate(col_data)
+            packet_data_flat[:, c] = np.rint(c_col)
+
+        return packet_data_flat.astype(np.int32)
 
     def synthesize(self, WPT_chunk):
-        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
-        for c in range(minimal.args.number_of_channels):
-            chunk[:, c] = WPT_chunk[c].reconstruct(update=False)
-        chunk = Stereo_Coding.synthesize(self, chunk)
+        self.d_chunk_list.pop(0)
+        self.d_chunk_list.append(chunk_WP)
+        o = self.overlap; fpc = minimal.args.frames_per_chunk
+        num_bands = 2**self.WPT_levels
+        band_len = fpc // num_bands
+        offset = o // num_bands
+        reconstructed_chunk = np.empty((fpc, chunk_WP.shape[1]), dtype=np.float32)
+
+        for c in range(chunk_WP.shape[1]):
+            coeffs = []
+            prev, curr, next = [x[:, c] for x in self.d_chunk_list]
+            for b in range(num_bands):
+                s_start, s_end = b*band_len, (b+1)*band_len
+                p_tail = prev[s_start:s_end][-offset:] if offset > 0 else []
+                n_head = next[s_start:s_end][:offset] if offset > 0 else []
+                ext_band = np.concatenate([p_tail, curr[s_start:s_end], n_head])
+                #q = self.quantization_steps[b] if b < len(self.quantization_steps) else 1
+                coeffs.append(ext_band)
+
+            dummy_len = fpc + 2*o
+            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
+            for i, node in enumerate(nodes):
+                if True:#if i < len(coeffs):
+                     tgt = len(node.data); src = coeffs[i]
+                     node.data = src[:tgt] if len(src) >= tgt else np.pad(src, (0, tgt - len(src)))
+            rec = wp.reconstruct(update=False)
+            rec_final = rec[o:-o] if o > 0 else rec
+            reconstructed_chunk[:, c] = rec_final[:fpc]
+
+        #if minimal.args.number_of_channels == 1 and chunk_WP.shape[1] == 2:
+        #     return np.clip(reconstructed_chunk[:, 0].reshape(-1, 1), -32768, 32767)
+        chunk = np.clip(reconstructed_chunk, -32768, 32767) 
         return chunk
 
-    def pack(self, chunk_number, chunk):
+    def __pack(self, chunk_number, chunk):
         WPT_chunk = self.analyze(chunk)
         # Quantize subbands
         analyzed_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
@@ -67,12 +113,12 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         packed_chunk = EC.pack(self, chunk_number, analyzed_chunk)
         return packed_chunk
 
-    def unpack(self, packed_chunk):
+    def __unpack(self, packed_chunk):
         chunk_number, analyzed_chunk = EC.unpack(self, packed_chunk)
         # Dequantize
         WPT_chunk = []
         for c in range(minimal.args.number_of_channels):
-            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.dwt_levels)
+            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.DWT_levels)
             i = 0
             #for node in WPT_channel.get_level(WPT_channel.maxlevel, order="freq"):
             for node in WPT_channel.get_level(WPT_channel.maxlevel, order="natural"):
@@ -116,7 +162,7 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
         return dummy_wp
 
-class Linear_ToH_NO__verbose(Linear_ToH_NO, Dyadic_ToH__verbose):
+class Temporal_Overlapped_WPT__verbose(Temporal_Overlapped_WPT, Temporal_No_Overlapped_WPT__verbose):
     pass
 
 try:
@@ -134,9 +180,9 @@ if __name__ == "__main__":
 
     minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Linear_ToH_NO__verbose()
+        intercom = Temporal_Overlapped_WPT__verbose()
     else:
-        intercom = Linear_ToH_NO()
+        intercom = Temporal_Overlapped_WPT()
 
     try:
         intercom.run()
