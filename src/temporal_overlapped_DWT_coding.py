@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-''' Real-time Audio Intercommunicator (removes intra-channel redundancy with a overlapped DWT (Discrete Wavelet Transform)). '''
+'''Overlapping chunks (DWT).'''
 
 import numpy as np
 import pywt  # pip install pywavelets

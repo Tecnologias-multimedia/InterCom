@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""
-Using Wavelet Packets a for a higher frequency resolution.
-"""
+'''Overlapping chunks (WPT).'''
 
 import numpy as np
 import sounddevice as sd
@@ -14,57 +12,26 @@ from dyadic_ToH import Dyadic_ToH, Dyadic_ToH__verbose
 from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
-class Linear_ToH_NO(Dyadic_ToH):
+class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
     def __init__(self):
         super().__init__()
-        self.quantization_steps = Linear_ToH_NO.calculate_quantization_steps(self, max_expected_q=1024)
+        logging.info(__doc__)
+        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.WPT_levels)
+        logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
+        logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
 
-    def calculate_quantization_steps(self, max_expected_q):
-        """
-        Calculate Quantization Step Sizes (QSS) for each subband based on Wavelet Packet decomposition.
-        """
+        # Structure to keep chunks during encoding
+        self.e_chunk_list = []
+        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
+        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
+        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
 
-        def print_shape(start_freq=50, end_freq=22050, num_points=2**self.dwt_levels, max_width=100):
-            """
-            Prints a text-based representation of the shape described by the calc function,
-            including a first column with the frequency.
-
-            Args:
-                start_freq (int): Starting frequency.
-                end_freq (int): Ending frequency.
-                num_points (int): Number of frequency points to evaluate.
-                max_width (int): Maximum width of the printed shape.
-            """
-
-            frequencies = np.linspace(start_freq, end_freq, num_points)
-            values = np.array([self.calc(f) for f in frequencies])
-
-            # Normalize values to the range [0, 1]
-            min_val = np.min(values)
-            max_val = np.max(values)
-            normalized_values = (values - min_val) / (max_val - min_val)
-
-            i = 1
-            for freq, val in zip(frequencies, normalized_values):
-                num_stars = int(val * max_width)
-                print(f"{i:3} | {freq:5.0f} | {num_stars+1:2} | {'*' * (num_stars+1)}")
-                i += 1
-
-
-        f = 22050
-        subbands = 2 ** self.dwt_levels
-        print_shape(end_freq=f, num_points = subbands)
-        frequencies = [(f / subbands) * (i + 0.5) for i in range(subbands)]
-        SPL_values = np.array([self.calc(f) for f in frequencies])
-        min_SPL = min(SPL_values)
-        max_SPL = max(SPL_values)
-        quantization_steps = np.array([
-            round(((SPL - min_SPL) / (max_SPL - min_SPL) * (max_expected_q - 1) + 1) * minimal.args.minimal_quantization_step_size)
-            for SPL in SPL_values
-        ])
-        logging.info(f"Quantization steps: {quantization_steps}")
-        return quantization_steps
+        # Structure to keep chunks during decoding
+        self.d_chunk_list = []
+        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
+        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
+        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
 
     def analyze(self, chunk):
         chunk = Stereo_Coding.analyze(self, chunk)

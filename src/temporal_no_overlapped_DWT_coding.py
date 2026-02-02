@@ -40,31 +40,31 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
         logging.info(f"DWT levels = {self.dwt_levels}")
 
-        self.DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
-        self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        #self.DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        #self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
 
     def analyze(self, chunk):
         chunk = super().analyze(chunk)
-        #DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
             #assert np.all( abs(channel_DWT_chunk) < (1<<24) )
             #DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int32)
-            self.DWT_chunk[:, c] = channel_DWT_chunk
-        return self.DWT_chunk
+            DWT_chunk[:, c] = channel_DWT_chunk
+        return DWT_chunk
 
     def synthesize(self, chunk_DWT):
         '''Inverse DWT.'''
-        self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
             #chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int32)
-            self._chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
+            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         #self._chunk = Stereo_Coding.synthesize(self, self._chunk)
-        self._chunk = super().synthesize(self._chunk)
-        return self._chunk
+        chunk = super().synthesize(chunk)
+        return chunk
 '''
     def pack_(self, chunk_number, chunk):
         #return Stereo_Coding.pack(self, chunk_number, chunk)
