@@ -43,14 +43,12 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         # Input C_i+1
         self.e_chunk_list[2] = Stereo_Coding.analyze(self, chunk)
 
-        # Build extended chunk
         extended_chunk = np.concatenate(
             (self.e_chunk_list[0][-o:],
              self.e_chunk_list[1],
              self.e_chunk_list[2][:o])
         )
 
-        # Compute extended decomposition
         def stereo_DWT(chunk):
             DWT_chunk = np.empty_like(chunk)
             for c in range(minimal.args.number_of_channels):

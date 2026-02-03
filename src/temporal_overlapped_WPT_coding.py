@@ -27,12 +27,15 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         self.e_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
         self.d_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
 
+        self.offset = self.number_of_overlapped_samples // (2**self.DWT_levels)
+
     def analyze(self, chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
 
-        # Input C_i+1
-        self.e_chunk_list[2] = Stereo_Coding.analyze(self, chunk)
+        # Input C_i+1 (and move the previous chunks)
+        self.e_chunk_list.pop(0)
+        self.e_chunk_list.append(Stereo_Coding.analyze(self, chunk))
 
         # Build extended chunk
         extended_chunk = np.concatenate(
@@ -41,45 +44,25 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
              self.e_chunk_list[2][:o])
         )
 
-        # Compute extended decomposition
-        packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
-
-        for c in range(minimal.args.number_of_channels):
-            wp = pywt.WaveletPacket(
-                data=extended_chunk[:, c],
-                wavelet=self.wavelet,
-                mode='per',
-                maxlevel=self.DWT_levels)
-            nodes = wp.get_level(self.DWT_levels, 'freq')
-            col_data = []
-            for i, node in enumerate(nodes):
-                data = node.data
-                #q = self.quantization_steps[i] if i < len(self.quantization_steps) else 1
-                #data = data / q
-                offset = o // (2**self.DWT_levels)
-                sliced = data[offset:-offset] if offset > 0 else data
-                col_data.append(sliced)
-            c_col = np.concatenate(col_data)
-            packet_data_flat[:, c] = np.rint(c_col)
-
-        return packet_data_flat.astype(np.int32)
-
-        # Extract decomposition subset
-        decomp_subset = extended_DWT_chunk[self.extended_slices[0][0]][o//2**self.DWT_levels:-o//2**self.DWT_levels]
-        for i in range(self.DWT_levels):
-            decomp_subset = np.concatenate(
-                (decomp_subset,
-                 extended_DWT_chunk[self.extended_slices[i+1]['d'][0]][o//2**(self.DWT_levels - i):-o//2**(self.DWT_levels - i)])
-            )
-
-        # C_i-1 <-- C_i
-        self.e_chunk_list[0] = self.e_chunk_list[1]
-
-        # C_i <-- C_i+1
-        self.e_chunk_list[1] = self.e_chunk_list[2]
-
-        return decomp_subset
-    
+        def WPT_and_extract(extended_chunk):
+            WPT_chunk = np.empty((fpc, minimal.args.number_of_channels), dtype=np.int32)
+            for c in range(minimal.args.number_of_channels):
+                stereo_packet_decomp = pywt.WaveletPacket(
+                    data=extended_chunk[:, c],
+                    wavelet=self.wavelet,
+                    mode='per',
+                    maxlevel=self.DWT_levels)
+                nodes = stereo_packet_decomp.get_level(self.DWT_levels, 'freq')
+                col_data = []
+                for i, node in enumerate(nodes):
+                    data = node.data
+                    slice_ = data[self.offset:-self.offset]
+                    col_data.append(slice_)
+                c_col = np.concatenate(col_data)
+                WPT_chunk[:, c] = c_col
+            return WPT_chunk
+        WPT_chunk = WPT_and_extract(extended_chunk)
+        return WPT_chunk
 
     def synthesize(self, WPT_chunk):
         self.d_chunk_list.pop(0)
@@ -96,26 +79,21 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
             prev, curr, next = [x[:, c] for x in self.d_chunk_list]
             for b in range(num_bands):
                 s_start, s_end = b*band_len, (b+1)*band_len
-                p_tail = prev[s_start:s_end][-offset:] if offset > 0 else []
-                n_head = next[s_start:s_end][:offset] if offset > 0 else []
+                p_tail = prev[s_start:s_end][-offset:]
+                n_head = next[s_start:s_end][:offset]
                 ext_band = np.concatenate([p_tail, curr[s_start:s_end], n_head])
-                #q = self.quantization_steps[b] if b < len(self.quantization_steps) else 1
                 coeffs.append(ext_band)
 
             dummy_len = fpc + 2*o
             wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.DWT_levels)
             nodes = wp.get_level(self.DWT_levels, 'freq')
             for i, node in enumerate(nodes):
-                if True:#if i < len(coeffs):
-                     tgt = len(node.data); src = coeffs[i]
-                     node.data = src[:tgt] if len(src) >= tgt else np.pad(src, (0, tgt - len(src)))
+                tgt = len(node.data); src = coeffs[i]
+                node.data = src[:tgt]
             rec = wp.reconstruct(update=False)
-            rec_final = rec[o:-o] if o > 0 else rec
+            rec_final = rec[o:-o]
             reconstructed_chunk[:, c] = rec_final[:fpc]
 
-        #if minimal.args.number_of_channels == 1 and chunk_WP.shape[1] == 2:
-        #     return np.clip(reconstructed_chunk[:, 0].reshape(-1, 1), -32768, 32767)
-        #chunk = np.clip(reconstructed_chunk, -32768, 32767)
         chunk = Stereo_Coding.synthesize(self, reconstructed_chunk)
         return chunk
 
