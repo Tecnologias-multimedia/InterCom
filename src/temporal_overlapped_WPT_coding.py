@@ -20,7 +20,7 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.WPT_levels)
+        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.DWT_levels)
         logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
         logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
 
@@ -40,19 +40,20 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         chunk = Stereo_Coding.analyze(self, chunk)
         self.e_chunk_list.pop(0)
         self.e_chunk_list.append(chunk)
-        o = self.overlap; fpc = minimal.args.frames_per_chunk
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
         extended_chunk = np.concatenate([self.e_chunk_list[0][-o:], self.e_chunk_list[1], self.e_chunk_list[2][:o]])
         packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
 
-        for c in range(chunk.shape[1]):
-            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
-            nodes = wp.get_level(self.WPT_levels, 'freq')
+        for c in range(minimal.args.number_of_channels):
+            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.DWT_levels)
+            nodes = wp.get_level(self.DWT_levels, 'freq')
             col_data = []
             for i, node in enumerate(nodes):
                 data = node.data
                 #q = self.quantization_steps[i] if i < len(self.quantization_steps) else 1
                 #data = data / q
-                offset = o // (2**self.WPT_levels)
+                offset = o // (2**self.DWT_levels)
                 sliced = data[offset:-offset] if offset > 0 else data
                 col_data.append(sliced)
             c_col = np.concatenate(col_data)
@@ -62,14 +63,15 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
     def synthesize(self, WPT_chunk):
         self.d_chunk_list.pop(0)
-        self.d_chunk_list.append(chunk_WP)
-        o = self.overlap; fpc = minimal.args.frames_per_chunk
-        num_bands = 2**self.WPT_levels
+        self.d_chunk_list.append(WPT_chunk)
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        num_bands = 2**self.DWT_levels
         band_len = fpc // num_bands
         offset = o // num_bands
-        reconstructed_chunk = np.empty((fpc, chunk_WP.shape[1]), dtype=np.float32)
+        reconstructed_chunk = np.empty((fpc, WPT_chunk.shape[1]), dtype=np.float32)
 
-        for c in range(chunk_WP.shape[1]):
+        for c in range(minimal.args.number_of_channels):
             coeffs = []
             prev, curr, next = [x[:, c] for x in self.d_chunk_list]
             for b in range(num_bands):
@@ -81,8 +83,8 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
                 coeffs.append(ext_band)
 
             dummy_len = fpc + 2*o
-            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
-            nodes = wp.get_level(self.WPT_levels, 'freq')
+            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.DWT_levels)
+            nodes = wp.get_level(self.DWT_levels, 'freq')
             for i, node in enumerate(nodes):
                 if True:#if i < len(coeffs):
                      tgt = len(node.data); src = coeffs[i]
@@ -93,7 +95,8 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
 
         #if minimal.args.number_of_channels == 1 and chunk_WP.shape[1] == 2:
         #     return np.clip(reconstructed_chunk[:, 0].reshape(-1, 1), -32768, 32767)
-        chunk = np.clip(reconstructed_chunk, -32768, 32767) 
+        #chunk = np.clip(reconstructed_chunk, -32768, 32767)
+        chunk = Stereo_Coding.synthesize(self, reconstructed_chunk)
         return chunk
 
     def __pack(self, chunk_number, chunk):
