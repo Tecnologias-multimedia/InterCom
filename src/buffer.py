@@ -191,6 +191,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.played_chunk_number = 0
         with self.stream(self._handler):
             cycle_feedback_thread.start()
+            #time.sleep(1) # Fix a race condition problem with stats 
             self.loop_receive_and_buffer()
 
 try:

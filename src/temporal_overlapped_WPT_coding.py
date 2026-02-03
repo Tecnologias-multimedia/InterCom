@@ -24,29 +24,32 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
         logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
 
-        # Structure to keep chunks during encoding
-        self.e_chunk_list = []
-        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
-        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
-        self.e_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
-
-        # Structure to keep chunks during decoding
-        self.d_chunk_list = []
-        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
-        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
-        self.d_chunk_list.append(np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32))
+        self.e_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
+        self.d_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
 
     def analyze(self, chunk):
-        chunk = Stereo_Coding.analyze(self, chunk)
-        self.e_chunk_list.pop(0)
-        self.e_chunk_list.append(chunk)
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
-        extended_chunk = np.concatenate([self.e_chunk_list[0][-o:], self.e_chunk_list[1], self.e_chunk_list[2][:o]])
+
+        # Input C_i+1
+        self.e_chunk_list[2] = Stereo_Coding.analyze(self, chunk)
+
+        # Build extended chunk
+        extended_chunk = np.concatenate(
+            (self.e_chunk_list[0][-o:],
+             self.e_chunk_list[1],
+             self.e_chunk_list[2][:o])
+        )
+
+        # Compute extended decomposition
         packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
 
         for c in range(minimal.args.number_of_channels):
-            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.DWT_levels)
+            wp = pywt.WaveletPacket(
+                data=extended_chunk[:, c],
+                wavelet=self.wavelet,
+                mode='per',
+                maxlevel=self.DWT_levels)
             nodes = wp.get_level(self.DWT_levels, 'freq')
             col_data = []
             for i, node in enumerate(nodes):
@@ -60,6 +63,23 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
             packet_data_flat[:, c] = np.rint(c_col)
 
         return packet_data_flat.astype(np.int32)
+
+        # Extract decomposition subset
+        decomp_subset = extended_DWT_chunk[self.extended_slices[0][0]][o//2**self.DWT_levels:-o//2**self.DWT_levels]
+        for i in range(self.DWT_levels):
+            decomp_subset = np.concatenate(
+                (decomp_subset,
+                 extended_DWT_chunk[self.extended_slices[i+1]['d'][0]][o//2**(self.DWT_levels - i):-o//2**(self.DWT_levels - i)])
+            )
+
+        # C_i-1 <-- C_i
+        self.e_chunk_list[0] = self.e_chunk_list[1]
+
+        # C_i <-- C_i+1
+        self.e_chunk_list[1] = self.e_chunk_list[2]
+
+        return decomp_subset
+    
 
     def synthesize(self, WPT_chunk):
         self.d_chunk_list.pop(0)
