@@ -10,7 +10,7 @@ from stereo_coding_32 import Stereo_Coding_32 as Stereo_Coding
 import logging
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
-minimal.parser.add_argument("-e", "--levels", type=str, help="Number of levels of DWT")
+minimal.parser.add_argument("-d", "--log2_dyadic_levels", type=str, help="Number of levels of the dyadic discrete wavelet transform")
 
 class Temporal_Coding(Stereo_Coding):
     pass # <-----------------------------------------------------
