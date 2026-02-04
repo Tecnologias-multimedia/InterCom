@@ -28,8 +28,10 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         self.d_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
 
         self.number_of_subbands = 2**self.DWT_levels
-        self.offset = self.number_of_overlapped_samples // self.number_of_subbands
+        logging.info(f"number of subbands = {self.number_of_subbands}")
         self.subbands_length = minimal.args.frames_per_chunk // self.number_of_subbands
+        logging.info(f"subbands length = {self.subbands_length}")
+        self.offset = self.number_of_overlapped_samples // self.number_of_subbands
 
     def analyze(self, chunk):
         o = self.number_of_overlapped_samples
@@ -67,6 +69,9 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         WPT_chunk = WPT_and_extract(extended_MST_chunk)
         return WPT_chunk
 
+    def analyze(self, chunk):
+        return chunk
+
     def synthesize(self, WPT_chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
@@ -102,6 +107,9 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         chunk = Stereo_Coding.synthesize(self, MST_chunk)
         return chunk
 
+    def synthesize(self, chunk):
+        return chunk
+    
     def __pack(self, chunk_number, chunk):
         WPT_chunk = self.analyze(chunk)
         # Quantize subbands
