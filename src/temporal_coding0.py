@@ -24,21 +24,21 @@ class Temporal_Coding(Stereo_Coding):
 
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
-        # Default dwt_levels is based on the length of the chunk and the length of the filter
+        # Default DWT_levels is based on the length of the chunk and the length of the filter
         self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
+        self.DWT_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
         if minimal.args.levels:
-            self.dwt_levels = int(minimal.args.levels)
+            self.DWT_levels = int(minimal.args.levels)
 
         # Structure used during the decoding
         zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.DWT_levels, mode="per")
         self.slices = pywt.coeffs_to_array(coeffs)[1]
 
         logging.info(f"wavelet name = {minimal.args.wavelet_name}")
         logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
         logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
-        logging.info(f"DWT levels = {self.dwt_levels}")
+        logging.info(f"DWT levels = {self.DWT_levels}")
 
     def analyze(self, chunk):
         return chunk

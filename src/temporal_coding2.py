@@ -23,15 +23,15 @@ class Temporal_Coding1(buffer.Buffering):
         logging.info(__doc__)
         self.wavelet = pywt.Wavelet(minimal.args.wavelet_name)
         
-        # Default dwt_levels is based on the length of the chunk and the length of the filter
+        # Default DWT_levels is based on the length of the chunk and the length of the filter
         max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
-        self.dwt_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=max_filters_length)
+        self.DWT_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=max_filters_length)
         if minimal.args.levels:
-            self.dwt_levels = int(minimal.args.levels)
+            self.DWT_levels = int(minimal.args.levels)
 
         # Structure used during the decoding
         zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
-        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+        coeffs = pywt.wavedec(zero_array, wavelet=self.wavelet, level=self.DWT_levels, mode="per")
         self.slices = pywt.coeffs_to_array(coeffs)[1]
 
         print("Performing intra-channel decorrelation")
@@ -39,13 +39,13 @@ class Temporal_Coding1(buffer.Buffering):
             print("wavelet name =", minimal.args.wavelet_name)
             print("analysis filters's length =", self.wavelet.dec_len)
             print("synthesis filters's length =", self.wavelet.rec_len)
-            print("DWT levels =", self.dwt_levels)
+            print("DWT levels =", self.DWT_levels)
 
     def analyze(self, chunk):
         '''Forward DWT.'''
         DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.dwt_levels, mode="per")
+            channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.DWT_levels, mode="per")
             channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
             #assert np.all( channel_DWT_chunk < (1<<31) )
             #assert np.all( abs(channel_DWT_chunk) < (1<<15) )

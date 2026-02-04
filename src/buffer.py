@@ -16,7 +16,7 @@ import minimal
 import soundfile as sf
 import logging
 
-minimal.parser.add_argument("-b", "--buffering_time", type=int, default=150, help="Miliseconds to buffer")
+minimal.parser.add_argument("-b", "--buffering_time", type=int, default=150, help="Miliseconds to buffer", metavar="MILISECONDS")
 
 class Buffering(minimal.Minimal):
 
@@ -191,6 +191,7 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.played_chunk_number = 0
         with self.stream(self._handler):
             cycle_feedback_thread.start()
+            #time.sleep(1) # Fix a race condition problem with stats?
             self.loop_receive_and_buffer()
 
 try:

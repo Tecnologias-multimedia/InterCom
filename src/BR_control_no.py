@@ -23,8 +23,8 @@ import minimal
 #from DEFLATE_byteplanes2 import DEFLATE_BytePlanes2 as Compression
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as Compression
 
-minimal.parser.add_argument("-q", "--minimal_quantization_step_size", type=int, default=128, help="Minimal quantization step")
-minimal.parser.add_argument("-r", "--rate_control_period", type=float, default=1, help="Number of seconds between two consecutive runs of the bit-rate control algorithm")
+minimal.parser.add_argument("-q", "--minimal_quantization_step_size", type=int, default=128, help="Minimal quantization step", metavar="QSS")
+minimal.parser.add_argument("-r", "--rate_control_period", type=float, default=1, help="Number of seconds between two consecutive runs of the bit-rate control algorithm", metavar="SECONDS")
 
 class BR_Control_No(Compression):
 
@@ -153,7 +153,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         # outdata, the played chunk, but this is only true after
         # running this method.
         
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata.copy()
+        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
         recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
         played_chunk = outdata.astype(np.double)
 

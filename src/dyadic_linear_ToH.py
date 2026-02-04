@@ -36,7 +36,7 @@ import argparse
 
 # Argument Parsing (Robust)
 try:
-    minimal.parser.add_argument("-l", "--log2_linear_levels", type=int, default=2, help="Logarithm base 2 of the number of linear subbands (per dyadic subband)")
+    minimal.parser.add_argument("-p", "--WPT_levels", type=int, default=2, help="Number of levels of WPT (linear subbands per dyadic one)")
 except argparse.ArgumentError: pass
 try:
     minimal.parser.add_argument("--advanced", action="store_true", help="Use the alternative advanced calculation for frequency processing")
@@ -55,11 +55,11 @@ class Dyadic_Linear_ToH(Threshold):
              minimal.args.filename = os.path.expanduser(minimal.args.filename)
 
         # --- FIX: INHERITANCE MISMATCH ---
-        #target_subbands = getattr(minimal.args, 'linear_levels', 4)
-        #self.dwt_levels = int(np.log2(target_subbands))
-        self.dwt_levels = minimal.args.log2_linear_levels
-        if self.dwt_levels < 1: self.dwt_levels = 1
-        minimal.args.levels = str(self.dwt_levels)
+        #target_subbands = getattr(minimal.args, 'WPT_levels', 4)
+        #self.WPT_levels = int(np.log2(target_subbands))
+        self.WPT_levels = minimal.args.WPT_levels
+        if self.WPT_levels < 1: self.WPT_levels = 1 # NOOOOOOOOOOOOO
+        minimal.args.levels = str(self.WPT_levels)
 
         super().__init__()
         logging.info(__doc__)
@@ -77,12 +77,10 @@ class Dyadic_Linear_ToH(Threshold):
         self.max_filters_length = max(self.wavelet.dec_len, self.wavelet.rec_len)
         # (Levels calculated before super init)
 
-        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.dwt_levels)
+        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.WPT_levels)
         self.overlap = self.number_of_overlapped_samples
 
-        logging.info(f"wavelet name = {minimal.args.wavelet_name}")
-        logging.info(f"WPT levels = {self.dwt_levels} ({2**self.dwt_levels} subbands)")
-        logging.info(f"Overlap samples = {self.overlap}")
+        logging.info(f"WPT levels = {self.WPT_levels} ({2**self.WPT_levels} subbands)")
 
         # --- Buffers (Stereo enforced) ---
         self.num_channels = minimal.args.number_of_channels
@@ -109,13 +107,15 @@ class Dyadic_Linear_ToH(Threshold):
          # plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
         def calc_advanced(f):
             return 16.97 * (np.log10(f) ** 2) - 106.98 * np.log10(f) + 173.82 + 10 ** -3 * (f / 1000) ** 4
+        def calc_advanced(f):
+            return 1
         def calc_standard(f):
             return 3.64 * (f / 1000) ** -0.8 - 6.5 * math.exp((-0.6) * (f / 1000 - 3.3) ** 2) + 10 ** -3 * (f / 1000) ** 4
 
         calc = calc_advanced if getattr(minimal.args, 'advanced', False) else calc_standard
         f = 22050
         average_SPLs = []
-        num_bands = 2**self.dwt_levels
+        num_bands = 2**self.WPT_levels
         band_width = f / num_bands
 
         for i in range(num_bands):
@@ -151,6 +151,7 @@ class Dyadic_Linear_ToH(Threshold):
             step = round((s - min_SPL) / (max_SPL - min_SPL + 1e-6) * (max_q - min_step) + min_step)
             if step < 1: step = 1
             qs.append(step)
+        print("--------------->", qs)
         return qs
 
     def analyze(self, chunk):
@@ -162,14 +163,14 @@ class Dyadic_Linear_ToH(Threshold):
         packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
 
         for c in range(chunk.shape[1]):
-            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.dwt_levels)
-            nodes = wp.get_level(self.dwt_levels, 'freq')
+            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
             col_data = []
             for i, node in enumerate(nodes):
                 data = node.data
                 q = self.quantization_steps[i] if i < len(self.quantization_steps) else 1
                 data = data / q
-                offset = o // (2**self.dwt_levels)
+                offset = o // (2**self.WPT_levels)
                 sliced = data[offset:-offset] if offset > 0 else data
                 col_data.append(sliced)
             c_col = np.concatenate(col_data)
@@ -183,7 +184,7 @@ class Dyadic_Linear_ToH(Threshold):
         self.d_chunk_list.pop(0)
         self.d_chunk_list.append(chunk_WP)
         o = self.overlap; fpc = minimal.args.frames_per_chunk
-        num_bands = 2**self.dwt_levels
+        num_bands = 2**self.WPT_levels
         band_len = fpc // num_bands
         offset = o // num_bands
         reconstructed_chunk = np.empty((fpc, chunk_WP.shape[1]), dtype=np.float32)
@@ -200,8 +201,8 @@ class Dyadic_Linear_ToH(Threshold):
                 coeffs.append(ext_band * q)
 
             dummy_len = fpc + 2*o
-            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.dwt_levels)
-            nodes = wp.get_level(self.dwt_levels, 'freq')
+            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
             for i, node in enumerate(nodes):
                 if True:#if i < len(coeffs):
                      tgt = len(node.data); src = coeffs[i]
