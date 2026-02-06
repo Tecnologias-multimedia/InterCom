@@ -51,7 +51,7 @@ class ToH(Temporal_Overlapped_WPT):
         for i in range(int(Nyquist_frequency)):
             SPLs.append(linear_ToH_model(i+1))
         SPLs = np.array(SPLs)
-        print(SPLs)
+        print("1.", SPLs)
 
         average_SPLs = []
         for i in range(1, self.number_of_subbands+1):
@@ -61,19 +61,27 @@ class ToH(Temporal_Overlapped_WPT):
             average = np.mean([ToH_model(val+1) for val in steps])
             average_SPLs.append(average)
         average_SPLs = np.array(average_SPLs).astype(np.int32)
+        average_SPLs -= np.min(average_SPLs)
+        #average_SPLs += 1
+        print("2.", average_SPLs)
         #print_SPLs(average_SPLs)
         min_SPL = np.min(average_SPLs)
         max_SPL = np.max(average_SPLs)
         normalized_SPLs = (average_SPLs - min_SPL) / (max_SPL - min_SPL)
+        print("3.", 12*normalized_SPLs)
+        nose = (1+np.sqrt(12*normalized_SPLs)) * self.quantization_step_size
+        nose = average_SPLs + self.quantization_step_size
+        print_SPLs(nose)
         shifted_SPLs = normalized_SPLs + 1
-        print(shifted_SPLs)
 
         QSSs = []
-        for s in shifted_SPLs:
+        for s in nose:
             #q = int(self.quantization_step_size + (s - min_SPL) / (max_SPL - min_SPL))
             #q = int(self.quantization_step_size + s)
-            q = math.sqrt(12*s)
-            if q < 1: q = 1
+            #if s < 1: s = 1
+            #q = math.sqrt(12*s) * self.quantization_step_size
+            q = s #+ self.quantization_step_size
+            #if q < 1: q = 1
             QSSs.append(q)
         QSSs = np.array(QSSs)
         #for i in QSSs:
