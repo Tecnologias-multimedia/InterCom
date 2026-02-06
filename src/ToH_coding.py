@@ -17,7 +17,7 @@ class ToH(Temporal_Overlapped_WPT):
         #self.QSSs = self.get_QSSs(max_expected_q=1024)
         self.QSSs = self.get_QSSs()
         for i in self.QSSs:
-            print(i, end=' ')
+            print(i[0], end=' ')
 
     def get_QSSs(self):
         '''
@@ -29,6 +29,9 @@ class ToH(Temporal_Overlapped_WPT):
             # plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
             #return 16.97 * (np.log10(f) ** 2) - 106.98 * np.log10(f) + 173.82 + 10 ** -3 * (f / 1000) ** 4
             return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
+
+        def linear_ToH_model(f):
+            return 10**(ToH_model(f)/10)
 
         def print_SPLs(SPLs):
             frequencies = np.linspace(0, 22050, self.number_of_subbands)
@@ -46,8 +49,9 @@ class ToH(Temporal_Overlapped_WPT):
         self.subbands_bandwidth = Nyquist_frequency / self.number_of_subbands
         SPLs = []
         for i in range(int(Nyquist_frequency)):
-            SPLs.append(ToH_model(i+1))
+            SPLs.append(linear_ToH_model(i+1))
         SPLs = np.array(SPLs)
+        print(SPLs)
 
         average_SPLs = []
         for i in range(1, self.number_of_subbands+1):
@@ -57,15 +61,18 @@ class ToH(Temporal_Overlapped_WPT):
             average = np.mean([ToH_model(val+1) for val in steps])
             average_SPLs.append(average)
         average_SPLs = np.array(average_SPLs).astype(np.int32)
-        print(average_SPLs)
         #print_SPLs(average_SPLs)
         min_SPL = np.min(average_SPLs)
         max_SPL = np.max(average_SPLs)
+        normalized_SPLs = (average_SPLs - min_SPL) / (max_SPL - min_SPL)
+        shifted_SPLs = normalized_SPLs + 1
+        print(shifted_SPLs)
 
         QSSs = []
-        for s in average_SPLs:
+        for s in shifted_SPLs:
             #q = int(self.quantization_step_size + (s - min_SPL) / (max_SPL - min_SPL))
-            q = int(self.quantization_step_size + s)
+            #q = int(self.quantization_step_size + s)
+            q = math.sqrt(12*s)
             if q < 1: q = 1
             QSSs.append(q)
         QSSs = np.array(QSSs)
