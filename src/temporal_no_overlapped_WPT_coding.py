@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-"""Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT (no chunk overlapping)."""
+"""Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT (without chunk overlapping)."""
 
 import numpy as np
 import sounddevice as sd
@@ -37,38 +37,6 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
         chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk
 
-    def __pack(self, chunk_number, chunk):
-        WPT_chunk = self.analyze(chunk)
-        # Quantize subbands
-        analyzed_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
-        for c in range(minimal.args.number_of_channels):
-            i = 0
-            #for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq"):
-            for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="natural"):
-            #for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel):
-                node.data = (node.data / self.quantization_steps[i]).astype(np.int32)
-                i += 1
-            #analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq")])
-            analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="natural")])
-            #analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel)])
-        packed_chunk = EC.pack(self, chunk_number, analyzed_chunk)
-        return packed_chunk
-
-    def __unpack(self, packed_chunk):
-        chunk_number, analyzed_chunk = EC.unpack(self, packed_chunk)
-        # Dequantize
-        WPT_chunk = []
-        for c in range(minimal.args.number_of_channels):
-            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.DWT_levels)
-            i = 0
-            #for node in WPT_channel.get_level(WPT_channel.maxlevel, order="freq"):
-            for node in WPT_channel.get_level(WPT_channel.maxlevel, order="natural"):
-            #for node in WPT_channel.get_level(WPT_channel.maxlevel):
-                node.data = node.data * self.quantization_steps[i]
-                i += 1
-            WPT_chunk.append(WPT_channel)
-        chunk = self.synthesize(WPT_chunk)
-        return chunk_number, chunk
 
     def fill_wavelet_packet(self, data, wavelet, mode):
         """
@@ -102,6 +70,38 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
             current_index += node_length
 
         return dummy_wp
+    def __pack(self, chunk_number, chunk):
+        WPT_chunk = self.analyze(chunk)
+        # Quantize subbands
+        analyzed_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
+        for c in range(minimal.args.number_of_channels):
+            i = 0
+            #for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq"):
+            for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="natural"):
+            #for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel):
+                node.data = (node.data / self.quantization_steps[i]).astype(np.int32)
+                i += 1
+            #analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq")])
+            analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="natural")])
+            #analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel)])
+        packed_chunk = EC.pack(self, chunk_number, analyzed_chunk)
+        return packed_chunk
+
+    def __unpack(self, packed_chunk):
+        chunk_number, analyzed_chunk = EC.unpack(self, packed_chunk)
+        # Dequantize
+        WPT_chunk = []
+        for c in range(minimal.args.number_of_channels):
+            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per", self.DWT_levels)
+            i = 0
+            #for node in WPT_channel.get_level(WPT_channel.maxlevel, order="freq"):
+            for node in WPT_channel.get_level(WPT_channel.maxlevel, order="natural"):
+            #for node in WPT_channel.get_level(WPT_channel.maxlevel):
+                node.data = node.data * self.quantization_steps[i]
+                i += 1
+            WPT_chunk.append(WPT_channel)
+        chunk = self.synthesize(WPT_chunk)
+        return chunk_number, chunk
 
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT__verbose
 

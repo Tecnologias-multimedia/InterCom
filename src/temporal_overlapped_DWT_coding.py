@@ -35,30 +35,25 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             level=self.DWT_levels,
             mode="per")
         self.extended_slices = pywt.coeffs_to_array(coeffs)[1]
-        
-    def analyze(self, chunk):
+
+    def build_extended_chunk(self, chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
 
         # Input C_i+1
-        self.e_chunk_list[2] = Stereo_Coding.analyze(self, chunk)
+        self.e_chunk_list[2] = chunk
 
         extended_chunk = np.concatenate(
             (self.e_chunk_list[0][-o:],
              self.e_chunk_list[1],
              self.e_chunk_list[2][:o])
         )
+        
+        return extended_chunk
 
-        def stereo_DWT(chunk):
-            DWT_chunk = np.empty_like(chunk)
-            for c in range(minimal.args.number_of_channels):
-                channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.DWT_levels, mode="per")
-                channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
-                DWT_chunk[:, c] = channel_DWT_chunk
-            return DWT_chunk
-        DWT_extended_chunk = stereo_DWT(extended_chunk)
-
-        # Extract decomposition subset
+    def get_decomposition(self, DWT_extended_chunk):
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
         DWT_chunk = DWT_extended_chunk[self.extended_slices[0][0]][o//2**self.DWT_levels:-o//2**self.DWT_levels]
         for l in range(self.DWT_levels):
             DWT_chunk = np.concatenate(
@@ -74,7 +69,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
         return DWT_chunk
 
-    def synthesize(self, DWT_chunk):
+    def put_decomposition(self, DWT_chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
 
@@ -91,8 +86,20 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.d_chunk_list[1] [self.slices[i+1]['d'][0]] ))
             DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.d_chunk_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.DWT_levels - i) ] ))
 
-        # Compute the extended chunk
-        extended_chunk = self.extended_DWT_decode(DWT_extended_chunk)
+        return DWT_extended_chunk
+        
+    def analyze(self, chunk):
+        extended_chunk = self.build_extended_chunk(chunk)
+        DWT_extended_chunk = super().analyze(extended_chunk)
+        DWT_chunk = self.get_decomposition(DWT_extended_chunk)
+        return DWT_chunk
+
+    def synthesize(self, DWT_chunk):
+        DWT_extended_chunk = self.put_decomposition(DWT_chunk)        
+        extended_chunk = self.stereo_IDWT(DWT_extended_chunk)
+
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
 
         # D_i-1 <-- D_i
         self.d_chunk_list[0] = self.d_chunk_list[1]
@@ -100,14 +107,16 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         # D_i <-- D_i+1
         self.d_chunk_list[1] = self.d_chunk_list[2]
 
-        return Stereo_Coding.synthesize(self,extended_chunk[o:o+fpc])
+        chunk = extended_chunk[o:o+fpc]
 
-    def extended_DWT_decode(self, chunk_DWT):
-        chunk = np.empty((minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples, minimal.args.number_of_channels), dtype=np.int32)
+        return Stereo_Coding.synthesize(self, chunk)
+
+    def stereo_IDWT(self, DWT_extended_chunk):
+        extended_chunk = np.empty_like(DWT_extended_chunk)
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.extended_slices, output_format="wavedec")
-            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
-        return chunk
+            channel_coeffs = pywt.array_to_coeffs(DWT_extended_chunk[:, c], self.extended_slices, output_format="wavedec")
+            extended_chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
+        return extended_chunk
 
     '''
     # Ignores overlapping
