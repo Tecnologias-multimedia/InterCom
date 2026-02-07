@@ -75,8 +75,6 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
     def get_extended_decomposition(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
-
-        # Build the extended decomposition
         DWT_extended_chunk = np.zeros((0, minimal.args.number_of_channels), dtype=np.int32)
         DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[0] [self.slices[0][0]] [ -o//2**(self.DWT_levels) : ] ))
         DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[1] [self.slices[0][0]] ))
@@ -87,10 +85,10 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.DWT_levels - i) ] ))
         return DWT_extended_chunk
         
-    def stereo_IDWT(self, DWT_extended_chunk):
-        extended_chunk = np.empty_like(DWT_extended_chunk)
+    def stereo_IDWT(self, extended_decomposition):
+        extended_chunk = np.empty_like(extended_decomposition)
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.array_to_coeffs(DWT_extended_chunk[:, c], self.extended_slices, output_format="wavedec")
+            channel_coeffs = pywt.array_to_coeffs(extended_decomposition[:, c], self.extended_slices, output_format="wavedec")
             extended_chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return extended_chunk
 
