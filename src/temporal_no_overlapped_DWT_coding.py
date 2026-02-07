@@ -46,7 +46,7 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         #self.DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         #self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
 
-    def stereo_DWT(self, chunk):
+    def analyze_in_time(self, chunk):
         decomposition = np.empty_like(chunk)
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.DWT_levels, mode="per")
@@ -57,7 +57,7 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
             decomposition[:, c] = channel_decomp
         return decomposition
 
-    def stereo_IDWT(self, decomposition):
+    def synthesize_in_time(self, decomposition):
         chunk = np.empty_like(decomposition)
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.array_to_coeffs(decomposition[:, c], self.slices, output_format="wavedec")
@@ -67,11 +67,11 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
 
     def analyze(self, chunk):
         chunk = super().analyze(chunk)
-        decomposition = self.stereo_DWT(chunk)
+        decomposition = self.analyze_in_time(chunk)
         return decomposition
 
     def synthesize(self, decomposition):
-        chunk = self.stereo_IDWT(decomposition)
+        chunk = self.synthesize_in_time(decomposition)
         chunk = super().synthesize(chunk)
         return chunk
 '''

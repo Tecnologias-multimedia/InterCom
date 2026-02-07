@@ -19,6 +19,14 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
+
+    def analyze_in_time(self, chunk):
+        WPT_chunk = []
+        analyzed_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels))
+        for c in range(minimal.args.number_of_channels):
+            WPT_chunk.append(pywt.WaveletPacket(data=chunk[:, c], wavelet=self.wavelet, maxlevel=self.DWT_levels, mode="per"))
+            analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq")])
+        return analyzed_chunk
         
     def analyze(self, chunk):
         chunk = Stereo_Coding.analyze(self, chunk)
@@ -29,6 +37,13 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
             analyzed_chunk[:, c] = np.concatenate([node.data for node in WPT_chunk[c].get_level(WPT_chunk[c].maxlevel, order="freq")])
         return analyzed_chunk
 
+    def synthesize_in_time(self, analyzed_chunk):
+        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
+        for c in range(minimal.args.number_of_channels):
+            WPT_channel = self.fill_wavelet_packet(analyzed_chunk[:, c], self.wavelet, "per")
+            chunk[:, c] = WPT_channel.reconstruct(update=False)
+        chunk = Stereo_Coding.synthesize(self, chunk)
+    
     def synthesize(self, analyzed_chunk):
         chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         for c in range(minimal.args.number_of_channels):
