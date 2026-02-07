@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''No bit-rate control using quantization. In this module, no control
-has been implemented. Both channels are quantized using the same
-constant step size.'''
+'''No bit-rate control using quantization. In this module, no control has been implemented. Both channels are quantized using the same constant step size.'''
 
 # Notice that this implementation of the BR control supposes that the
 # communication link is symmetric, or at least, the quality of the

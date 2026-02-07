@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Bit-rate control using quantization. Both channels are quantized
-using the same constant step. The quantization step is multipled by 2
-each time 2 lost chunks has been detected. Otherwise, the quantization
-step size is divided by 1.1.'''
+'''Bit-rate control using quantization. Both channels are quantized using the same constant step. The quantization step is multipled by 2 each time 2 lost chunks has been detected. Otherwise, the quantization step size is divided by "1.1".'''
 
 import time
 import logging

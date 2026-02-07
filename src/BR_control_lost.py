@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''Bit-rate control using quantization. Both channels are quantized
-using the same constant step. The quantization step size is the number
-of lost packed minus 1.'''
+'''Bit-rate control using quantization. Both channels are quantized using the same constant step. The quantization step size is the number of lost packed minus 1.'''
 
 import time
 import logging

@@ -13,8 +13,8 @@ import pywt  # pip install pywavelets
 import logging
 
 import minimal
-from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
-#from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
+#from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
 
 minimal.parser.add_argument("-w", "--wavelet_name", type=str, default="db5", help="Name of the wavelet")
 minimal.parser.add_argument("-l", "--levels", type=str, default="6", help="Number of levels of DWT")
@@ -66,13 +66,15 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         return chunk
 
     def analyze(self, chunk):
-        chunk = super().analyze(chunk)
+        #chunk = super().analyze(chunk)
+        chunk = Stereo_Coding.analyze(self, chunk)
         decomposition = self.analyze_in_time(chunk)
         return decomposition
 
     def synthesize(self, decomposition):
         chunk = self.synthesize_in_time(decomposition)
-        chunk = super().synthesize(chunk)
+        #chunk = super().synthesize(chunk)
+        chunk = Stereo_Coding.synthesize(self, chunk)
         return chunk
 '''
     def pack_(self, chunk_number, chunk):
@@ -83,6 +85,7 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         #return Stereo_Coding.unpack(self, compressed_chunk)
         return super().unpack(compressed_chunk)
 '''
+#from stereo_MST_coding_16 import Stereo_MST_Coding_16__verbose as Stereo_Coding__verbose
 from stereo_MST_coding_32 import Stereo_MST_Coding_32__verbose as Stereo_Coding__verbose
 
 class Temporal_No_Overlapped_DWT__verbose(Temporal_No_Overlapped_DWT, Stereo_Coding__verbose):
