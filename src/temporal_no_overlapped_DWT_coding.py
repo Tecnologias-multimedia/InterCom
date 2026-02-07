@@ -3,7 +3,10 @@
 
 '''Removes spatial (inter-channel) and temporal (intra-channel) redundancy using the WPT (no chunk overlapping).'''
 
-# Rename to temporal_coding0.py
+# Nomenclature:
+#
+# chunk = the sequence of samples returned by the sound card
+# decomposition = the sequence of coefficients returned by the DWT
 
 import numpy as np
 import pywt  # pip install pywavelets
@@ -44,31 +47,31 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         #self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
 
     def stereo_DWT(self, chunk):
-        DWT_chunk = np.empty_like(chunk)
+        decomposition = np.empty_like(chunk)
         for c in range(minimal.args.number_of_channels):
             channel_coeffs = pywt.wavedec(chunk[:, c], wavelet=self.wavelet, level=self.DWT_levels, mode="per")
-            channel_DWT_chunk = pywt.coeffs_to_array(channel_coeffs)[0]
-            #assert np.all( channel_DWT_chunk < (1<<31) )
-            #assert np.all( abs(channel_DWT_chunk) < (1<<24) )
-            #DWT_chunk[:, c] = np.rint(channel_DWT_chunk).astype(np.int32)
-            DWT_chunk[:, c] = channel_DWT_chunk
-        return DWT_chunk
+            channel_decomp = pywt.coeffs_to_array(channel_coeffs)[0]
+            #assert np.all( channel_decomp < (1<<31) )
+            #assert np.all( abs(channel_decomp) < (1<<24) )
+            #DWT_chunk[:, c] = np.rint(channel_decomp).astype(np.int32)
+            decomposition[:, c] = channel_decomp
+        return decomposition
 
-    def stereo_IDWT(self, DWT_chunk):
-        chunk = np.empty_like(DWT_chunk)
+    def stereo_IDWT(self, decomposition):
+        chunk = np.empty_like(decomposition)
         for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.array_to_coeffs(DWT_chunk[:, c], self.slices, output_format="wavedec")
+            channel_coeffs = pywt.array_to_coeffs(decomposition[:, c], self.slices, output_format="wavedec")
             #chunk[:, c] = np.rint(pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")).astype(np.int32)
             chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return chunk
 
     def analyze(self, chunk):
         chunk = super().analyze(chunk)
-        DWT_chunk = self.stereo_DWT(chunk)
-        return DWT_chunk
+        decomposition = self.stereo_DWT(chunk)
+        return decomposition
 
-    def synthesize(self, chunk_DWT):
-        chunk = self.stereo_IDWT(chunk_DWT)
+    def synthesize(self, decomposition):
+        chunk = self.stereo_IDWT(decomposition)
         chunk = super().synthesize(chunk)
         return chunk
 '''
