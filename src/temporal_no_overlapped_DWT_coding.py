@@ -32,6 +32,7 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         self.DWT_levels = pywt.dwt_max_level(data_len=minimal.args.frames_per_chunk//4, filter_len=self.max_filters_length)
         if minimal.args.levels:
             self.DWT_levels = int(minimal.args.levels)
+        self.number_of_subbands = self.DWT_levels + 1
 
         # Structure used during the decoding
         zero_array = np.zeros(shape=minimal.args.frames_per_chunk)
@@ -42,6 +43,7 @@ class Temporal_No_Overlapped_DWT(Stereo_Coding):
         logging.info(f"analysis filters's length = {self.wavelet.dec_len}")
         logging.info(f"synthesis filters's length = {self.wavelet.rec_len}")
         logging.info(f"DWT levels = {self.DWT_levels}")
+        logging.info(f"number of subbands = {self.number_of_subbands}")
 
         #self.DWT_chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
         #self._chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)

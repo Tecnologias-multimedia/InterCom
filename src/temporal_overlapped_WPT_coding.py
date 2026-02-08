@@ -27,7 +27,6 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
         self.e_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
         self.d_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
 
-        self.number_of_subbands = 2**self.DWT_levels
         logging.info(f"number of subbands = {self.number_of_subbands}")
         self.subbands_length = minimal.args.frames_per_chunk // self.number_of_subbands
         logging.info(f"subbands length = {self.subbands_length}")
