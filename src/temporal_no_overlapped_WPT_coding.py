@@ -8,10 +8,8 @@ import sounddevice as sd
 import pywt
 import logging
 import minimal
-#from dyadic_ToH import Dyadic_ToH, Dyadic_ToH__verbose
-from stereo_MST_coding_16 import Stereo_MST_Coding_16 as Stereo_Coding
+from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
-
 from temporal_no_overlapped_DWT_coding import Temporal_No_Overlapped_DWT
 
 class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):

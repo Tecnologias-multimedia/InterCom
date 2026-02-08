@@ -10,27 +10,16 @@ import logging
 import minimal
 
 from stereo_MST_coding_32 import Stereo_MST_Coding_32 as Stereo_Coding
+from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT
 from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT
-from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT__verbose
 
 #from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3 as EC
 
-class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
+class Temporal_Overlapped_WPT(Temporal_Overlapped_DWT, Temporal_No_Overlapped_WPT):
 
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        self.number_of_overlapped_samples = self.max_filters_length * (1 << self.DWT_levels)
-        logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
-        logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
-
-        self.e_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
-        self.d_chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
-
-        logging.info(f"number of subbands = {self.number_of_subbands}")
-        self.subbands_length = minimal.args.frames_per_chunk // self.number_of_subbands
-        logging.info(f"subbands length = {self.subbands_length}")
-        self.offset = self.number_of_overlapped_samples // self.number_of_subbands
 
     def analyze(self, chunk):
         o = self.number_of_overlapped_samples
@@ -174,6 +163,8 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT):
             current_index += node_length
 
         return dummy_wp
+
+from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT__verbose
 
 class Temporal_Overlapped_WPT__verbose(Temporal_Overlapped_WPT, Temporal_No_Overlapped_WPT__verbose):
     pass

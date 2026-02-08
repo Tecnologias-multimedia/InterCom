@@ -28,8 +28,9 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         logging.info(__doc__)
 
         self.number_of_overlapped_samples = self.max_filters_length * (1 << self.DWT_levels)
+        self.extended_chunk_size = minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2
         logging.info(f"number of overlapped samples = {self.number_of_overlapped_samples}")
-        logging.info(f"extended chunk size = {minimal.args.frames_per_chunk + self.number_of_overlapped_samples*2}")
+        logging.info(f"extended chunk size = {self.extended_chunk_size}")
 
         self.chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
         self.decom_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
@@ -109,17 +110,6 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         extended_chunk = Temporal_No_Overlapped_DWT.synthesize(self, extended_decomposition)
         chunk = self.get_chunk(extended_chunk)
         return chunk
-
-    '''
-    # Ignores overlapping
-    def synthesize(self, chunk_DWT):
-        chunk = np.empty((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32)
-        for c in range(minimal.args.number_of_channels):
-            channel_coeffs = pywt.array_to_coeffs(chunk_DWT[:, c], self.slices, output_format="wavedec")
-            chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
-        chunk = Stereo_Coding.synthesize(self,chunk)
-        return chunk
-    '''
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):
 
