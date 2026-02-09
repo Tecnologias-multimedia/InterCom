@@ -22,6 +22,9 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         logging.info(__doc__)
         self.offset = self.number_of_overlapped_samples // self.number_of_subbands
         self.extended_subbands_length = self.extended_chunk_length // self.number_of_subbands
+
+        fpc = minimal.args.frames_per_chunk
+        self.WPT_levels = self.DWT_levels
         
     def __get_decomposition(self, extended_decomposition):
         nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
@@ -43,13 +46,76 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
             decomp[start:end] = extended_decomp[e_start:e_end][self.offset:-self.offset]
         return decomp
 
+    def buffer_chunks(self, chunk):
+        self.chunk_list.pop(0)
+        self.chunk_list.append(chunk)
+
+    def extend_chunk(self):
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        extended_chunk = np.concatenate([self.chunk_list[0][-o:], self.chunk_list[1], self.chunk_list[2][:o]])
+        return extended_chunk
+
+    def analyze_extended(self, extended_chunk):
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        packet_data_flat = np.empty((fpc, 2), dtype=np.int32)
+
+        for c in range(2):
+            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
+            #print(len(nodes))
+            col_data = []
+            for i, node in enumerate(nodes):
+                data = node.data
+                q = 1#self.quantization_steps[i] if i < len(self.quantization_steps) else 1
+                data = data / q
+                offset = o // (2**self.WPT_levels)
+                sliced = data[offset:-offset] if offset > 0 else data
+                col_data.append(sliced)
+            c_col = np.concatenate(col_data)
+            #if len(c_col) != fpc:
+            #    c_col = c_col[:fpc] if len(c_col) > fpc else np.pad(c_col, (0, fpc - len(c_col)))
+            packet_data_flat[:, c] = np.rint(c_col)
+
+        return packet_data_flat.astype(np.int32)
+    
     def analyze(self, chunk):
         self.buffer_chunks(chunk)
         extended_chunk = self.extend_chunk()
-        extended_decomp = Temporal_No_Overlapped_WPT.analyze(self, extended_chunk)
-        decomp = self.extract_decomposition(extended_decomp)
+        #extended_decomp = Temporal_No_Overlapped_WPT.analyze(self, extended_chunk)
+        #decomp = self.extract_decomposition(extended_decomp)
+        decomp = self.analyze_extended(extended_chunk)
         return decomp
 
+    def __analyze(self, chunk):
+        #if chunk.shape[1] == 1: chunk = np.column_stack((chunk, chunk))
+        self.e_chunk_list.pop(0)
+        self.e_chunk_list.append(chunk)
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        extended_chunk = np.concatenate([self.e_chunk_list[0][-o:], self.e_chunk_list[1], self.e_chunk_list[2][:o]])
+        packet_data_flat = np.empty((fpc, chunk.shape[1]), dtype=np.int32)
+
+        for c in range(chunk.shape[1]):
+            wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
+            #print(len(nodes))
+            col_data = []
+            for i, node in enumerate(nodes):
+                data = node.data
+                q = 1#self.quantization_steps[i] if i < len(self.quantization_steps) else 1
+                data = data / q
+                offset = o // (2**self.WPT_levels)
+                sliced = data[offset:-offset] if offset > 0 else data
+                col_data.append(sliced)
+            c_col = np.concatenate(col_data)
+            #if len(c_col) != fpc:
+            #    c_col = c_col[:fpc] if len(c_col) > fpc else np.pad(c_col, (0, fpc - len(c_col)))
+            packet_data_flat[:, c] = np.rint(c_col)
+
+        return packet_data_flat.astype(np.int32)
+    
     def extend_decomposition(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
@@ -216,6 +282,44 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
 
         return dummy_wp
 
+
+    def __synthesize(self, chunk_WP):
+        self.d_chunk_list.pop(0)
+        self.d_chunk_list.append(chunk_WP)
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        num_bands = 2**self.WPT_levels
+        band_len = fpc // num_bands
+        offset = o // num_bands
+        reconstructed_chunk = np.empty((fpc, chunk_WP.shape[1]), dtype=np.float32)
+
+        for c in range(chunk_WP.shape[1]):
+            coeffs = []
+            prev, curr, next = [x[:, c] for x in self.d_chunk_list]
+            for b in range(num_bands):
+                s_start, s_end = b*band_len, (b+1)*band_len
+                p_tail = prev[s_start:s_end][-offset:] if offset > 0 else []
+                n_head = next[s_start:s_end][:offset] if offset > 0 else []
+                ext_band = np.concatenate([p_tail, curr[s_start:s_end], n_head])
+                q = 1#self.quantization_steps[b] if b < len(self.quantization_steps) else 1
+                coeffs.append(ext_band * q)
+
+            dummy_len = fpc + 2*o
+            wp = pywt.WaveletPacket(data=np.zeros(dummy_len), wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
+            nodes = wp.get_level(self.WPT_levels, 'freq')
+            for i, node in enumerate(nodes):
+                if True:#if i < len(coeffs):
+                     tgt = len(node.data); src = coeffs[i]
+                     node.data = src[:tgt] if len(src) >= tgt else np.pad(src, (0, tgt - len(src)))
+            rec = wp.reconstruct(update=False)
+            rec_final = rec[o:-o] if o > 0 else rec
+            reconstructed_chunk[:, c] = rec_final[:fpc]
+
+        #if minimal.args.number_of_channels == 1 and chunk_WP.shape[1] == 2:
+        #     return np.clip(reconstructed_chunk[:, 0].reshape(-1, 1), -32768, 32767)
+        return np.clip(reconstructed_chunk, -32768, 32767)
+
+    
 from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT__verbose
 
 class Temporal_Overlapped_WPT__verbose(Temporal_Overlapped_WPT, Temporal_No_Overlapped_WPT__verbose):
