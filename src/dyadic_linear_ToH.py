@@ -165,6 +165,7 @@ class Dyadic_Linear_ToH(Threshold):
         for c in range(chunk.shape[1]):
             wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
             nodes = wp.get_level(self.WPT_levels, 'freq')
+            #print(len(nodes))
             col_data = []
             for i, node in enumerate(nodes):
                 data = node.data

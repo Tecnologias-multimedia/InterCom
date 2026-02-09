@@ -34,9 +34,8 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
         self.chunk_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
         self.decom_list = [np.zeros((minimal.args.frames_per_chunk, minimal.args.number_of_channels), dtype=np.int32) for _ in range(3)]
-        
-        extended_chunk = np.zeros(
-            shape=minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples)
+        self.extended_chunk_length = minimal.args.frames_per_chunk + 2*self.number_of_overlapped_samples
+        extended_chunk = np.zeros(shape=self.extended_chunk_length)
         coeffs = pywt.wavedec(
             extended_chunk,
             wavelet=self.wavelet,
@@ -44,7 +43,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             mode="per")
         self.extended_slices = pywt.coeffs_to_array(coeffs)[1]
 
-    def get_extended_chunk(self):
+    def extend_chunk(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
 
@@ -56,13 +55,13 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         
         return extended_chunk
 
-    def get_chunk(self, extended_chunk):
+    def extract_chunk(self, extended_chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         chunk = extended_chunk[o:o+fpc]
         return chunk
     
-    def get_decomposition(self, extended_decomposition):
+    def extract_decomposition(self, extended_decomposition):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         decomposition = extended_decomposition[self.extended_slices[0][0]][o//2**self.DWT_levels:-o//2**self.DWT_levels]
@@ -73,7 +72,7 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             )
         return decomposition
 
-    def get_extended_decomposition(self):
+    def extend_decomposition(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         l = self.DWT_levels
@@ -115,16 +114,16 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         
     def analyze(self, chunk):
         self.buffer_chunks(chunk)
-        extended_chunk = self.get_extended_chunk()
+        extended_chunk = self.extend_chunk()
         extended_decomposition = Temporal_No_Overlapped_DWT.analyze(self, extended_chunk)
-        decomposition = self.get_decomposition(extended_decomposition)
+        decomposition = self.extract_decomposition(extended_decomposition)
         return decomposition
 
     def synthesize(self, decomposition):
         self.buffer_decompositions(decomposition)
-        extended_decomposition = self.get_extended_decomposition()        
+        extended_decomposition = self.extend_decomposition()        
         extended_chunk = Temporal_No_Overlapped_DWT.synthesize(self, extended_decomposition)
-        chunk = self.get_chunk(extended_chunk)
+        chunk = self.extract_chunk(extended_chunk)
         return chunk
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):

@@ -19,6 +19,8 @@ class Temporal_No_Overlapped_WPT(Temporal_No_Overlapped_DWT):
         logging.info(__doc__)
         self.number_of_subbands = 2**self.DWT_levels
         logging.info(f"number of subbands = {self.number_of_subbands}")
+        self.subbands_length = minimal.args.frames_per_chunk//self.number_of_subbands
+        logging.info(f"number of coefficients per subband = {self.subbands_length}")
 
     def analyze_in_time(self, chunk):
         decomposition = np.empty_like(chunk)
