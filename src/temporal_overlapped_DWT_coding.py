@@ -76,15 +76,25 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
     def get_extended_decomposition(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
-        DWT_extended_chunk = np.zeros((0, minimal.args.number_of_channels), dtype=np.int32)
-        DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[0] [self.slices[0][0]] [ -o//2**(self.DWT_levels) : ] ))
-        DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[1] [self.slices[0][0]] ))
-        DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[2] [self.slices[0][0]] [ : o//2**(self.DWT_levels) ] ))        
-        for i in range(self.DWT_levels):
-            DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[0] [self.slices[i+1]['d'][0]] [ -o//2**(self.DWT_levels - i) : ] ))
-            DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[1] [self.slices[i+1]['d'][0]] ))
-            DWT_extended_chunk = np.concatenate(( DWT_extended_chunk, self.decom_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(self.DWT_levels - i) ] ))
-        return DWT_extended_chunk
+        l = self.DWT_levels
+        ed = self.decom_list[0] [self.slices[0][0]] [ -o//2**(l) : ]
+        ed = np.concatenate(
+            ( ed, self.decom_list[1] [self.slices[0][0]] )
+        )
+        ed = np.concatenate(
+            ( ed, self.decom_list[2] [self.slices[0][0]] [ : o//2**(l) ] )
+        )        
+        for i in range(l):
+            ed = np.concatenate(
+                ( ed, self.decom_list[0] [self.slices[i+1]['d'][0]] [ -o//2**(l - i) : ] )
+            )
+            ed = np.concatenate(
+                ( ed, self.decom_list[1] [self.slices[i+1]['d'][0]] )
+            )
+            ed = np.concatenate(
+                ( ed, self.decom_list[2] [self.slices[i+1]['d'][0]] [ : o//2**(l - i) ] )
+            )
+        return ed
         
     def synthesize_in_time(self, extended_decomposition):
         extended_chunk = np.empty_like(extended_decomposition)
@@ -93,19 +103,25 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             extended_chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return extended_chunk
 
-    def analyze(self, chunk):
+    def buffer_chunks(self, chunk):
         self.chunk_list[0] = self.chunk_list[1]  # C_i-1 <-- C_i
         self.chunk_list[1] = self.chunk_list[2]  # C_i <-- C_i+1
         self.chunk_list[2] = chunk  # Input C_i+1
+
+    def buffer_decompositions(self, decomposition):
+        self.decom_list[0] = self.decom_list[1]  # ED_i-1 <-- ED_i
+        self.decom_list[1] = self.decom_list[2]  # ED_i <-- ED_i+1
+        self.decom_list[2] = decomposition  # Input ED_i+1
+        
+    def analyze(self, chunk):
+        self.buffer_chunks(chunk)
         extended_chunk = self.get_extended_chunk()
         extended_decomposition = Temporal_No_Overlapped_DWT.analyze(self, extended_chunk)
         decomposition = self.get_decomposition(extended_decomposition)
         return decomposition
 
     def synthesize(self, decomposition):
-        self.decom_list[0] = self.decom_list[1]  # ED_i-1 <-- ED_i
-        self.decom_list[1] = self.decom_list[2]  # ED_i <-- ED_i+1
-        self.decom_list[2] = decomposition  # Input ED_i+1
+        self.buffer_decompositions(decomposition)
         extended_decomposition = self.get_extended_decomposition()        
         extended_chunk = Temporal_No_Overlapped_DWT.synthesize(self, extended_decomposition)
         chunk = self.get_chunk(extended_chunk)

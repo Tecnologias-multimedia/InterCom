@@ -21,7 +21,44 @@ class Temporal_Overlapped_WPT(Temporal_Overlapped_DWT, Temporal_No_Overlapped_WP
         super().__init__()
         logging.info(__doc__)
 
+    def get_decomposition(self, extended_decomposition):
+        nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
+        for i, node in enumerate(nodes):
+            data = node.data
+            slice_ = data[self.offset:-self.offset]
+            decomposition = np.concatenate((decomposition, slice_))
+        return decomposition
+
     def analyze(self, chunk):
+        self.buffer_chunks(chunk)
+        extended_chunk = self.get_extended_chunk()
+        extended_decomposition = Temporal_No_Overlapped_WPT.analyze(self, extended_chunk)
+        decomposition = self.get_decomposition(extended_decomposition)
+        return decomposition
+
+    def synthesize(self, decomposition):
+        self.buffer_decompositions(decomposition)
+        extended_decomposition = self.get_extended_decomposition()        
+        extended_chunk = Temporal_No_Overlapped_WPT.synthesize(self, extended_decomposition)
+        chunk = self.get_chunk(extended_chunk)
+        return chunk
+
+    def get_extended_decomposition(self):
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        extended_decom = []
+        for b in range(self.number_of_subbands):
+            start = b * self.subbands_length
+            end = start + self.subbands_length
+            p_tail = self.decom_list[0][start:end][-self.offset:]
+            n_head = self.decom_list[2][start:end][:self.offset]
+            extended_subband = np.concatenate(
+                (p_tail, self.decom_list[1][start:end], n_head)
+            )
+            extended_decom.append(extended_subband)
+        return np.array(extended_decom)
+    
+    def ___analyze(self, chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
 
@@ -57,10 +94,10 @@ class Temporal_Overlapped_WPT(Temporal_Overlapped_DWT, Temporal_No_Overlapped_WP
         WPT_chunk = WPT_and_extract(extended_MST_chunk)
         return WPT_chunk
 
-    def analyze(self, chunk):
+    def ___analyze(self, chunk):
         return chunk
 
-    def synthesize(self, WPT_chunk):
+    def ___synthesize(self, WPT_chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         self.d_chunk_list.pop(0)
@@ -95,7 +132,7 @@ class Temporal_Overlapped_WPT(Temporal_Overlapped_DWT, Temporal_No_Overlapped_WP
         chunk = Stereo_Coding.synthesize(self, MST_chunk)
         return chunk
 
-    def synthesize(self, chunk):
+    def ___synthesize(self, chunk):
         return chunk
     
     def __pack(self, chunk_number, chunk):
@@ -131,7 +168,7 @@ class Temporal_Overlapped_WPT(Temporal_Overlapped_DWT, Temporal_No_Overlapped_WP
         chunk = self.synthesize(WPT_chunk)
         return chunk_number, chunk
 
-    def fill_wavelet_packet(self, data, wavelet, mode, levels):
+    def __fill_wavelet_packet(self, data, wavelet, mode, levels):
         """
         Fills a WaveletPacket structure with data from a NumPy array.
 
