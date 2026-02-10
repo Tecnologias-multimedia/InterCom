@@ -61,7 +61,6 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         fpc = minimal.args.frames_per_chunk
         packet_data_flat = np.empty((fpc, 2), dtype=np.int32)
         offset = o // (2**self.WPT_levels)
-
         for c in range(2):
             wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
             nodes = wp.get_level(self.WPT_levels, 'freq')
@@ -75,7 +74,6 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
             #if len(c_col) != fpc:
             #    c_col = c_col[:fpc] if len(c_col) > fpc else np.pad(c_col, (0, fpc - len(c_col)))
             packet_data_flat[:, c] = np.rint(c_col)
-
         return packet_data_flat.astype(np.int32)
     
     def analyze(self, chunk):
