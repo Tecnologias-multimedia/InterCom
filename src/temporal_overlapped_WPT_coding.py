@@ -60,6 +60,7 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         packet_data_flat = np.empty((fpc, 2), dtype=np.int32)
+        offset = o // (2**self.WPT_levels)
 
         for c in range(2):
             wp = pywt.WaveletPacket(data=extended_chunk[:, c], wavelet=self.wavelet, mode='per', maxlevel=self.WPT_levels)
@@ -68,10 +69,7 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
             col_data = []
             for i, node in enumerate(nodes):
                 data = node.data
-                q = 1#self.quantization_steps[i] if i < len(self.quantization_steps) else 1
-                data = data / q
-                offset = o // (2**self.WPT_levels)
-                sliced = data[offset:-offset] if offset > 0 else data
+                sliced = data[offset:-offset]
                 col_data.append(sliced)
             c_col = np.concatenate(col_data)
             #if len(c_col) != fpc:
