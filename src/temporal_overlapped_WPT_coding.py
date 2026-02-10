@@ -26,37 +26,13 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         fpc = minimal.args.frames_per_chunk
         self.WPT_levels = self.DWT_levels
         
-    def __get_decomposition(self, extended_decomposition):
-        nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
-        for i, node in enumerate(nodes):
-            data = node.data
-            slice_ = data[self.offset:-self.offset]
-            decomposition = np.concatenate((decomposition, slice_))
-        return decomposition
-
-    def extract_decomposition(self, extended_decomp):
-        decomp = np.empty_like(self.zero_chunk)
-        print()
-        for b in range(self.number_of_subbands):
-            start = b * self.subbands_length
-            end = start + self.subbands_length
-            e_start = b * self.extended_subbands_length
-            e_end = e_start + self.extended_subbands_length
-            print(start, end, self.offset, e_start, e_end)
-            decomp[start:end] = extended_decomp[e_start:e_end][self.offset:-self.offset]
-        return decomp
-
-    def buffer_chunks(self, chunk):
-        self.chunk_list.pop(0)
-        self.chunk_list.append(chunk)
-
     def extend_chunk(self):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         extended_chunk = np.concatenate([self.chunk_list[0][-o:], self.chunk_list[1], self.chunk_list[2][:o]])
         return extended_chunk
 
-    def analyze_extended(self, extended_chunk):
+    def analyze_in_time_and_extract(self, extended_chunk):
         o = self.number_of_overlapped_samples
         fpc = minimal.args.frames_per_chunk
         packet_data_flat = np.empty((fpc, 2), dtype=np.int32)
@@ -77,12 +53,59 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         return packet_data_flat.astype(np.int32)
     
     def analyze(self, chunk):
+        chunk = Stereo_Coding.analyze(self, chunk)
         self.buffer_chunks(chunk)
         extended_chunk = self.extend_chunk()
         #extended_decomp = Temporal_No_Overlapped_WPT.analyze(self, extended_chunk)
         #decomp = self.extract_decomposition(extended_decomp)
-        decomp = self.analyze_extended(extended_chunk)
+        decomp = self.analyze_in_time_and_extract(extended_chunk)
         return decomp
+
+    def extend_decomposition(self):
+        o = self.number_of_overlapped_samples
+        fpc = minimal.args.frames_per_chunk
+        extended_decom = []
+        for b in range(self.number_of_subbands):
+            start = b * self.subbands_length
+            end = start + self.subbands_length
+            p_tail = self.decom_list[0][start:end][-self.offset:]
+            n_head = self.decom_list[2][start:end][:self.offset]
+            extended_subband = np.concatenate(
+                (p_tail, self.decom_list[1][start:end], n_head)
+            )
+            extended_decom.append(extended_subband)
+        return np.array(extended_decom).reshape((minimal.args.frames_per_chunk+self.number_of_overlapped_samples*2, 2))
+
+    def synthesize(self, decomp):
+        self.buffer_decompositions(decomp)
+        extended_decomp = self.extend_decomposition()        
+        extended_chunk = Temporal_No_Overlapped_WPT.synthesize(self, extended_decomp)
+        chunk = self.extract_chunk(extended_chunk)
+        return chunk
+
+    def ___get_decomposition(self, extended_decomposition):
+        nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
+        for i, node in enumerate(nodes):
+            data = node.data
+            slice_ = data[self.offset:-self.offset]
+            decomposition = np.concatenate((decomposition, slice_))
+        return decomposition
+
+    def ___extract_decomposition(self, extended_decomp):
+        decomp = np.empty_like(self.zero_chunk)
+        print()
+        for b in range(self.number_of_subbands):
+            start = b * self.subbands_length
+            end = start + self.subbands_length
+            e_start = b * self.extended_subbands_length
+            e_end = e_start + self.extended_subbands_length
+            print(start, end, self.offset, e_start, e_end)
+            decomp[start:end] = extended_decomp[e_start:e_end][self.offset:-self.offset]
+        return decomp
+
+    def ___buffer_chunks(self, chunk):
+        self.chunk_list.pop(0)
+        self.chunk_list.append(chunk)
 
     def __analyze(self, chunk):
         #if chunk.shape[1] == 1: chunk = np.column_stack((chunk, chunk))
@@ -112,28 +135,6 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
 
         return packet_data_flat.astype(np.int32)
     
-    def extend_decomposition(self):
-        o = self.number_of_overlapped_samples
-        fpc = minimal.args.frames_per_chunk
-        extended_decom = []
-        for b in range(self.number_of_subbands):
-            start = b * self.subbands_length
-            end = start + self.subbands_length
-            p_tail = self.decom_list[0][start:end][-self.offset:]
-            n_head = self.decom_list[2][start:end][:self.offset]
-            extended_subband = np.concatenate(
-                (p_tail, self.decom_list[1][start:end], n_head)
-            )
-            extended_decom.append(extended_subband)
-        return np.array(extended_decom).reshape((minimal.args.frames_per_chunk+self.number_of_overlapped_samples*2, 2))
-
-    def synthesize(self, decomp):
-        self.buffer_decompositions(decomp)
-        extended_decomp = self.extend_decomposition()        
-        extended_chunk = Temporal_No_Overlapped_WPT.synthesize(self, extended_decomp)
-        chunk = self.extract_chunk(extended_chunk)
-        return chunk
-
     
     def ___analyze(self, chunk):
         o = self.number_of_overlapped_samples

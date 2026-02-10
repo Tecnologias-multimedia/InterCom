@@ -102,15 +102,23 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             extended_chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return extended_chunk
 
-    def buffer_chunks(self, chunk):
+    def ___buffer_chunks(self, chunk):
         self.chunk_list[0] = self.chunk_list[1]  # C_i-1 <-- C_i
         self.chunk_list[1] = self.chunk_list[2]  # C_i <-- C_i+1
         self.chunk_list[2] = chunk  # Input C_i+1
 
-    def buffer_decompositions(self, decomposition):
+    def buffer_chunks(self, chunk):
+        self.chunk_list.pop(0)
+        self.chunk_list.append(chunk)
+
+    def ___buffer_decompositions(self, decomposition):
         self.decom_list[0] = self.decom_list[1]  # ED_i-1 <-- ED_i
         self.decom_list[1] = self.decom_list[2]  # ED_i <-- ED_i+1
         self.decom_list[2] = decomposition  # Input ED_i+1
+
+    def buffer_decompositions(self, decomposition):
+        self.decom_list.pop(0)
+        self.decom_list.append(decomposition)
         
     def analyze(self, chunk):
         self.buffer_chunks(chunk)

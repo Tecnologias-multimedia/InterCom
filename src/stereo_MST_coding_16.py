@@ -23,7 +23,7 @@ class Stereo_MST_Coding_16(BR_Control):
         w[:, 1] = (x[:, 0].astype(np.int32) - x[:, 1])/2
         return w
  
-    def synthesize(self, w):
+    def synthesize(self, quantized_w):
         #x = np.empty_like(w)
         x = np.empty_like(w, dtype=np.int16)
         x[:, 0] = w[:, 0] + w[:, 1]

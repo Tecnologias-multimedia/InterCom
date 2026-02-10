@@ -69,7 +69,7 @@ class BR_Control_No(Compression):
     def pack(self, chunk_number, chunk):
         '''Quantize and pack a chunk.'''
         quantized_chunk = self.quantize(chunk)
-        #quantized_chunk = chunk
+
         packed_chunk = super().pack(chunk_number, quantized_chunk)
         return packed_chunk
 
