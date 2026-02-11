@@ -142,7 +142,7 @@ class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Over
         # outdata, the played chunk, but this is only true after
         # running this method.
 
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata.copy()
+        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy()
         #recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
         recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 3) % (self.cells_in_buffer)].astype(np.double)  # <- Modification
         played_chunk = outdata.astype(np.double)
