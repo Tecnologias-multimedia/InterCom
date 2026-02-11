@@ -151,7 +151,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         # outdata, the played chunk, but this is only true after
         # running this method.
         
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
+        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata[:]#.copy() # copy() does not affect to the SNR bug :-/ 
         recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
         played_chunk = outdata.astype(np.double)
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
         argcomplete.autocomplete(minimal.parser)
     except Exception:
         logging.warning("argcomplete not working :-/")
-    minimal.args = minimal.parser.parse_args()
+    minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
         intercom = BR_Control_No__verbose()
     else:
