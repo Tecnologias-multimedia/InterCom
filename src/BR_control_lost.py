@@ -41,7 +41,7 @@ if __name__ == "__main__":
         argcomplete.autocomplete(minimal.parser)
     except Exception:
         logging.warning("argcomplete not working :-/")
-    minimal.args = minimal.parser.parse_args()
+    minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
         intercom = BR_Control_Lost__verbose()
     else:

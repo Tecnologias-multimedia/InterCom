@@ -69,7 +69,7 @@ class BR_Control_No(Compression):
     def pack(self, chunk_number, chunk):
         '''Quantize and pack a chunk.'''
         quantized_chunk = self.quantize(chunk)
-        #quantized_chunk = chunk
+
         packed_chunk = super().pack(chunk_number, quantized_chunk)
         return packed_chunk
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
         argcomplete.autocomplete(minimal.parser)
     except Exception:
         logging.warning("argcomplete not working :-/")
-    minimal.args = minimal.parser.parse_args()
+    minimal.args = minimal.parser.parse_known_args()[0]
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
         intercom = BR_Control_No__verbose()
     else:

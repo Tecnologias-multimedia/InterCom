@@ -102,15 +102,23 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
             extended_chunk[:, c] = pywt.waverec(channel_coeffs, wavelet=self.wavelet, mode="per")
         return extended_chunk
 
-    def buffer_chunks(self, chunk):
+    def ___buffer_chunks(self, chunk):
         self.chunk_list[0] = self.chunk_list[1]  # C_i-1 <-- C_i
         self.chunk_list[1] = self.chunk_list[2]  # C_i <-- C_i+1
         self.chunk_list[2] = chunk  # Input C_i+1
 
-    def buffer_decompositions(self, decomposition):
+    def buffer_chunks(self, chunk):
+        self.chunk_list.pop(0)
+        self.chunk_list.append(chunk)
+
+    def ___buffer_decompositions(self, decomposition):
         self.decom_list[0] = self.decom_list[1]  # ED_i-1 <-- ED_i
         self.decom_list[1] = self.decom_list[2]  # ED_i <-- ED_i+1
         self.decom_list[2] = decomposition  # Input ED_i+1
+
+    def buffer_decompositions(self, decomposition):
+        self.decom_list.pop(0)
+        self.decom_list.append(decomposition)
         
     def analyze(self, chunk):
         self.buffer_chunks(chunk)
@@ -134,7 +142,7 @@ class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Over
         # outdata, the played chunk, but this is only true after
         # running this method.
 
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata.copy()
+        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy()
         #recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
         recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 3) % (self.cells_in_buffer)].astype(np.double)  # <- Modification
         played_chunk = outdata.astype(np.double)
