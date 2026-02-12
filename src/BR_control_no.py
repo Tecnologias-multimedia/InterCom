@@ -211,6 +211,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
                 self.accumulated_SNR_per_cycle[c] += SNR[c]
             except ValueError:
                 SNR[c] = 0.0
+                
             #if error_energy[c].any():
             #    if signal_energy[c].any():
 
