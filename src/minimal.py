@@ -312,12 +312,12 @@ class Minimal__verbose(Minimal):
 
         self.cycle = 1 # An infinite cycle's counter.
 
-        self.sent_bytes_count = 0
-        self.received_bytes_count = 0
-        self.sent_messages_count = 0
-        self.received_messages_count = 0
-        self.sent_KBPS = 0
-        self.received_KBPS = 0
+        self.sent_bytes_count_by_cycle = 0
+        self.received_bytes_count_by_cycle = 0
+        self.sent_messages_count_by_cycle = 0
+        self.received_messages_count_by_cycle = 0
+        self.sent_KBPS_per_cycle = 0
+        self.received_KBPS_per_cycle = 0
         # All these counters are reset at the end of each cycle.
 
         self.average_sent_messages = 0
@@ -326,7 +326,7 @@ class Minimal__verbose(Minimal):
         self.average_global_CPU_usage = 0
         self.average_sent_KBPS = 0
         self.average_received_KBPS = 0
-        # All average values are per cycle.
+        # Average values are updated every cycle.
 
         #self.seconds_per_cycle = se
         
@@ -424,16 +424,19 @@ class Minimal__verbose(Minimal):
     def send(self, packed_chunk):
         ''' Computes the number of sent bytes and the number of sent packets. '''
         super().send(packed_chunk)
-        #self.sent_bytes_count += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*args.number_of_channels
-        self.sent_bytes_count += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
-        self.sent_messages_count += 1
+        #self.sent_bytes_count_by_cycle += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*args.number_of_channels
+        self.sent_bytes_count_by_cycle += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
+        self.sent_messages_count_by_cycle += 1
+        #self.total_number_of_sent_chunks += 1
+        #if (self.total_number_of_sent_chunks % 44) == 0:
+        #    self.cycle_feedback()
 
     def receive(self):
         ''' Computes the number of received bytes and the number of received packets. '''
         try:
             packed_chunk = super().receive()
-            self.received_bytes_count += len(packed_chunk)
-            self.received_messages_count += 1
+            self.received_bytes_count_by_cycle += len(packed_chunk)
+            self.received_messages_count_by_cycle += 1
             return packed_chunk
         except Exception:
             raise
@@ -441,10 +444,10 @@ class Minimal__verbose(Minimal):
     def stats(self):
         string = ""
         string += "{:5d}".format(self.cycle)
-        string += "{:8d}".format(self.sent_messages_count)
-        string += "{:8d}".format(self.received_messages_count)
-        string += "{:8d}".format(self.sent_KBPS)
-        string += "{:8d}".format(self.received_KBPS)
+        string += "{:8d}".format(self.sent_messages_count_by_cycle)
+        string += "{:8d}".format(self.received_messages_count_by_cycle)
+        string += "{:8d}".format(self.sent_KBPS_per_cycle)
+        string += "{:8d}".format(self.received_KBPS_per_cycle)
         string += "{:5d}".format(int(self.CPU_usage))
         string += "{:5d}".format(int(self.global_CPU_usage))
         return string
@@ -455,10 +458,10 @@ class Minimal__verbose(Minimal):
     def first_line(self):
         string = ""
         string += "{:5s}".format('') # cycle
-        string += "{:>8s}".format("sent") # sent_messages_count
-        string += "{:>8s}".format("recv.") # received_messages_count
-        string += "{:>8s}".format("sent") # sent_KBPS
-        string += "{:>9s}".format("recv.") # received_KBPS
+        string += "{:>8s}".format("sent") # sent_messages_count_by_cycle
+        string += "{:>8s}".format("recv.") # received_messages_count_by_cycle
+        string += "{:>8s}".format("sent") # sent_KBPS_per_cycle
+        string += "{:>9s}".format("recv.") # received_KBPS_per_cycle
         string += "{:3s}".format('') # CPU_usage
         string += "{:>6s}".format("Global") # average_global_CPU_usage
         return string
@@ -469,10 +472,10 @@ class Minimal__verbose(Minimal):
     def second_line(self):
         string = ""
         string += "{:5s}".format("cycle") # cycle
-        string += "{:>8s}".format("mesgs.") # sent_messages_count
-        string += "{:>8s}".format("mesgs.") # received_messages_count
-        string += "{:>8s}".format("KBPS") # sent_KBPS
-        string += "{:>8s}".format("KBPS") # received_KBPS
+        string += "{:>8s}".format("mesgs.") # sent_messages_count_by_cycle
+        string += "{:>8s}".format("mesgs.") # received_messages_count_by_cycle
+        string += "{:>8s}".format("KBPS") # sent_KBPS_per_cycle
+        string += "{:>8s}".format("KBPS") # received_KBPS_per_cycle
         string += "{:>5s}".format("%CPU") # CPU_usage
         string += "{:>5s}".format("%CPU") # global_CPU_usage
         return string
@@ -527,13 +530,13 @@ class Minimal__verbose(Minimal):
         self.old_time = time.time()
         self.old_CPU_time = psutil.Process().cpu_times()[0]
 
-        self.average_sent_messages = self.moving_average(self.average_sent_messages, self.sent_messages_count, self.cycle)
-        self.average_received_messages = self.moving_average(self.average_received_messages, self.received_messages_count, self.cycle)
+        self.average_sent_messages = self.moving_average(self.average_sent_messages, self.sent_messages_count_by_cycle, self.cycle)
+        self.average_received_messages = self.moving_average(self.average_received_messages, self.received_messages_count_by_cycle, self.cycle)
 
-        self.sent_KBPS = int(self.sent_bytes_count * 8 / 1000 / elapsed_time)
-        self.received_KBPS = int(self.received_bytes_count * 8 / 1000 / elapsed_time)
-        self.average_sent_KBPS = self.moving_average(self.average_sent_KBPS, self.sent_KBPS, self.cycle)
-        self.average_received_KBPS = self.moving_average(self.average_received_KBPS, self.received_KBPS, self.cycle)
+        self.sent_KBPS_per_cycle = int(self.sent_bytes_count_by_cycle * 8 / 1000 / elapsed_time)
+        self.received_KBPS_per_cycle = int(self.received_bytes_count_by_cycle * 8 / 1000 / elapsed_time)
+        self.average_sent_KBPS = self.moving_average(self.average_sent_KBPS, self.sent_KBPS_per_cycle, self.cycle)
+        self.average_received_KBPS = self.moving_average(self.average_received_KBPS, self.received_KBPS_per_cycle, self.cycle)
 
         self.print_stats()
         self.print_averages()
@@ -541,11 +544,11 @@ class Minimal__verbose(Minimal):
         self.print_trailer()
         print("\033[5A")
 
-        self.total_number_of_sent_chunks += self.sent_messages_count
-        self.sent_bytes_count = 0
-        self.received_bytes_count = 0
-        self.sent_messages_count = 0
-        self.received_messages_count = 0
+        #self.total_number_of_sent_chunks += self.sent_messages_count_by_cycle
+        self.sent_bytes_count_by_cycle = 0
+        self.received_bytes_count_by_cycle = 0
+        self.sent_messages_count_by_cycle = 0
+        self.received_messages_count_by_cycle = 0
 
         self.cycle += 1
 
@@ -600,8 +603,8 @@ class Minimal__verbose(Minimal):
             self.show_played_chunk(DAC)
 
         #self.q.put(DAC[:128])
-        self.recorded_chunk = ADC
-        self.played_chunk = DAC
+        #self.recorded_chunk = ADC
+        #self.played_chunk = DAC
         #print(".")
 
     def _read_IO_and_play(self, DAC, frames, time, status):
@@ -611,8 +614,8 @@ class Minimal__verbose(Minimal):
             self.show_recorded_chunk(chunk)
             self.show_played_chunk(DAC)
 
-        self.recorded_chunk = DAC
-        self.played_chunk = DAC
+        #self.recorded_chunk = DAC
+        #self.played_chunk = DAC
 
     def loop_update_display(self):
         while True:
@@ -633,7 +636,6 @@ class Minimal__verbose(Minimal):
         self.print_header()
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            #if self.args.show_spectrum:
             if args.show_spectrum:
                 self.loop_update_display()
             else:

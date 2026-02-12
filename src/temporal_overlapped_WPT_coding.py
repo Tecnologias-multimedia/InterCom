@@ -77,12 +77,13 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         return np.array(extended_decom).reshape((minimal.args.frames_per_chunk+self.number_of_overlapped_samples*2, 2))
 
     def synthesize(self, decomp):
+        #print("o")
         self.buffer_decompositions(decomp)
         extended_decomp = self.extend_decomposition()        
         extended_chunk = Temporal_No_Overlapped_WPT.synthesize(self, extended_decomp)
         chunk = self.extract_chunk(extended_chunk)
         return chunk
-
+    ################################################################3
     def ___get_decomposition(self, extended_decomposition):
         nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
         for i, node in enumerate(nodes):
