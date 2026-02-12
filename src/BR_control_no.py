@@ -98,6 +98,9 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         for i in range(self.cells_in_buffer):
             self.recorded_chunks_buff[i] = self.zero_chunk
 
+        #self.counter_0SNR = 0
+        self.delay_in_chunks = 1
+            
     def stats(self):
         string = super().stats()
         string += "{:>5d}".format(self.quantization_step_size)
@@ -151,8 +154,8 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         # outdata, the played chunk, but this is only true after
         # running this method.
         self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
-        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)]
-        played_chunk = outdata
+        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - self.delay_in_chunks) % (self.cells_in_buffer)].astype(np.double)
+        played_chunk = outdata.astype(np.double)
 
         #if minimal.args.show_samples:
         #    print("\033[32mbr_control: ", end=''); self.show_recorded_chunk(recorded_chunk)
@@ -167,7 +170,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         #print(recorded_chunk)
         square_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_signal[c] = recorded_chunk[:, c].astype(np.float32) * recorded_chunk[:, c]
+            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
         # Notice that numpy uses the symbol "*" for computing the dot
         # product of two arrays "a" and "b", that basically is the
         # projection of one of the vectors ("a") into the other
@@ -193,13 +196,11 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         square_error_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_error_signal[c] = error_signal[c].astype(np.float32) * error_signal[c]
+            square_error_signal[c] = error_signal[c] * error_signal[c]
 
         error_energy = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             error_energy[c] = np.sum( square_error_signal[c] )
-            if error_energy[c] == 0:
-                error_energy[c] = 1
 
         RMSE = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
@@ -208,16 +209,24 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         SNR = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
+            if error_energy[c].any():
+                if signal_energy[c].any():
+                    SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
+                    self.accumulated_SNR_per_cycle[c] += SNR[c]
+            '''
             try:
                 SNR_lin = signal_energy[c] / error_energy[c]
             except ValueError:
-                print(signal_energy[c], error_energy[c])
+                logging.warning(f"signal energy = {signal_energy[c]}")
+                logging.warning(f"error energy = {error_energy[c]}")
             try:
                 SNR[c] = 10.0 * math.log(SNR_lin)
                 self.accumulated_SNR_per_cycle[c] += SNR[c]
             except ValueError:
-                print(SNR_lin)
+                self.counter_0SNR += 1
+                logging.warning(f"{self.counter_0SNR} SNR lineal = {SNR_lin}")
                 SNR[c] = 0.0
+            '''
                 
             #if error_energy[c].any():
             #    if signal_energy[c].any():

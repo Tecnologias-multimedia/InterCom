@@ -318,9 +318,9 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         return np.clip(reconstructed_chunk, -32768, 32767)
 
     
-from temporal_no_overlapped_WPT_coding import Temporal_No_Overlapped_WPT__verbose
+from temporal_overlapped_DWT_coding import Temporal_Overlapped_DWT__verbose
 
-class Temporal_Overlapped_WPT__verbose(Temporal_Overlapped_WPT, Temporal_No_Overlapped_WPT__verbose):
+class Temporal_Overlapped_WPT__verbose(Temporal_Overlapped_WPT, Temporal_Overlapped_DWT__verbose):
     pass
 
 try:
