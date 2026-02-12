@@ -138,7 +138,7 @@ class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Over
 
     def __init__(self):
         super().__init__()
-        self.delay_in_chunks += 2
+        #self.delay_in_chunks += 6
 
 try:
     import argcomplete  # <tab> completion for argparse.

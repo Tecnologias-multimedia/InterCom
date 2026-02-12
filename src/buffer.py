@@ -38,7 +38,7 @@ class Buffering(minimal.Minimal):
             self._buffer[i] = self.zero_chunk
         #self.sock.settimeout(self.chunk_time)
         #self.sock.settimeout(0)
-        self.chunk_number = 0
+        self.sent_chunk_number = 0
         logging.info(f"chunks_to_buffer = {self.chunks_to_buffer}")
 
         if minimal.args.filename:
@@ -57,12 +57,12 @@ class Buffering(minimal.Minimal):
 
     def unpack(self, packed_chunk):
         '''Splits the packed chunk into a chunk number and a chunk.'''
-        (chunk_number,) = struct.unpack("!H", packed_chunk[:2])
+        (received_chunk_number,) = struct.unpack("!H", packed_chunk[:2])
         chunk = packed_chunk[2:]
         # Notice that struct.calcsize('H') = 2
         chunk = np.frombuffer(chunk, dtype=np.int16)
         #chunk = chunk.reshape(minimal.args.frames_per_chunk, minimal.args.number_of_channels)
-        return chunk_number, chunk
+        return received_chunk_number, chunk
 
     def buffer_chunk(self, chunk_number, chunk):
         self._buffer[chunk_number % self.cells_in_buffer] = chunk
@@ -91,16 +91,16 @@ class Buffering(minimal.Minimal):
         return chunk_number
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
-        self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
-        packed_chunk = self.pack(self.chunk_number, ADC)
+        self.sent_chunk_number = (self.sent_chunk_number + 1) % self.CHUNK_NUMBERS
+        packed_chunk = self.pack(self.sent_chunk_number, ADC)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(DAC, chunk)
 
     def _read_IO_and_play(self, DAC, frames, time, status):
-        self.chunk_number = (self.chunk_number + 1) % self.CHUNK_NUMBERS
+        self.sent_chunk_number = (self.sent_chunk_number + 1) % self.CHUNK_NUMBERS
         read_chunk = self.read_chunk_from_file()
-        packed_chunk = self.pack(self.chunk_number, read_chunk)
+        packed_chunk = self.pack(self.sent_chunk_number, read_chunk)
         self.send(packed_chunk)
         chunk = self.unbuffer_next_chunk()
         self.play_chunk(DAC, chunk)
@@ -114,6 +114,7 @@ class Buffering(minimal.Minimal):
         with self.stream(self._handler):
             first_received_chunk_number = self.receive_and_buffer()
             logging.debug("first_received_chunk_number =", first_received_chunk_number)
+            logging.debug("sending chunk =", self.sent_chunk_number)
 
             self.played_chunk_number = (first_received_chunk_number - self.chunks_to_buffer) % self.cells_in_buffer
             # The previous selects the first chunk to be played the

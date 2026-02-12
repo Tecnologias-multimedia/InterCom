@@ -310,7 +310,7 @@ class Minimal__verbose(Minimal):
 
         #self.args = args
 
-        self.cycle = 1 # An infinite cycle's counter.
+        self.cycle = 1  # Infinite cycle counter.
 
         self.sent_bytes_count_by_cycle = 0
         self.received_bytes_count_by_cycle = 0

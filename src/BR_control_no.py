@@ -99,7 +99,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
             self.recorded_chunks_buff[i] = self.zero_chunk
 
         #self.counter_0SNR = 0
-        self.delay_in_chunks = 1
+        self.delay_in_chunks = 0
             
     def stats(self):
         string = super().stats()
@@ -153,9 +153,13 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         # Remember that indata contains the recorded chunk and
         # outdata, the played chunk, but this is only true after
         # running this method.
+
+        # Este buffer debería controlarse con self.received_chunk_number. self.recorded_chunks_buff debería llamarse self.received_chunks_buf. Habría que comparar self._buffer[i] y self.recorded_chunks_buf[i].
         self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
-        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - self.delay_in_chunks) % (self.cells_in_buffer)].astype(np.double)
+        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - self.delay_in_chunks + 1) % (self.cells_in_buffer)].astype(np.double)
         played_chunk = outdata.astype(np.double)
+        #print("recorded", recorded_chunk[:,0].T)
+        #print("  played", played_chunk[:,0].T)
 
         #if minimal.args.show_samples:
         #    print("\033[32mbr_control: ", end=''); self.show_recorded_chunk(recorded_chunk)
