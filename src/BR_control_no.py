@@ -164,10 +164,10 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         #    print("\033[32mbr_control: ", end=''); self.show_played_chunk(played_chunk)
         #    print("\033[m", end='')
 
-        print(recorded_chunk)
+        #print(recorded_chunk)
         square_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
+            square_signal[c] = recorded_chunk[:, c].astype(np.float32) * recorded_chunk[:, c]
         # Notice that numpy uses the symbol "*" for computing the dot
         # product of two arrays "a" and "b", that basically is the
         # projection of one of the vectors ("a") into the other
@@ -193,11 +193,13 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         square_error_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_error_signal[c] = error_signal[c] * error_signal[c]
+            square_error_signal[c] = error_signal[c].astype(np.float32) * error_signal[c]
 
         error_energy = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             error_energy[c] = np.sum( square_error_signal[c] )
+            if error_energy[c] == 0:
+                error_energy[c] = 1
 
         RMSE = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
@@ -207,9 +209,14 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         SNR = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             try:
-                SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
+                SNR_lin = signal_energy[c] / error_energy[c]
+            except ValueError:
+                print(signal_energy[c], error_energy[c])
+            try:
+                SNR[c] = 10.0 * math.log(SNR_lin)
                 self.accumulated_SNR_per_cycle[c] += SNR[c]
             except ValueError:
+                print(SNR_lin)
                 SNR[c] = 0.0
                 
             #if error_energy[c].any():

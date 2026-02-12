@@ -188,14 +188,14 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
                 self.receive_and_buffer()
 
     def run(self):
-        #cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
-        #cycle_feedback_thread.daemon = True        
+        cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback)
+        cycle_feedback_thread.daemon = True        
         self.print_running_info()
         super().print_header()
         self.played_chunk_number = 0
         with self.stream(self._handler):
-            #cycle_feedback_thread.start()
-            #time.sleep(1) # Fix a race condition problem with stats?
+            cycle_feedback_thread.start()
+            time.sleep(1) # Fix a race condition problem with stats?
             self.loop_receive_and_buffer()
 
 try:
