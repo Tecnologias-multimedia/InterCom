@@ -22,6 +22,7 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
         logging.info(__doc__)
         self.offset = self.number_of_overlapped_samples // self.number_of_subbands
         self.extended_subbands_length = self.extended_chunk_length // self.number_of_subbands
+        logging.info(f"extended subbands length = {self.extended_subbands_length}")
         
     def __get_decomposition(self, extended_decomposition):
         nodes = extended_decomposition.get_level(self.DWT_levels, 'freq')
@@ -33,13 +34,13 @@ class Temporal_Overlapped_WPT(Temporal_No_Overlapped_WPT, Temporal_Overlapped_DW
 
     def extract_decomposition(self, extended_decomp):
         decomp = np.empty_like(self.zero_chunk)
-        print()
+        #print()
         for b in range(self.number_of_subbands):
             start = b * self.subbands_length
             end = start + self.subbands_length
             e_start = b * self.extended_subbands_length
             e_end = e_start + self.extended_subbands_length
-            print(start, end, self.offset, e_start, e_end)
+            #print(start, end, self.offset, e_start, e_end)
             decomp[start:end] = extended_decomp[e_start:e_end][self.offset:-self.offset]
         return decomp
 
