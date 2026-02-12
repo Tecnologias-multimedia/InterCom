@@ -327,8 +327,6 @@ class Minimal__verbose(Minimal):
         self.average_sent_KBPS = 0
         self.average_received_KBPS = 0
         # Average values are updated every cycle.
-
-        #self.seconds_per_cycle = se
         
         self.frames_per_cycle = self.seconds_per_cycle * args.frames_per_second
         self.chunks_per_cycle = self.frames_per_cycle / args.frames_per_chunk

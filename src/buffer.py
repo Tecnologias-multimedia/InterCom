@@ -128,9 +128,6 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
         super().__init__()
-        #self.args = args
-        #Buffering.__init__(self)
-        #Minimal__verbose.__init__(self, args)
 
     def send(self, packed_chunk):
         '''Computes the number of sent bytes and the number of sent
