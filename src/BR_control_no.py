@@ -98,6 +98,9 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         for i in range(self.cells_in_buffer):
             self.recorded_chunks_buff[i] = self.zero_chunk
 
+        #self.counter_0SNR = 0
+        self.delay_in_chunks = 1
+            
     def stats(self):
         string = super().stats()
         string += "{:>5d}".format(self.quantization_step_size)
@@ -150,21 +153,21 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         # Remember that indata contains the recorded chunk and
         # outdata, the played chunk, but this is only true after
         # running this method.
-        
         self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
-        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
+        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - self.delay_in_chunks) % (self.cells_in_buffer)].astype(np.double)
         played_chunk = outdata.astype(np.double)
 
-        if minimal.args.show_samples:
-            print("\033[32mbr_control: ", end=''); self.show_indata(recorded_chunk.astype(np.int))
-            print("\033[m", end='')
-            # Remember that
-            # buffer.Buffering__verbose._record_IO_and_play shows also
-            # indata and outdata.
-        
-            print("\033[32mbr_control: ", end=''); self.show_outdata(played_chunk.astype(np.int))
-            print("\033[m", end='')
+        #if minimal.args.show_samples:
+        #    print("\033[32mbr_control: ", end=''); self.show_recorded_chunk(recorded_chunk)
+        #    print("\033[m", end='')
+        #    # Remember that
+        #    # buffer.Buffering__verbose._record_IO_and_play shows also
+        #    # indata and outdata.
+        #
+        #    print("\033[32mbr_control: ", end=''); self.show_played_chunk(played_chunk)
+        #    print("\033[m", end='')
 
+        #print(recorded_chunk)
         square_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
@@ -190,11 +193,11 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         error_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             error_signal[c] = recorded_chunk[:, c] - played_chunk[:, c]
-            
+
         square_error_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             square_error_signal[c] = error_signal[c] * error_signal[c]
-            
+
         error_energy = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
             error_energy[c] = np.sum( square_error_signal[c] )
@@ -210,6 +213,23 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
                 if signal_energy[c].any():
                     SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
                     self.accumulated_SNR_per_cycle[c] += SNR[c]
+            '''
+            try:
+                SNR_lin = signal_energy[c] / error_energy[c]
+            except ValueError:
+                logging.warning(f"signal energy = {signal_energy[c]}")
+                logging.warning(f"error energy = {error_energy[c]}")
+            try:
+                SNR[c] = 10.0 * math.log(SNR_lin)
+                self.accumulated_SNR_per_cycle[c] += SNR[c]
+            except ValueError:
+                self.counter_0SNR += 1
+                logging.warning(f"{self.counter_0SNR} SNR lineal = {SNR_lin}")
+                SNR[c] = 0.0
+            '''
+                
+            #if error_energy[c].any():
+            #    if signal_energy[c].any():
 
     def _record_IO_and_play(self, indata, outdata, frames, time, status):
         super()._record_IO_and_play(indata, outdata, frames, time, status)

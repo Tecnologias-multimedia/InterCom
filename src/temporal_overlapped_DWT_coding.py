@@ -136,72 +136,9 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):
 
-    # Modified so the added chunk delay is taken into account
-    def compute(self, indata, outdata):
-        # Remember that indata contains the recorded chunk and
-        # outdata, the played chunk, but this is only true after
-        # running this method.
-
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy()
-        #recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 1) % (self.cells_in_buffer)].astype(np.double)
-        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - 3) % (self.cells_in_buffer)].astype(np.double)  # <- Modification
-        played_chunk = outdata.astype(np.double)
-
-        if minimal.args.show_samples:
-            print("\033[32mbr_control: ", end=''); self.show_indata(recorded_chunk.astype(np.int))
-            print("\033[m", end='')
-            # Remember that
-            # buffer.Buffering__verbose._record_IO_and_play shows also
-            # indata and outdata.
-
-            print("\033[32mbr_control: ", end=''); self.show_outdata(played_chunk.astype(np.int))
-            print("\033[m", end='')
-
-        square_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
-        # Notice that numpy uses the symbol "*" for computing the dot
-        # product of two arrays "a" and "b", that basically is the
-        # projection of one of the vectors ("a") into the other
-        # ("b"). However, when both vectors are the same and identical
-        # in shape (np.arange(10).reshape(10,1) and
-        # np.arange(10).reshape(1,10) are the same vector, but one is
-        # a row matrix and the other is a column matrix) and the
-        # contents are the same, the resulting vector is the result of
-        # computing the power by 2, which is equivalent to compute
-        # "a**2". Moreover, numpy provides the element-wise array
-        # multiplication "numpy.multiply(a, b)" that when "a" and "b"
-        # are equal, generates the same result. Among all these
-        # alternatives, the dot product seems to be the faster one.
-
-        signal_energy = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            signal_energy[c] = np.sum( square_signal[c] )
-
-        # Compute distortions
-        error_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            error_signal[c] = recorded_chunk[:, c] - played_chunk[:, c]
-
-        square_error_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            square_error_signal[c] = error_signal[c] * error_signal[c]
-
-        error_energy = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            error_energy[c] = np.sum( square_error_signal[c] )
-
-        RMSE = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            RMSE[c] = math.sqrt( error_energy[c] )
-            self.accumulated_RMSE_per_cycle[c] += RMSE[c]
-
-        SNR = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            if error_energy[c].any():
-                if signal_energy[c].any():
-                    SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
-                    self.accumulated_SNR_per_cycle[c] += SNR[c]
+    def __init__(self):
+        super().__init__()
+        self.delay_in_chunks += 2
 
 try:
     import argcomplete  # <tab> completion for argparse.

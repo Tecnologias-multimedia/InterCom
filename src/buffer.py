@@ -28,8 +28,9 @@ class Buffering(minimal.Minimal):
         logging.info(__doc__)
         if minimal.args.buffering_time <= 0:
             minimal.args.buffering_time = 1 # ms
-        logging.info(f"buffering_time = {minimal.args.buffering_time} miliseconds")
+        logging.info(f"buffering time = {minimal.args.buffering_time} miliseconds")
         self.chunks_to_buffer = int(math.ceil(minimal.args.buffering_time / 1000 / self.chunk_time))
+        logging.info(f"chunks to buffer = {self.chunks_to_buffer}")
         self.zero_chunk = self.generate_zero_chunk()
         self.cells_in_buffer = self.chunks_to_buffer * 2
         self._buffer = [None] * self.cells_in_buffer
@@ -127,23 +128,23 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
     
     def __init__(self):
         super().__init__()
-        #self.args = args
-        #Buffering.__init__(self)
-        #Minimal__verbose.__init__(self, args)
 
     def send(self, packed_chunk):
         '''Computes the number of sent bytes and the number of sent
         packets.'''
         Buffering.send(self, packed_chunk)
-        self.sent_bytes_count += len(packed_chunk)
-        self.sent_messages_count += 1
+        self.sent_bytes_count_by_cycle += len(packed_chunk)
+        self.sent_messages_count_by_cycle += 1
+        self.total_number_of_sent_chunks += 1
+        #if (self.total_number_of_sent_chunks % 44) == 0:
+        #    self.cycle_feedback()
 
     def receive(self):
         '''Computes the number of received bytes and the number of received
         packets.'''
         packed_chunk = Buffering.receive(self)
-        self.received_bytes_count += len(packed_chunk)
-        self.received_messages_count += 1
+        self.received_bytes_count_by_cycle += len(packed_chunk)
+        self.received_messages_count_by_cycle += 1
         return packed_chunk
 
     def _record_IO_and_play(self, ADC, DAC, frames, time, status):
@@ -155,20 +156,20 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         if minimal.args.show_samples:
             self.show_played_chunk(DAC)
 
-        self.recorded_chunk = ADC#DAC
-        self.played_chunk = DAC#ADC
+        #self.recorded_chunk = ADC#DAC
+        #self.played_chunk = DAC#ADC
         #self.recorded_chunk[512:,:]=20000 # <--------------------------------------------
 
     def _read_IO_and_play(self, DAC, frames, time, status):
-        read_chunk = super()._read_IO_and_play(DAC, frames, time, status)
+        chunk = super()._read_IO_and_play(DAC, frames, time, status)
 
         if minimal.args.show_samples:
-            self.show_recorded_chunk(read_chunk)
+            self.show_recorded_chunk(chunk)
             self.show_played_chunk(DAC)
 
-        self.recorded_chunk = read_chunk#DAC
+        #self.recorded_chunk = read_chunk#DAC
 
-        return read_chunk
+        return chunk
 
     def loop_receive_and_buffer(self):
         first_received_chunk_number = self.receive_and_buffer()
@@ -191,7 +192,6 @@ class Buffering__verbose(Buffering, minimal.Minimal__verbose):
         self.played_chunk_number = 0
         with self.stream(self._handler):
             cycle_feedback_thread.start()
-            #time.sleep(1) # Fix a race condition problem with stats?
             self.loop_receive_and_buffer()
 
 try:
