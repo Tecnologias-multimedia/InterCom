@@ -97,6 +97,7 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         self.recorded_chunks_buff = [None] * self.cells_in_buffer
         for i in range(self.cells_in_buffer):
             self.recorded_chunks_buff[i] = self.zero_chunk
+        self.counter = 0
 
         #self.counter_0SNR = 0
         self.delay_in_chunks = 0
@@ -150,17 +151,26 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
         self.accumulated_RMSE_per_cycle[:] = 0.0
 
     def compute(self, indata, outdata):
-        # Remember that indata contains the recorded chunk and
-        # outdata, the played chunk, but this is only true after
-        # running this method.
-
-        # Este buffer debería controlarse con self.received_chunk_number. self.recorded_chunks_buff debería llamarse self.received_chunks_buf. Habría que comparar self._buffer[i] y self.recorded_chunks_buf[i].
-        self.recorded_chunks_buff[self.chunk_number % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/ 
-        recorded_chunk = self.recorded_chunks_buff[(self.chunk_number - self.chunks_to_buffer - self.delay_in_chunks + 1) % (self.cells_in_buffer)].astype(np.double)
+        # indata is the chunk that we have received from the mic or
+        # read from the input file, and outdata is the chunk currently
+        # played (that was received from the Internet and has been
+        # stored in the de-jittering buffer). The idea is to compare
+        # indata (the original audio) with the played chunk (lossy
+        # compressed audio). However, the problem is that the chunk
+        # that we currently play is a (probably degraded) version of
+        # one of the chunks that were in indata some chunk-times
+        # ago. For this reason, we cannot compare indata and outdata
+        # direcly: we need a new buffer filled with indata. But, how many indata-chunks must be buffered? This number depends on how-many chunks  
+        self.recorded_chunks_buff[self.counter % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/
+        recorded_chunk = self.recorded_chunks_buff[(self.counter - self.chunks_to_buffer - self.delay_in_chunks - 3) % (self.cells_in_buffer)].astype(np.double)
+        recorded_chunk = indata
         played_chunk = outdata.astype(np.double)
-        #print("recorded", recorded_chunk[:,0].T)
-        #print("  played", played_chunk[:,0].T)
+        print("recorded", recorded_chunk[:,0].T)
+        print("  played", played_chunk[:,0].T)
 
+        self.counter += 1
+
+        
         #if minimal.args.show_samples:
         #    print("\033[32mbr_control: ", end=''); self.show_recorded_chunk(recorded_chunk)
         #    print("\033[m", end='')
