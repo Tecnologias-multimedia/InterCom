@@ -82,6 +82,7 @@ class BR_Control_No(Compression):
 
 #from DEFLATE_byteplanes2 import DEFLATE_BytePlanes2__verbose as Compression__verbose
 from DEFLATE_byteplanes3 import DEFLATE_BytePlanes3__verbose as Compression__verbose
+from collections import deque
 
 class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
     
@@ -101,7 +102,104 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         #self.counter_0SNR = 0
         self.delay_in_chunks = 0
+
+        self.original_chunks = deque()
+        self.received_chunks = deque()
+
+    # Hay que sobrecargar el método que obtiene el chunk descomprimido
+    #def receive(self):
+    #    #print("o", end='')
+    #    packed_chunk = super().receive()
+    #    _, chunk = self.unpack(packed_chunk)
+    #    self.received_chunks.append(chunk)
+    #    return packed_chunk
+    def buffer_chunk(self, chunk_number, chunk):
+        super().buffer_chunk(chunk_number, chunk)
+        #print(chunk.shape)
+        self.received_chunks.append(chunk)
+
+    #def _record_IO_and_play(self, indata, outdata, frames, time, status):
+    #    super()._record_IO_and_play(indata, outdata, frames, time, status)
+    #    self.compute(indata, outdata)
+
+    def _read_IO_and_play(self, outdata, frames, time, status):
+        #print("O", end='')
+        chunk = super()._read_IO_and_play(outdata, frames, time, status)
+        self.original_chunks.append(chunk)
+        self.compute()
             
+    def compute(self):
+        try:
+            played_chunk = self.received_chunks.popleft().astype(np.double)
+            recorded_chunk = self.original_chunks.popleft().astype(np.double)
+        except IndexError:
+            played_chunk = self.zero_chunk
+            recorded_chunk = self.zero_chunk
+        #print("played:  ", played_chunk[:,0].T)
+        #print("recorded:", recorded_chunk[:,0].T)
+
+        square_signal = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
+        # Notice that numpy uses the symbol "*" for computing the dot
+        # product of two arrays "a" and "b", that basically is the
+        # projection of one of the vectors ("a") into the other
+        # ("b"). However, when both vectors are the same and identical
+        # in shape (np.arange(10).reshape(10,1) and
+        # np.arange(10).reshape(1,10) are the same vector, but one is
+        # a row matrix and the other is a column matrix) and the
+        # contents are the same, the resulting vector is the result of
+        # computing the power by 2, which is equivalent to compute
+        # "a**2". Moreover, numpy provides the element-wise array
+        # multiplication "numpy.multiply(a, b)" that when "a" and "b"
+        # are equal, generates the same result. Among all these
+        # alternatives, the dot product seems to be the faster one.
+       
+        signal_energy = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            signal_energy[c] = np.sum( square_signal[c] )
+ 
+        # Compute distortions
+        error_signal = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            error_signal[c] = recorded_chunk[:, c] - played_chunk[:, c]
+            #print(np.max(np.abs(error_signal[c])))
+
+        square_error_signal = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            square_error_signal[c] = error_signal[c] * error_signal[c]
+
+        error_energy = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            error_energy[c] = np.sum( square_error_signal[c] )
+            #print(error_energy[c])
+
+        RMSE = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            RMSE[c] = math.sqrt( error_energy[c] )
+            self.accumulated_RMSE_per_cycle[c] += RMSE[c]
+
+        SNR = [None] * minimal.args.number_of_channels
+        for c in range(minimal.args.number_of_channels):
+            if error_energy[c].any():
+                if signal_energy[c].any():
+                    SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
+                    self.accumulated_SNR_per_cycle[c] += SNR[c]
+
+            '''
+            try:
+                SNR_lin = signal_energy[c] / error_energy[c]
+            except ValueError:
+                logging.warning(f"signal energy = {signal_energy[c]}")
+                logging.warning(f"error energy = {error_energy[c]}")
+            try:
+                SNR[c] = 10.0 * math.log(SNR_lin)
+                self.accumulated_SNR_per_cycle[c] += SNR[c]
+            except ValueError:
+                logging.warning(f"SNR lineal = {SNR_lin}")
+                SNR[c] = 0.0
+            '''
+
     def stats(self):
         string = super().stats()
         string += "{:>5d}".format(self.quantization_step_size)
@@ -149,109 +247,6 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         self.accumulated_SNR_per_cycle[:] = 0.0
         self.accumulated_RMSE_per_cycle[:] = 0.0
-
-    def compute(self, indata, outdata):
-        # indata is the chunk that we have received from the mic or
-        # read from the input file, and outdata is the chunk currently
-        # played (that was received from the Internet and has been
-        # stored in the de-jittering buffer). The idea is to compare
-        # indata (the original audio) with the played chunk (lossy
-        # compressed audio). However, the problem is that the chunk
-        # that we currently play is a (probably degraded) version of
-        # one of the chunks that were in indata some chunk-times
-        # ago. For this reason, we cannot compare indata and outdata
-        # direcly: we need a new buffer filled with indata. But, how many indata-chunks must be buffered? This number depends on how-many chunks  
-        self.recorded_chunks_buff[self.counter % self.cells_in_buffer] = indata#.copy() # copy() does not affect to the SNR bug :-/
-        recorded_chunk = self.recorded_chunks_buff[(self.counter - self.chunks_to_buffer - self.delay_in_chunks - 3) % (self.cells_in_buffer)].astype(np.double)
-        recorded_chunk = indata
-        played_chunk = outdata.astype(np.double)
-        print("recorded", recorded_chunk[:,0].T)
-        print("  played", played_chunk[:,0].T)
-
-        self.counter += 1
-
-        
-        #if minimal.args.show_samples:
-        #    print("\033[32mbr_control: ", end=''); self.show_recorded_chunk(recorded_chunk)
-        #    print("\033[m", end='')
-        #    # Remember that
-        #    # buffer.Buffering__verbose._record_IO_and_play shows also
-        #    # indata and outdata.
-        #
-        #    print("\033[32mbr_control: ", end=''); self.show_played_chunk(played_chunk)
-        #    print("\033[m", end='')
-
-        #print(recorded_chunk)
-        square_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
-        # Notice that numpy uses the symbol "*" for computing the dot
-        # product of two arrays "a" and "b", that basically is the
-        # projection of one of the vectors ("a") into the other
-        # ("b"). However, when both vectors are the same and identical
-        # in shape (np.arange(10).reshape(10,1) and
-        # np.arange(10).reshape(1,10) are the same vector, but one is
-        # a row matrix and the other is a column matrix) and the
-        # contents are the same, the resulting vector is the result of
-        # computing the power by 2, which is equivalent to compute
-        # "a**2". Moreover, numpy provides the element-wise array
-        # multiplication "numpy.multiply(a, b)" that when "a" and "b"
-        # are equal, generates the same result. Among all these
-        # alternatives, the dot product seems to be the faster one.
-       
-        signal_energy = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            signal_energy[c] = np.sum( square_signal[c] )
- 
-        # Compute distortions
-        error_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            error_signal[c] = recorded_chunk[:, c] - played_chunk[:, c]
-
-        square_error_signal = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            square_error_signal[c] = error_signal[c] * error_signal[c]
-
-        error_energy = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            error_energy[c] = np.sum( square_error_signal[c] )
-
-        RMSE = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            RMSE[c] = math.sqrt( error_energy[c] )
-            self.accumulated_RMSE_per_cycle[c] += RMSE[c]
-
-        SNR = [None] * minimal.args.number_of_channels
-        for c in range(minimal.args.number_of_channels):
-            if error_energy[c].any():
-                if signal_energy[c].any():
-                    SNR[c] = 10.0 * math.log( signal_energy[c] / error_energy[c] )
-                    self.accumulated_SNR_per_cycle[c] += SNR[c]
-            '''
-            try:
-                SNR_lin = signal_energy[c] / error_energy[c]
-            except ValueError:
-                logging.warning(f"signal energy = {signal_energy[c]}")
-                logging.warning(f"error energy = {error_energy[c]}")
-            try:
-                SNR[c] = 10.0 * math.log(SNR_lin)
-                self.accumulated_SNR_per_cycle[c] += SNR[c]
-            except ValueError:
-                self.counter_0SNR += 1
-                logging.warning(f"{self.counter_0SNR} SNR lineal = {SNR_lin}")
-                SNR[c] = 0.0
-            '''
-                
-            #if error_energy[c].any():
-            #    if signal_energy[c].any():
-
-    def _record_IO_and_play(self, indata, outdata, frames, time, status):
-        super()._record_IO_and_play(indata, outdata, frames, time, status)
-        self.compute(indata, outdata)
-
-    def _read_IO_and_play(self, outdata, frames, time, status):
-        chunk = super()._read_IO_and_play(outdata, frames, time, status)
-        self.compute(chunk, outdata)
 
     def print_final_averages(self):
         super().print_final_averages()
