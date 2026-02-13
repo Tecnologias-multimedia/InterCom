@@ -135,10 +135,10 @@ class Temporal_Overlapped_DWT(Temporal_No_Overlapped_DWT):
         return chunk
 
 class Temporal_Overlapped_DWT__verbose(Temporal_Overlapped_DWT, Temporal_No_Overlapped_DWT__verbose):
-
     def __init__(self):
         super().__init__()
-        self.delay_in_chunks += 2
+        self.original_chunks.append(self.zero_chunk)
+        self.original_chunks.append(self.zero_chunk)
 
 try:
     import argcomplete  # <tab> completion for argparse.

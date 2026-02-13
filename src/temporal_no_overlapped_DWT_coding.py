@@ -92,17 +92,6 @@ from stereo_MST_coding_32 import Stereo_MST_Coding_32__verbose as Stereo_Coding_
 
 class Temporal_No_Overlapped_DWT__verbose(Temporal_No_Overlapped_DWT, Stereo_Coding__verbose):
     pass
-    #def ___init__(self):
-    #    super().__init__()
-'''
-    def _analyze(self, chunk):
-        analyzed_chunk = Temporal_Coding0.analyze(self, chunk)
-        self.LH_chunks_in_the_cycle.append(analyzed_chunk)
-        return analyzed_chunk
-
-    def __analyze(self, chunk):
-        return Temporal_Coding__verbose.analyze(self, chunk)
-'''
 
 try:
     import argcomplete  # <tab> completion for argparse.
