@@ -26,8 +26,9 @@ class ToH(Temporal_Overlapped_WPT):
 
         def ToH_model(f):
             #return 1
-            # plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
+            # set xrange[0:22050]; plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
             #return 16.97 * (np.log10(f) ** 2) - 106.98 * np.log10(f) + 173.82 + 10 ** -3 * (f / 1000) ** 4
+            # set xrange[0:22050]; lot 3.64*(x/1000)**(-0.8) - exp((-0.6)*(x/1000-3.3)**2) + 10**(-3)*(x/1000)**4
             return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
 
         def linear_ToH_model(f):
@@ -47,7 +48,33 @@ class ToH(Temporal_Overlapped_WPT):
 
         Nyquist_frequency = minimal.args.frames_per_second // 2
         self.subbands_bandwidth = Nyquist_frequency / self.number_of_subbands
-        SPLs = []
+        SPLs = []  # Sound Preassure Levels of the threshold of hearing
+        for i in range(1, int(Nyquist_frequency)+1):
+            #SPLs.append(linear_ToH_model(i+1))
+            SPLs.append(ToH_model(i))
+        SPLs = np.array(SPLs)
+        print_SPLs(SPLs)
+        frequencies = np.linspace(0, Nyquist_frequency, self.number_of_subbands)
+        min_val = np.min(SPLs)
+        max_val = np.max(SPLs)
+        normalized_values = (SPLs - min_val) / (max_val - min_val)
+        #for i in normalized_values:
+        #    print(i, end=' ')
+
+        QSSs = []
+        for freq, val in zip(frequencies, normalized_values):
+            q = int(val*self.quantization_step_size)
+            QSSs.append(q)
+        QSSs = np.array(QSSs)
+        QSSs_per_coef = np.repeat(QSSs, self.subbands_length)
+        stereo_QSSs_per_coef = np.empty_like(self.zero_chunk)
+        stereo_QSSs_per_coef[:, 0] = QSSs_per_coef
+        stereo_QSSs_per_coef[:, 1] = QSSs_per_coef
+        return stereo_QSSs_per_coef
+        '''
+        Nyquist_frequency = minimal.args.frames_per_second // 2
+        self.subbands_bandwidth = Nyquist_frequency / self.number_of_subbands
+        SPLs = []  # Sound Preassure Levels of the threshold of hearing
         for i in range(int(Nyquist_frequency)):
             SPLs.append(linear_ToH_model(i+1))
         SPLs = np.array(SPLs)
@@ -57,8 +84,8 @@ class ToH(Temporal_Overlapped_WPT):
         for i in range(1, self.number_of_subbands+1):
             start_freq = i * self.subbands_bandwidth
             end_freq = (i+1) * self.subbands_bandwidth
-            steps = np.linspace(start_freq, end_freq, 1)
-            average = np.mean([ToH_model(val+1) for val in steps])
+            samples_in_the_subband = np.linspace(start_freq, end_freq, 1)
+            average = np.mean([ToH_model(val+1) for val in samples_in_the_subband])
             average_SPLs.append(average)
         average_SPLs = np.array(average_SPLs).astype(np.int32)
         average_SPLs -= np.min(average_SPLs)
@@ -92,6 +119,7 @@ class ToH(Temporal_Overlapped_WPT):
         stereo_QSSs_per_coef[:, 0] = QSSs_per_coef
         stereo_QSSs_per_coef[:, 1] = QSSs_per_coef
         return stereo_QSSs_per_coef
+        '''
     
     def quantize(self, chunk):
         '''Deadzone quantizer using different QSS per subband.'''
