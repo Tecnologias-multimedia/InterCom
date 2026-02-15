@@ -11,14 +11,23 @@ from temporal_overlapped_WPT_coding import Temporal_Overlapped_WPT
 
 class ToH(Temporal_Overlapped_WPT):
 
+    PERSONAL_SCALE = 128
+    
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        # Global scaling of the ToH curve. For QSS=0, it should
-        # provide the threshold of the minimum noticeable distortion.
-        self.max_ToH = 1.0 
-        self.average_SPLs = self.get_average_SPLs()
-        self.QSSs = np.empty_like(self.zero_chunk) + 1
+
+        avg_SPLs = self.get_average_SPLs()
+        min_avg_SPLs = np.min(avg_SPLs)
+        positive_avg_SPLs = avg_SPLs + np.abs(min_avg_SPLs)
+        print("positive_avg_SPLs", positive_avg_SPLs)
+        self.QSSs = positive_avg_SPLs + minimal.args.minimal_quantization_step_size
+        self.QSSs[self.QSSs < 1] = 1
+        self.quantization_step_size = np.min(self.QSSs) + 1
+        logging.info(f"Average Sound Preasure Levels in the ToH = {self.QSSs}")
+        self.coef_QSSs = np.empty_like(self.zero_chunk)
+        #self.QSSs[:, 0] = np.repeat(self.average_SPLs, self.subbands_length)
+        #self.QSSs[:, 1] = self.QSSs[:, 0]
 
     def ToH_model(self, f):
         '''
@@ -35,22 +44,38 @@ class ToH(Temporal_Overlapped_WPT):
 
     def get_average_SPLs(self):
         '''
-        Calculate The Quantization Step Size (QSS) for each WPT subband.
+        Calculate the averge Sound Preasure Level of the ToH for each WPT subband.
         '''
         self.Nyquist_frequency = minimal.args.frames_per_second // 2
         self.subbands_bandwidth = self.Nyquist_frequency / self.number_of_subbands
         # Average Sound Preassure Levels of the threshold of hearing
         average_SPLs = []  
-        for i in range(1, self.number_of_subbands + 1):
+        for i in range(self.number_of_subbands):
             start_freq = i*self.subbands_bandwidth
             end_freq = (i + 1)*self.subbands_bandwidth
-            steps = np.linspace(start_freq, end_freq, 1)
-            avg_SPL = np.mean([self.ToH_model(f) for f in steps])
+            print(start_freq, end_freq)
+            steps = np.linspace(start_freq, end_freq, 10) + 1
+            SPLs = [self.ToH_model(f) for f in steps]
+            print("SPLs", SPLs)
+            avg_SPL = np.mean(SPLs)
+            #print(avg_SPL)
             average_SPLs.append(avg_SPL)
         average_SPLs = np.array(average_SPLs)
+        
         return average_SPLs
 
     def normalize_SPLs(self):
+
+        def normalize(x):
+            min_x = np.min(x)
+            max_x = np.max(x)
+            maxmin_x = max_x - min_x
+            if maxmin_x != 0:
+                #print(max_x, min_x)
+                return (x - min_x)/maxmin_x
+            else:
+                return np.ones_like(x)
+            
         min_val = np.min(SPLs)
         max_val = np.max(SPLs)
         normalized_values = (SPLs - min_val) / (max_val - min_val)
@@ -119,12 +144,14 @@ class ToH(Temporal_Overlapped_WPT):
     
     def quantize(self, chunk):
         '''Deadzone quantizer using different QSS per subband.'''
-        quantized_chunk = (chunk / self.QSSs).astype(np.int32)
+        self.coef_QSSs[:, 0] = np.repeat(self.QSSs, self.subbands_length) + self.quantization_step_size
+        self.coef_QSSs[:, 1] = self.coef_QSSs[:, 0]
+        quantized_chunk = (chunk / self.coef_QSSs).astype(np.int32)
         #print("->", chunk, quantized_chunk, self.QSSs)
         return quantized_chunk
 
     def dequantize(self, quantized_chunk):
-        chunk = quantized_chunk * self.QSSs
+        chunk = quantized_chunk * self.coef_QSSs
         return chunk
 
 from temporal_overlapped_WPT_coding import Temporal_Overlapped_WPT__verbose
@@ -133,13 +160,16 @@ class ToH__verbose(ToH, Temporal_Overlapped_WPT__verbose):
 
     def __init__(self):
         super().__init__()
-        self.print_average_SPLs()
+        #self.print_average_SPLs()
 
-    def print_average_SPLs(self):
+    def print_average_SPLs(x):
         frequencies = np.linspace(0, self.Nyquist_frequency, self.number_of_subbands)
-        min_val = np.min(self.average_SPLs)
-        max_val = np.max(self.average_SPLs)
-        normalized_values = (self.average_SPLs - min_val) / (max_val - min_val)
+        min_val = np.min(x)
+        max_val = np.max(x)
+        if max_val != min_val:
+            normalized_values = (x - min_val) / (max_val - min_val)
+        else:
+            normalized_values = np.ones_like(x)
 
         i = 1
         for freq, val in zip(frequencies, normalized_values):
