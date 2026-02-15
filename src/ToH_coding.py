@@ -53,9 +53,10 @@ class ToH(Temporal_Overlapped_WPT):
         for i in range(self.number_of_subbands):
             start_freq = i*self.subbands_bandwidth
             end_freq = (i + 1)*self.subbands_bandwidth
-            print(start_freq, end_freq)
+            #print(start_freq, end_freq)
             steps = np.linspace(start_freq, end_freq, 10) + 1
             SPLs = [self.ToH_model(f) for f in steps]
+            #SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
             print("SPLs", SPLs)
             avg_SPL = np.mean(SPLs)
             #print(avg_SPL)
