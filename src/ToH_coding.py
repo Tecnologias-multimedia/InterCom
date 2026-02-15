@@ -14,47 +14,43 @@ class ToH(Temporal_Overlapped_WPT):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
-        #self.QSSs = self.get_QSSs(max_expected_q=1024)
-        self.QSSs = self.get_QSSs()
-        for i in self.QSSs:
-            print(i[0], end=' ')
+        # Global scaling of the ToH curve. For QSS=0, it should
+        # provide the threshold of the minimum noticeable distortion.
+        self.max_ToH = 1.0 
+        self.average_SPLs = self.get_average_SPLs()
+        self.QSSs = np.empty_like(self.zero_chunk) + 1
 
-    def get_QSSs(self):
+    def ToH_model(self, f):
+        '''
+        f is in Hz.
+        '''
+        #return 1
+        # set xrange[0:22050]; plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
+        #return 16.97 * (np.log10(f) ** 2) - 106.98 * np.log10(f) + 173.82 + 10 ** -3 * (f / 1000) ** 4
+        # set xrange[0:22050]; lot 3.64*(x/1000)**(-0.8) - exp((-0.6)*(x/1000-3.3)**2) + 10**(-3)*(x/1000)**4
+        return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
+
+    def linear_ToH_model(self, f):
+        return 10**(self.ToH_model(f)/10)
+
+    def get_average_SPLs(self):
         '''
         Calculate The Quantization Step Size (QSS) for each WPT subband.
         '''
+        self.Nyquist_frequency = minimal.args.frames_per_second // 2
+        self.subbands_bandwidth = self.Nyquist_frequency / self.number_of_subbands
+        # Average Sound Preassure Levels of the threshold of hearing
+        average_SPLs = []  
+        for i in range(1, self.number_of_subbands + 1):
+            start_freq = i*self.subbands_bandwidth
+            end_freq = (i + 1)*self.subbands_bandwidth
+            steps = np.linspace(start_freq, end_freq, 1)
+            avg_SPL = np.mean([self.ToH_model(f) for f in steps])
+            average_SPLs.append(avg_SPL)
+        average_SPLs = np.array(average_SPLs)
+        return average_SPLs
 
-        def ToH_model(f):
-            #return 1
-            # set xrange[0:22050]; plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
-            #return 16.97 * (np.log10(f) ** 2) - 106.98 * np.log10(f) + 173.82 + 10 ** -3 * (f / 1000) ** 4
-            # set xrange[0:22050]; lot 3.64*(x/1000)**(-0.8) - exp((-0.6)*(x/1000-3.3)**2) + 10**(-3)*(x/1000)**4
-            return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
-
-        def linear_ToH_model(f):
-            return 10**(ToH_model(f)/10)
-
-        def print_SPLs(SPLs):
-            frequencies = np.linspace(0, 22050, self.number_of_subbands)
-            min_val = np.min(SPLs)
-            max_val = np.max(SPLs)
-            normalized_values = (SPLs - min_val) / (max_val - min_val)
-
-            i = 1
-            for freq, val in zip(frequencies, normalized_values):
-                num_stars = int(val*80)
-                print(f"{i:3} | {freq:5.0f} | {num_stars+1:2} | {'*' * (num_stars+1)}")
-                i += 1
-
-        Nyquist_frequency = minimal.args.frames_per_second // 2
-        self.subbands_bandwidth = Nyquist_frequency / self.number_of_subbands
-        SPLs = []  # Sound Preassure Levels of the threshold of hearing
-        for i in range(1, int(Nyquist_frequency)+1):
-            #SPLs.append(linear_ToH_model(i+1))
-            SPLs.append(ToH_model(i))
-        SPLs = np.array(SPLs)
-        print_SPLs(SPLs)
-        frequencies = np.linspace(0, Nyquist_frequency, self.number_of_subbands)
+    def normalize_SPLs(self):
         min_val = np.min(SPLs)
         max_val = np.max(SPLs)
         normalized_values = (SPLs - min_val) / (max_val - min_val)
@@ -134,7 +130,22 @@ class ToH(Temporal_Overlapped_WPT):
 from temporal_overlapped_WPT_coding import Temporal_Overlapped_WPT__verbose
 
 class ToH__verbose(ToH, Temporal_Overlapped_WPT__verbose):
-    pass
+
+    def __init__(self):
+        super().__init__()
+        self.print_average_SPLs()
+
+    def print_average_SPLs(self):
+        frequencies = np.linspace(0, self.Nyquist_frequency, self.number_of_subbands)
+        min_val = np.min(self.average_SPLs)
+        max_val = np.max(self.average_SPLs)
+        normalized_values = (self.average_SPLs - min_val) / (max_val - min_val)
+
+        i = 1
+        for freq, val in zip(frequencies, normalized_values):
+            num_stars = int(val*80)
+            print(f"{i:3} | {freq:5.0f} | {num_stars+1:2} | {'*' * (num_stars+1)}")
+            i += 1
 
 try:
     import argcomplete
