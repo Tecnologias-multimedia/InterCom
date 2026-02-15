@@ -56,10 +56,11 @@ class ToH(Temporal_Overlapped_WPT):
             #print(start_freq, end_freq)
             steps = np.linspace(start_freq, end_freq, 10) + 1
             SPLs = [self.ToH_model(f) for f in steps]
-            #SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
-            print("SPLs", SPLs)
+            SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
+            SPLs = (255*(SPLs - np.min(SPLs)/(np.max(SPLs) - np.min(SPLs)))).astype(np.int32)
+            #print("SPLs", SPLs)
             avg_SPL = np.mean(SPLs)
-            #print(avg_SPL)
+            print(avg_SPL)
             average_SPLs.append(avg_SPL)
         average_SPLs = np.array(average_SPLs)
         
