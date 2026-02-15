@@ -3,6 +3,8 @@
 
 """Providing linear splitting of the dyadic subbands using wavelet packets."""
 
+# Para q=0 (que puede ser negativa), la curva debería tener la altura máxima (atenuación maxima) que no proporciona ninguna fuente de distorsión. A partir de ahí, calcularemos: max(q+ToH,1)
+
 import numpy as np
 import pywt
 import logging
