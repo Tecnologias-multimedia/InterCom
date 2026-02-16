@@ -56,11 +56,11 @@ class ToH(Temporal_Overlapped_WPT):
             #print(start_freq, end_freq)
             steps = np.linspace(start_freq, end_freq, 10) + 1
             SPLs = [self.ToH_model(f) for f in steps]
-            SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
-            SPLs = (255*(SPLs - np.min(SPLs)/(np.max(SPLs) - np.min(SPLs)))).astype(np.int32)
+            #SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
+            #SPLs = ((SPLs - np.min(SPLs)/(np.max(SPLs) - np.min(SPLs))))
             #print("SPLs", SPLs)
-            avg_SPL = np.mean(SPLs)
-            print(avg_SPL)
+            avg_SPL = np.mean(SPLs).astype(np.int64)
+            #print("->", avg_SPL)
             average_SPLs.append(avg_SPL)
         average_SPLs = np.array(average_SPLs)
         
@@ -162,7 +162,23 @@ class ToH__verbose(ToH, Temporal_Overlapped_WPT__verbose):
 
     def __init__(self):
         super().__init__()
+        self.print_QSSs()
         #self.print_average_SPLs()
+
+    def print_QSSs(self):
+        frequencies = np.linspace(0, self.Nyquist_frequency, self.number_of_subbands)
+        min_val = np.min(self.QSSs)
+        max_val = np.max(self.QSSs)
+        if max_val != min_val:
+            normalized_values = (self.QSSs - min_val) / (max_val - min_val)
+        else:
+            normalized_values = np.ones_like(self.QSSs)
+
+        i = 1
+        for freq, val in zip(frequencies, normalized_values):
+            num_stars = int(val*80)
+            print(f"{i:3} | {freq:5.0f} | {self.QSSs[i-1]:2} | {'*' * (num_stars+1)}")
+            i += 1
 
     def print_average_SPLs(x):
         frequencies = np.linspace(0, self.Nyquist_frequency, self.number_of_subbands)
