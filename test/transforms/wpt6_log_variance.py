@@ -7,7 +7,7 @@ import sys
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use("Qt5Agg")   # sudo pacman -S python-pyqt5; pip install PyQt5
+matplotlib.use("Qt5Agg")   # pip install PyQt5
 import numpy as np
 import sounddevice as sd
 import pywt
