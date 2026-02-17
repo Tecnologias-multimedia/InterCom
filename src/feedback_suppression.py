@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
+# Restar al chunk capturado el chunk recibido, en el dominio de Fourier.
+
 # Probar a comprimir (logaritmicamente) la salida por los altavoces con una ganancia proporcional al parecido entre lo que sale por los altavoces (lo que llega a través de la red) y lo que captura el micrófono. Probado y no funciona bien porque el logaritmo amplifica el ruido de fondo.
 
 
