@@ -13,3 +13,5 @@ pygame_widgets
 # setuptools
 # PyQt5
 # jupyterlab
+# ipywidgets
+# If the widgets are not shown: jupyter labextension install @jupyter-widgets/jupyterlab-manager
