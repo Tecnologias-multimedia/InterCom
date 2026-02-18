@@ -20,18 +20,21 @@ class ToH(Temporal_Overlapped_WPT):
         avg_SPLs = self.get_average_SPLs()
         min_avg_SPLs = np.min(avg_SPLs)
         positive_avg_SPLs = avg_SPLs + np.abs(min_avg_SPLs)
-        print("positive_avg_SPLs", positive_avg_SPLs)
+        #print("positive_avg_SPLs", positive_avg_SPLs)
         self.QSSs = positive_avg_SPLs + minimal.args.minimal_quantization_step_size
         self.QSSs[self.QSSs < 1] = 1
         self.quantization_step_size = np.min(self.QSSs) + 1
-        logging.info(f"Average Sound Preasure Levels in the ToH = {self.QSSs}")
+        #logging.info(f"QSSs = {self.QSSs}")
         self.coef_QSSs = np.empty_like(self.zero_chunk)
         #self.QSSs[:, 0] = np.repeat(self.average_SPLs, self.subbands_length)
         #self.QSSs[:, 1] = self.QSSs[:, 0]
+        self.coef_QSSs[:, 0] = np.repeat(self.QSSs, self.subbands_length) + self.quantization_step_size
+        self.coef_QSSs[:, 1] = self.coef_QSSs[:, 0]
 
     def ToH_model(self, f):
-        '''
-        f is in Hz.
+        '''f is in Hz. This model assumes that the temporal transform is
+        orthogonal and therefore the contribution of each subband is
+        the same.
         '''
         #return 1
         # set xrange[0:22050]; plot 16.97 * (log10(x) ** 2) - 106.98 * log10(x) + 173.82 + 10 ** -3 * (x / 1000) ** 4, 3.64 * (x / 1000) ** -0.8 - 6.5 * exp((-0.6) * (x / 1000 - 3.3) ** 2) + 10 ** -3 * (x / 1000) ** 4
@@ -39,6 +42,7 @@ class ToH(Temporal_Overlapped_WPT):
         # set xrange[0:22050]; lot 3.64*(x/1000)**(-0.8) - exp((-0.6)*(x/1000-3.3)**2) + 10**(-3)*(x/1000)**4
         return 3.64*(f/1000)**(-0.8) - 6.5*math.exp((-0.6)*(f/1000-3.3)**2) + 10**(-3)*(f/1000)**4
 
+    # Un-used
     def linear_ToH_model(self, f):
         return 10**(self.ToH_model(f)/10)
 
@@ -54,7 +58,7 @@ class ToH(Temporal_Overlapped_WPT):
             start_freq = i*self.subbands_bandwidth
             end_freq = (i + 1)*self.subbands_bandwidth
             #print(start_freq, end_freq)
-            steps = np.linspace(start_freq, end_freq, 10) + 1
+            steps = np.linspace(start_freq, end_freq, int(end_freq - start_freq)) + 1
             SPLs = [self.ToH_model(f) for f in steps]
             #SPLs = [np.sqrt(12*self.linear_ToH_model(f)) for f in steps]
             #SPLs = ((SPLs - np.min(SPLs)/(np.max(SPLs) - np.min(SPLs))))
@@ -66,7 +70,7 @@ class ToH(Temporal_Overlapped_WPT):
         
         return average_SPLs
 
-    def normalize_SPLs(self):
+    def normalize_SPLs_____(self):
 
         def normalize(x):
             min_x = np.min(x)
@@ -146,8 +150,8 @@ class ToH(Temporal_Overlapped_WPT):
     
     def quantize(self, chunk):
         '''Deadzone quantizer using different QSS per subband.'''
-        self.coef_QSSs[:, 0] = np.repeat(self.QSSs, self.subbands_length) + self.quantization_step_size
-        self.coef_QSSs[:, 1] = self.coef_QSSs[:, 0]
+        #self.coef_QSSs[:, 0] = np.repeat(self.QSSs, self.subbands_length) + self.quantization_step_size
+        #self.coef_QSSs[:, 1] = self.coef_QSSs[:, 0]
         quantized_chunk = (chunk / self.coef_QSSs).astype(np.int32)
         #print("->", chunk, quantized_chunk, self.QSSs)
         return quantized_chunk
