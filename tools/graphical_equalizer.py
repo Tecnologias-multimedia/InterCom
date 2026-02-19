@@ -4,7 +4,7 @@ import soundfile as sf
 import pywt
 import json
 import os
-import tkinter as tk  # sudo pacman -S tk
+import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from scipy.fft import dct, idct
 
@@ -72,6 +72,12 @@ class AudioEQApp:
         self.audio_stream = None
         
         self.available_families = [f for f in pywt.families(short=True) if f not in ['bior', 'rbio', 'dmey', 'gaus', 'mexh', 'morl', 'cgau', 'shan', 'fbsp', 'cmor']]
+
+        self.sliders = []
+        self.meters = []
+        self.mute_btns = []
+        self.mute_vars = []
+        self.gain_vars = []
 
         self.build_ui()
         self.start_audio_engine()
@@ -159,11 +165,6 @@ class AudioEQApp:
         self.eq_canvas.create_window((0, 0), window=self.eq_frame, anchor="nw", tags="self.eq_frame")
         self.eq_frame.bind("<Configure>", lambda e: self.eq_canvas.configure(scrollregion=self.eq_canvas.bbox("all")))
 
-        self.sliders = []
-        self.meters = []
-        self.mute_btns = []
-        self.mute_vars = []
-
         for i in range(NUM_BANDS):
             band_f = tk.Frame(self.eq_frame, bd=1, relief="ridge", padx=2, pady=5)
             band_f.pack(side="left", fill="y", padx=2)
@@ -175,6 +176,16 @@ class AudioEQApp:
             m_btn.pack(side="top", pady=2)
             self.mute_btns.append(m_btn)
 
+            # Gain Text Entry
+            gain_var = tk.StringVar(value=f"{self.gains[i]:.2f}")
+            self.gain_vars.append(gain_var)
+            gain_entry = tk.Entry(band_f, textvariable=gain_var, width=5, justify="center", font=("Arial", 8))
+            gain_entry.pack(side="top", pady=2)
+            
+            # Bind the entry box to update the slider when pressing Enter or clicking away
+            gain_entry.bind("<Return>", lambda e, idx=i: self.apply_entry_gain(idx))
+            gain_entry.bind("<FocusOut>", lambda e, idx=i: self.apply_entry_gain(idx))
+
             # Max/Min Helpers
             tk.Button(band_f, text="↑", command=lambda idx=i: self.set_single_gain(idx, MAX_SLIDER_GAIN), font=("Arial", 8), pady=0).pack(side="top")
             
@@ -182,11 +193,11 @@ class AudioEQApp:
             sm_frame = tk.Frame(band_f)
             sm_frame.pack(side="top", expand=True, fill="y", pady=5)
             
-            slider = ttk.Scale(sm_frame, from_=MAX_SLIDER_GAIN, to=0.0, orient="vertical", value=self.gains[i], command=lambda val, idx=i: self.update_gain(idx, val), length=250)
+            slider = ttk.Scale(sm_frame, from_=MAX_SLIDER_GAIN, to=0.0, orient="vertical", value=self.gains[i], command=lambda val, idx=i: self.update_gain(idx, val), length=200)
             slider.pack(side="left", padx=2)
             self.sliders.append(slider)
             
-            meter_canvas = tk.Canvas(sm_frame, width=12, height=250, bg="#222", highlightthickness=0)
+            meter_canvas = tk.Canvas(sm_frame, width=12, height=200, bg="#222", highlightthickness=0)
             meter_canvas.pack(side="left", padx=2)
             self.meters.append(meter_canvas)
             
@@ -237,7 +248,20 @@ class AudioEQApp:
         self.global_volume = self.master_vol_var.get()
 
     def update_gain(self, idx, val):
-        self.gains[idx] = float(val)
+        # Called automatically when the slider is moved
+        v = float(val)
+        self.gains[idx] = v
+        self.gain_vars[idx].set(f"{v:.2f}")
+
+    def apply_entry_gain(self, idx):
+        # Called when the user types a number and presses Enter
+        try:
+            val = float(self.gain_vars[idx].get())
+            val = max(0.0, min(val, MAX_SLIDER_GAIN)) # Clamp between 0.0 and Max
+            self.set_single_gain(idx, val)
+        except ValueError:
+            # If they typed letters by mistake, revert to the current valid gain
+            self.gain_vars[idx].set(f"{self.gains[idx]:.2f}")
 
     def toggle_mute(self, idx):
         self.band_active[idx] = self.mute_vars[idx].get()
@@ -254,7 +278,7 @@ class AudioEQApp:
         for i in range(NUM_BANDS): self.set_single_gain(i, val)
 
     def set_single_gain(self, idx, val):
-        self.gains[idx] = val
+        # Triggers update_gain via slider.set()
         self.sliders[idx].set(val)
 
     def save_preset(self):
@@ -308,7 +332,7 @@ class AudioEQApp:
             target = min(max(raw_vals[i], 0.0), 1.0)
             if target > self.smoothed_vals[i]: self.smoothed_vals[i] = target
             else: self.smoothed_vals[i] *= self.DECAY_FACTOR
-            self.draw_vertical_meter(self.meters[i], self.smoothed_vals[i], 250, 12, "#00ccff")
+            self.draw_vertical_meter(self.meters[i], self.smoothed_vals[i], 200, 12, "#00ccff")
             
         # 2. Update Master Meter
         t_master = min(max(self.master_variance, 0.0), 1.0)
