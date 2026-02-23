@@ -30,6 +30,7 @@ provide an incremental functionality.
     ------------------------+-------------------------------------------------------------------+----------------------------------
                     Minimal | Full-duplex real-time transmission of chunks of audio over UDP    | minimal.py
                   Buffering | Network jitter hidding using a buffer of chunks                   | buffer.py
+        Feedback_Supression | (Optional) Removes the echo generated at the far-end              | feedback_supression.py
                 DEFLATE_Raw | Compression of the chunks using DEFLATE                           | DEFLATE_raw.py
         DEFLATE_BytePlanes3 | Apply DEFLATE by planes of bytes                                  | DEFLATE_byteplanes3.py
               BR_Control_No | Increases compression ratios (and distortion)  using quantization | BR_control_no.py
