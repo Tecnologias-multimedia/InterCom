@@ -32,6 +32,7 @@ import numpy as np
 import select
 import argparse
 import psutil
+import logging
 import minimal
 
 spinner = minimal.spinning_cursor()
@@ -210,21 +211,27 @@ class Minimal_Video(minimal.Minimal):
 
 class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
     def __init__(self):
+        # Initialize base class first (Minimal_Video, which extends Minimal)
         super().__init__()
 
-        #if not args.show_video or not hasattr(self, 'cap') or self.cap is None:
-        #    return
-
-        try:
-            minimal.Minimal__verbose.__init__(self)
-            print(f"Verbose Mode: stats cycle = {self.seconds_per_cycle}s")
-        except AttributeError:
-            print("Error: Could not initialize minimal.Minimal__verbose. Statistics will not work.")
-
+        # Define video metrics BEFORE initializing verbose parent
         self.video_sent_bytes_count = 0
         self.video_sent_messages_count = 0
         self.video_received_bytes_count = 0
         self.video_received_messages_count = 0
+
+        # Define audio metrics that verbose class expects
+        self.sent_bytes_count = 0
+        self.received_bytes_count = 0
+        self.sent_messages_count = 0
+        self.received_messages_count = 0
+
+        # Initialize verbose parent (Minimal__verbose)
+        try:
+            minimal.Minimal__verbose.__init__(self)
+            print(f"Verbose Mode: stats cycle = {self.seconds_per_cycle}s")
+        except AttributeError as e:
+            print(f"Error: Could not initialize minimal.Minimal__verbose: {e}")            
 
         self._total_audio_sent_bytes = 0
         self._total_audio_received_bytes = 0
@@ -237,6 +244,13 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
 
         self.total_number_of_sent_frames = 0
         self.frame_time = 1.0 / self.fps
+
+        # Video quality metrics (MSE/PSNR)
+        self.last_sent_frame = None
+        self.last_received_frame = None
+        self.accumulated_mse = 0.0
+        self.accumulated_psnr = 0.0
+        self.frames_analyzed = 0
 
         self.end_time = None
         if hasattr(args, "reading_time") and args.reading_time:
@@ -286,6 +300,31 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
         print(header3)
         print(header4)
         print("=" * (8 + 3 + 13 + 3 + 13 + 3 + 15 + 3 + 15 + 3 + 8 + 4))
+
+    def calculate_video_metrics(self):
+        """Calculate MSE and PSNR between sent and received frames."""
+        if self.last_sent_frame is None or self.last_received_frame is None:
+            return None, None
+        
+        try:
+            # Convert frames for comparison (ensure same shape and type)
+            sent_frame = self.last_sent_frame.astype(np.float32)
+            received_frame = self.last_received_frame.astype(np.float32)
+            
+            # Calculate MSE
+            mse = np.mean((sent_frame - received_frame) ** 2)
+            
+            # Calculate PSNR (Peak Signal-to-Noise Ratio)
+            # PSNR = 10 * log10(MAX^2 / MSE)
+            if mse > 0:
+                psnr = 10.0 * np.log10((np.max(sent_frame) ** 2) / mse)
+            else:
+                psnr = float('inf')  
+            
+            return mse, psnr
+        except Exception as e:
+            logging.debug(f"Error calculating video metrics: {e}")
+            return None, None
 
     def loop_cycle_feedback(self):
         #if not args.show_video or not hasattr(self, 'cap') or self.cap is None:
@@ -378,12 +417,26 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
         print(f"Video received:   {video_received_kbps:.2f} kbps")
         print(f"Total time:       {total_time:.1f} s")
         print("=====================================")
+        
+        # Video quality metrics
+        if self.frames_analyzed > 0:
+            avg_mse = self.accumulated_mse / self.frames_analyzed
+            avg_psnr = self.accumulated_psnr / self.frames_analyzed
+            print("\n=== Video quality metrics ===")
+            print(f"Average MSE (Mean Squared Error):  {avg_mse:.2f}")
+            print(f"Average PSNR (dB):                {avg_psnr:.2f} dB")
+            print(f"Frames analyzed:                  {self.frames_analyzed}")
+            print("===============================")
 
     def video_loop(self):
         try:
             while self.running:
                 data = self.capture_image()
                 fragments_received_this_cycle = 0
+
+                # Store the sent frame for metrics (reshape to original frame shape)
+                if data:
+                    self.last_sent_frame = np.frombuffer(data, dtype=np.uint8).reshape(self.height, self.width, 3).copy()
 
                 for frag_idx in range(self.total_frags):
                     sent_len = self.send_video_fragment(frag_idx, data)
@@ -396,10 +449,20 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
                         self.video_received_messages_count += 1
                         fragments_received_this_cycle += 1
 
+                # Store received frame for metrics after all fragments processed
+                self.last_received_frame = self.remote_frame.copy()
+                
+                # Calculate and accumulate video quality metrics (MSE/PSNR)
+                mse, psnr = self.calculate_video_metrics()
+                if mse is not None:
+                    self.accumulated_mse += mse
+                    self.accumulated_psnr += psnr if psnr != float('inf') else 100  # Cap PSNR at 100 dB
+                    self.frames_analyzed += 1
+
                 self._fragments_received_this_cycle = fragments_received_this_cycle
                 self.show_video()
-        except Exception:
-            print(f"Error in video loop: {e}")
+        except Exception as e:
+            logging.error(f"Error in video loop: {e}")
             pass
 
 
