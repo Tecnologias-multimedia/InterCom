@@ -47,6 +47,8 @@ if not hasattr(minimal, 'parser'):
     minimal.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser = minimal.parser
 
+# Añadir argumentos para tamaño de bloque
+parser.add_argument("--block_size", type=int, default=8, help="Block size for square video blocks (default 8)")
 parser.add_argument("-v", "--video_payload_size", type=int, default=1400, help="Desired size (bytes) of video payload/UDP fragment (default 1400).")
 
 # In Linux: v4l2-ctl -d /dev/video0 --list-formats-ext
@@ -93,15 +95,17 @@ class Minimal_Video(minimal.Minimal):
         if self.effective_video_payload_size != args.video_payload_size:
             print(f"Warning: --video_payload_size adjusted to {self.effective_video_payload_size} bytes.")
 
+        self.block_width = self.block_height = getattr(args, 'block_size', 8)
+
         self.cap = None
         self.width = 0
         self.height = 0
         self.fps = 0
 
         self.expected_frame_size = 0
-        self.total_frags = 0
+        self.block_map = []  # Lista de (y, x) para cada bloque
+        self.total_blocks = 0
 
-        #print(f"Flag --show_video detected. Attempting to initialize camera with index {args.camera_index}...")
         try:
             self.cap = cv2.VideoCapture(args.camera_index)
             if not self.cap.isOpened():
@@ -118,18 +122,15 @@ class Minimal_Video(minimal.Minimal):
             self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
 
             self.expected_frame_size = self.width * self.height * 3
-            self.total_frags = math.ceil(self.expected_frame_size / self.effective_video_payload_size)
 
-            self.fragment_ranges = []
-            self.fragment_headers = []
-            for frag_idx in range(self.total_frags):
-                start = frag_idx * self.effective_video_payload_size
-                end = min(start + self.effective_video_payload_size, self.expected_frame_size)
-                self.fragment_ranges.append((start, end))
-                self.fragment_headers.append(struct.pack(self._header_format, frag_idx))
+            # Crear mapa de bloques (y, x)
+            self.block_map = []
+            for by in range(0, self.height, self.block_height):
+                for bx in range(0, self.width, self.block_width):
+                    self.block_map.append((by, bx))
+            self.total_blocks = len(self.block_map)
 
             self.remote_frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-            
         except Exception as e:
             print(f"Error initializing camera: {e}. Disabling video.")
             if self.cap:
@@ -142,29 +143,34 @@ class Minimal_Video(minimal.Minimal):
         _, frame = self.cap.read()
         return frame.tobytes()
 
-    def send_video_fragment(self, frag_idx, data):
-        start, end = self.fragment_ranges[frag_idx]
-        payload = data[start:end]
-        packet = self.fragment_headers[frag_idx] + payload
+
+    def send_video_block(self, block_idx, frame):
+        by, bx = self.block_map[block_idx]
+        block = frame[by:by+self.block_height, bx:bx+self.block_width, :]
+        payload = block.tobytes()
+        header = struct.pack(self._header_format, block_idx)
+        packet = header + payload
         try:
             self.video_sock.sendto(packet, self.video_addr)
         except BlockingIOError:
-            print(f"Socket blocked while sending fragment {frag_idx}.")
+            print(f"Socket blocked while sending block {block_idx}.")
             pass
         return len(packet)
 
-    def receive_video_fragment(self):
+    def receive_video_block(self):
         rlist, _, _ = select.select([self.video_sock], [], [], 0.001)
         if rlist:
-            packet, addr = self.video_sock.recvfrom(self.effective_video_payload_size + self.header_size)
+            # El tamaño máximo de bloque es block_width*block_height*3
+            max_block_bytes = self.block_width * self.block_height * 3
+            packet, addr = self.video_sock.recvfrom(self.header_size + max_block_bytes)
             header = packet[:self.header_size]
             payload = packet[self.header_size:]
-            recv_frag_idx, = struct.unpack(self._header_format, header)
-            start = recv_frag_idx * self.effective_video_payload_size
-            end = min(start + len(payload), self.expected_frame_size)
-            flat_frame = self.remote_frame.reshape(-1) # Flatten the frame for direct assignment
-            flat_frame[start:end] = np.frombuffer(payload, dtype=np.uint8, count=(end - start)) # Direct assignment
-            return recv_frag_idx, len(packet)
+            block_idx, = struct.unpack(self._header_format, header)
+            by, bx = self.block_map[block_idx]
+            block_shape = (min(self.block_height, self.height - by), min(self.block_width, self.width - bx), 3)
+            block = np.frombuffer(payload, dtype=np.uint8).reshape(block_shape)
+            self.remote_frame[by:by+block_shape[0], bx:bx+block_shape[1], :] = block
+            return block_idx, len(packet)
         return None, 0
 
     def show_video(self):
@@ -174,10 +180,10 @@ class Minimal_Video(minimal.Minimal):
     def video_loop(self):
         try:
             while self.running:
-                data = self.capture_image()
-                for frag_idx in range(self.total_frags):
-                    self.send_video_fragment(frag_idx, data)
-                    self.receive_video_fragment()
+                _, frame = self.cap.read()
+                for block_idx in range(self.total_blocks):
+                    self.send_video_block(block_idx, frame)
+                    self.receive_video_block()
                 self.show_video()
         except Exception as e:
             print(f"Error in video loop: {e}")
