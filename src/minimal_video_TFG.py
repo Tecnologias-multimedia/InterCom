@@ -47,8 +47,7 @@ if not hasattr(minimal, 'parser'):
     minimal.parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser = minimal.parser
 
-# Añadir argumentos para tamaño de bloque
-parser.add_argument("--block_size", type=int, default=8, help="Block size for square video blocks (default 8)")
+parser.add_argument("--block_size", type=int, default=16, help="Block size for square video blocks (default 16)")
 parser.add_argument("-v", "--video_payload_size", type=int, default=1400, help="Desired size (bytes) of video payload/UDP fragment (default 1400).")
 
 # In Linux: v4l2-ctl -d /dev/video0 --list-formats-ext
@@ -60,7 +59,7 @@ parser.add_argument("-lvp", "--listening_video_port", type=int, default=4445, he
 parser.add_argument("-dvp", "--destination_video_port", type=int, default=4445, help="Port to send video to (default 4445).")
 parser.add_argument("--camera_index", type=int, default=0, help="Index of the camera to use (default 0).")
 
-
+ 
 args = None
 
 class Minimal_Video(minimal.Minimal):
@@ -133,7 +132,7 @@ class Minimal_Video(minimal.Minimal):
             self.remote_frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         except Exception as e:
             print(f"Error initializing camera: {e}. Disabling video.")
-            if self.cap:
+            if self.cap:  
                 self.cap.release()
             self.cap = None
 
