@@ -58,8 +58,8 @@ parser.add_argument("-z", "--fps", type=int, default=30, help="Video frames per 
 parser.add_argument("-lvp", "--listening_video_port", type=int, default=4445, help="Port to listen on for receiving video (default 4445).")
 parser.add_argument("-dvp", "--destination_video_port", type=int, default=4445, help="Port to send video to (default 4445).")
 parser.add_argument("--camera_index", type=int, default=0, help="Index of the camera to use (default 0).")
+parser.add_argument("--refresh", type=float, default=0, help="Conditional refresh threshold (mean absolute diff). 0 = send all blocks every frame. >0 = skip blocks that changed less than this value (default 0).")
 
- 
 args = None
 
 class Minimal_Video(minimal.Minimal):
@@ -130,6 +130,9 @@ class Minimal_Video(minimal.Minimal):
             self.total_blocks = len(self.block_map)
 
             self.remote_frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+            self.previous_frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+            self.refresh_threshold = getattr(args, 'refresh', 0)
+            self._block_send_mask = None
         except Exception as e:
             print(f"Error initializing camera: {e}. Disabling video.")
             if self.cap:  
@@ -142,6 +145,25 @@ class Minimal_Video(minimal.Minimal):
         _, frame = self.cap.read()
         return frame.tobytes()
 
+    def compute_block_diffs(self, frame):
+        '''Compute per-block mean absolute diff vs previous frame (one cv2.absdiff for the whole frame).'''
+        if self.refresh_threshold <= 0:
+            self._block_send_mask = None
+            return
+        diff_frame = cv2.absdiff(frame, self.previous_frame)
+        mask = [False] * self.total_blocks
+        for i, (by, bx) in enumerate(self.block_map):
+            bh = min(self.block_height, self.height - by)
+            bw = min(self.block_width, self.width - bx)
+            if np.mean(diff_frame[by:by+bh, bx:bx+bw, :]) > self.refresh_threshold:
+                mask[i] = True
+        self._block_send_mask = mask
+
+    def should_send_block(self, block_idx, frame):
+        '''Check precomputed mask (from compute_block_diffs).'''
+        if self._block_send_mask is None:
+            return True
+        return self._block_send_mask[block_idx]
 
     def send_video_block(self, block_idx, frame):
         by, bx = self.block_map[block_idx]
@@ -177,16 +199,28 @@ class Minimal_Video(minimal.Minimal):
         cv2.waitKey(1)
 
     def video_loop(self):
+        cv2.namedWindow(f"Video (Cam {args.camera_index})", cv2.WINDOW_AUTOSIZE)
         try:
             while self.running:
                 _, frame = self.cap.read()
+                if frame is None:
+                    continue
+                self.compute_block_diffs(frame)
+                # Phase 1: Send blocks that changed
                 for block_idx in range(self.total_blocks):
-                    self.send_video_block(block_idx, frame)
-                    self.receive_video_block()
+                    if self.should_send_block(block_idx, frame):
+                        self.send_video_block(block_idx, frame)
+                # Phase 2: Drain all pending receives
+                while True:
+                    recv_idx, recv_len = self.receive_video_block()
+                    if recv_idx is None:
+                        break
+                self.previous_frame = frame.copy()
                 self.show_video()
         except Exception as e:
             print(f"Error in video loop: {e}")
-            pass
+            import traceback
+            traceback.print_exc()
 
     def run(self):
         #if not args.show_video or self.cap is None:
@@ -443,43 +477,49 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
             print("===============================")
 
     def video_loop(self):
+        cv2.namedWindow(f"Video (Cam {args.camera_index})", cv2.WINDOW_AUTOSIZE)
         try:
             while self.running:
-                data = self.capture_image()
-                fragments_received_this_cycle = 0
+                _, frame = self.cap.read()
+                if frame is None:
+                    continue
 
-                # Store the sent frame for metrics (reshape to original frame shape)
-                if data:
-                    self.last_sent_frame = np.frombuffer(data, dtype=np.uint8).reshape(self.height, self.width, 3).copy()
+                self.last_sent_frame = frame.copy()
+                self.compute_block_diffs(frame)
 
-                for frag_idx in range(self.total_frags):
-                    sent_len = self.send_video_fragment(frag_idx, data)
-                    self.video_sent_bytes_count += sent_len
-                    self.video_sent_messages_count += 1
+                # Phase 1: Send blocks that changed
+                for block_idx in range(self.total_blocks):
+                    if self.should_send_block(block_idx, frame):
+                        sent_len = self.send_video_block(block_idx, frame)
+                        self.video_sent_bytes_count += sent_len
+                        self.video_sent_messages_count += 1
 
-                    recv_idx, recv_len = self.receive_video_fragment()
+                # Phase 2: Drain all pending receives
+                while True:
+                    recv_idx, recv_len = self.receive_video_block()
+                    if recv_idx is None:
+                        break
                     if recv_len:
                         self.video_received_bytes_count += recv_len
                         self.video_received_messages_count += 1
-                        fragments_received_this_cycle += 1
 
-                # Store received frame for metrics after all fragments processed
+                self.previous_frame = frame.copy()
                 self.last_received_frame = self.remote_frame.copy()
-                
+
                 # Calculate and accumulate video quality metrics (MSE/PSNR)
                 mse, psnr = self.calculate_video_metrics()
                 if mse is not None:
                     self.last_mse = mse
-                    self.last_psnr = psnr if psnr != float('inf') else 100  # Cap PSNR at 100 dB
+                    self.last_psnr = psnr if psnr != float('inf') else 100
                     self.accumulated_mse += mse
                     self.accumulated_psnr += self.last_psnr
                     self.frames_analyzed += 1
 
-                self._fragments_received_this_cycle = fragments_received_this_cycle
                 self.show_video()
         except Exception as e:
             logging.error(f"Error in video loop: {e}")
-            pass
+            import traceback
+            traceback.print_exc()
 
 
     def run(self):
