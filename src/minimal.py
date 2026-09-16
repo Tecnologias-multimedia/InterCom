@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
 
-'''A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (playable) chunks. '''
+'''A minimal InterCom (no compression, no quantization, no transform, ... only provides a bidirectional (full-duplex) transmission of raw (hardware-playable) chunks. '''
 
 import os
 import signal
@@ -33,10 +33,23 @@ def int_or_str(text):
     except ValueError:
         return text
 
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    add_help=False
+)
+
+# Re-add -h / --help with your custom capital-letter string
+parser.add_argument(
+    "-h",
+    "--help",
+    action="help",  # Preserves default help-and-exit behavior
+    default=argparse.SUPPRESS,
+    help="Show this help message and exit",  # Your customized text
+)
+
+parser.add_argument("--list-devices", action="store_true", help="Print the available audio devices and quit")
 parser.add_argument("--input-device", type=int_or_str, help="Input device ID or substring", metavar="ID")
 parser.add_argument("--output-device", type=int_or_str, help="Output device ID or substring", metavar="ID")
-parser.add_argument("--list-devices", action="store_true", help="Print the available audio devices and quit")
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="Sampling rate in frames/second", metavar="RATE")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk", metavar="FRAMES")
 parser.add_argument("--listening_port", type=int, default=4444, help="My listening port", metavar="PORT")
@@ -354,6 +367,7 @@ class Minimal__verbose(Minimal):
             self.window_heigh = self.eye_size + 1
             pygame.init()
             self.display = pygame.display.set_mode((args.frames_per_chunk//2, self.window_heigh))
+            pygame.display.set_caption("Fourier Spectrum (DAC above, ADC below)")
             self.display.fill((0, 0, 0))
             self.surface = pygame.surface.Surface((args.frames_per_chunk//2, self.window_heigh)).convert()
             self.RGB_matrix = np.zeros((self.window_heigh, args.frames_per_chunk//2, 3), dtype=np.uint8)
@@ -373,6 +387,7 @@ class Minimal__verbose(Minimal):
         ri_channel_rec = self.recorded_chunk[:, 1]
         le_channel_pla = self.played_chunk[:, 0]
         ri_channel_pla = self.played_chunk[:, 1]
+        print(np.max(le_channel_rec))
         le_windowed_channel_rec = le_channel_rec * self.hamming_window
         ri_windowed_channel_rec = ri_channel_rec * self.hamming_window
         le_windowed_channel_pla = le_channel_pla * self.hamming_window
@@ -601,9 +616,10 @@ class Minimal__verbose(Minimal):
             self.show_played_chunk(DAC)
 
         #self.q.put(DAC[:128])
-        #self.recorded_chunk = ADC
-        #self.played_chunk = DAC
-        #print(".")
+        # Required for showing the spectrum
+        if args.show_spectrum:
+            self.recorded_chunk = ADC
+            self.played_chunk = DAC
 
     def _read_IO_and_play(self, DAC, frames, time, status):
         chunk = super()._read_IO_and_play(DAC, frames, time, status)
@@ -612,8 +628,10 @@ class Minimal__verbose(Minimal):
             self.show_recorded_chunk(chunk)
             self.show_played_chunk(DAC)
 
-        #self.recorded_chunk = DAC
-        #self.played_chunk = DAC
+        # Required for showing the spectrum
+        if args.show_spectrum:
+            self.recorded_chunk = DAC
+            self.played_chunk = DAC
 
     def loop_update_display(self):
         while True:
