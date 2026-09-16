@@ -40,7 +40,7 @@ parser.add_argument("--list-devices", action="store_true", help="Print the avail
 parser.add_argument("-s", "--frames_per_second", type=float, default=44100, help="Sampling rate in frames/second", metavar="RATE")
 parser.add_argument("-c", "--frames_per_chunk", type=int, default=1024, help="Number of frames in a chunk", metavar="FRAMES")
 parser.add_argument("--listening_port", type=int, default=4444, help="My listening port", metavar="PORT")
-parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening) address", metavar="PORT")
+parser.add_argument("-a", "--destination_address", type=int_or_str, default="localhost", help="Destination (interlocutor's listening) address", metavar="ADDRESS")
 parser.add_argument("--destination_port", type=int, default=4444, help="Destination (interlocutor's listing-) port", metavar="PORT")
 parser.add_argument("-f", "--filename", type=str, help="Use a wav/oga/... file instead of the mic data", metavar="NAME")
 parser.add_argument("-t", "--reading_time", type=int, help="Time reading data (mic or file) (only with effect if --show_stats or --show_data is used)", metavar="TIME")
