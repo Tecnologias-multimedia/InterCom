@@ -387,7 +387,6 @@ class Minimal__verbose(Minimal):
         ri_channel_rec = self.recorded_chunk[:, 1]
         le_channel_pla = self.played_chunk[:, 0]
         ri_channel_pla = self.played_chunk[:, 1]
-        print(np.max(le_channel_rec))
         le_windowed_channel_rec = le_channel_rec * self.hamming_window
         ri_windowed_channel_rec = ri_channel_rec * self.hamming_window
         le_windowed_channel_pla = le_channel_pla * self.hamming_window
