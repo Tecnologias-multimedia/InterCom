@@ -6,7 +6,7 @@
 # Probar a comprimir (logaritmicamente) la salida por los altavoces con una ganancia proporcional al parecido entre lo que sale por los altavoces (lo que llega a través de la red) y lo que captura el micrófono. Probado y no funciona bien porque el logaritmo amplifica el ruido de fondo.
 
 
-'''Feedback supression (template).'''
+'''Echo supression (template).'''
 
 import logging
 import numpy as np
@@ -14,7 +14,7 @@ import numpy as np
 import minimal
 import buffer
         
-class Feedback_Supression(buffer.Buffering):
+class Echo_Supression(buffer.Buffering):
     def __init__(self):
         super().__init__()
         logging.info(__doc__)
@@ -92,7 +92,7 @@ class Feedback_Supression(buffer.Buffering):
         DAC[...] = self.empty_chunk
         print(".")
 
-class Feedback_Supression__verbose(Feedback_Supression, buffer.Buffering__verbose):
+class Echo_Supression__verbose(Echo_Supression, buffer.Buffering__verbose):
     def __init__(self):
         super().__init__()
 
@@ -110,9 +110,9 @@ if __name__ == "__main__":
     minimal.args = minimal.parser.parse_known_args()[0]
 
     if minimal.args.show_stats or minimal.args.show_samples or minimal.args.show_spectrum:
-        intercom = Feedback_Supression__verbose()
+        intercom = Echo_Supression__verbose()
     else:
-        intercom = Feedback_Supression()
+        intercom = Echo_Supression()
     try:
         intercom.run()
     except KeyboardInterrupt:
