@@ -23,7 +23,6 @@ Usage:
 import zlib
 import numpy as np
 import struct
-import select
 import time
 import argparse
 import scipy.fftpack
@@ -109,40 +108,34 @@ class DEFLATE_Video_DCT(minimal_video_TFG.Minimal_Video):
 
     def receive_video_block(self):
         '''Receive + decompress + dequantize + inverse DCT.'''
-        rlist, _, _ = select.select([self.video_sock], [], [], 0.001)
-        if rlist:
-            try:
-                packet, addr = self.video_sock.recvfrom(65536)
-            except BlockingIOError:
-                return None, 0
-            header = packet[:self.header_size]
-            compressed = packet[self.header_size:]
-            block_idx, = struct.unpack(self._header_format, header)
-            try:
-                decompressed = zlib.decompress(compressed)
-            except zlib.error:
-                return None, 0
+        try:
+            packet, addr = self.video_sock.recvfrom(65536)
+        except BlockingIOError:
+            return None, 0
+        header = packet[:self.header_size]
+        compressed = packet[self.header_size:]
+        block_idx, = struct.unpack(self._header_format, header)
+        try:
+            decompressed = zlib.decompress(compressed)
+        except zlib.error:
+            return None, 0
 
-            # Always full block size (padded on sender)
-            quantized = np.frombuffer(decompressed, dtype=np.int16).reshape(
-                self.block_height, self.block_width, 3)
-            dct_block = self.dequantize(quantized)
+        quantized = np.frombuffer(decompressed, dtype=np.int16).reshape(
+            self.block_height, self.block_width, 3)
+        dct_block = self.dequantize(quantized)
 
-            # Separable inverse 2D DCT per channel
-            block = np.empty_like(dct_block)
-            for c in range(3):
-                block[:, :, c] = scipy.fftpack.idct(
-                    scipy.fftpack.idct(dct_block[:, :, c], axis=1, norm='ortho'),
-                    axis=0, norm='ortho')
-            block = np.clip(block, 0, 255).astype(np.uint8)
+        block = np.empty_like(dct_block)
+        for c in range(3):
+            block[:, :, c] = scipy.fftpack.idct(
+                scipy.fftpack.idct(dct_block[:, :, c], axis=1, norm='ortho'),
+                axis=0, norm='ortho')
+        block = np.clip(block, 0, 255).astype(np.uint8)
 
-            # Crop to actual block size and place in remote frame
-            by, bx = self.block_map[block_idx]
-            bh = min(self.block_height, self.height - by)
-            bw = min(self.block_width, self.width - bx)
-            self.remote_frame[by:by+bh, bx:bx+bw, :] = block[:bh, :bw, :]
-            return block_idx, len(packet)
-        return None, 0
+        by, bx = self.block_map[block_idx]
+        bh = min(self.block_height, self.height - by)
+        bw = min(self.block_width, self.width - bx)
+        self.remote_frame[by:by+bh, bx:bx+bw, :] = block[:bh, :bw, :]
+        return block_idx, len(packet)
 
 
 class DEFLATE_Video_DCT__verbose(DEFLATE_Video_DCT, minimal_video_TFG.Minimal_Video__verbose):
