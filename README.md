@@ -12,7 +12,7 @@ provide an incremental functionality.
 
 ### Audio
 
-                 Layer name | Description                                                      | Provide by the module
+         Layer (class) name | Description                                                      | Provide by the module
     ------------------------+------------------------------------------------------------------+----------------------------------
                     Minimal | Full-duplex real-time transmission of chunks of audio over UDP   | minimal.py
                   Buffering | Network jitter hidding using a buffer of chunks                  | buffer.py
@@ -26,24 +26,12 @@ provide an incremental functionality.
 
 ### Video
 
-### Current
-
-
-### Expected
-
-                 Layer name | Description                                                       | Provide by module
-    ------------------------+-------------------------------------------------------------------+----------------------------------
-                    Minimal | Full-duplex real-time transmission of chunks of audio over UDP    | minimal.py
-                  Buffering | Network jitter hidding using a buffer of chunks                   | buffer.py
-       Feedback_Suppression | (Optional) Removes the echo generated at the far-end              | feedback_suppression.py
-                DEFLATE_Raw | Compression of the chunks using DEFLATE                           | DEFLATE_raw.py
-        DEFLATE_BytePlanes3 | Apply DEFLATE by planes of bytes                                  | DEFLATE_byteplanes3.py
-              BR_Control_No | Increases compression ratios (and distortion)  using quantization | BR_control_no.py
-    BR_Control_Conservative | Network congestion control through the quantization step size     | BR_control_conservative.py
-       Stereo_MST_Coding_32 | Exploiting inter-channel (spatial) correlation using the MST      | stereo_MST_coding_32.py
-                       MDCT | Exploiting intra-channel (temporal) correlation using the MDCT    | MDCT_coding.py
-                        ToH | Perceptial quantization considering the Threshold of Hearing      | ToH_coding.py
-                Zero_Coding | Improving entropy coding considering runs of zeros                | zero_coding.py
+         Layer (class) name | Description                                                      | Provide by the module
+    ------------------------+------------------------------------------------------------------+----------------------------------
+              Minimal_Video | Full-duplex real-time transmission of chunks of pixels over UDP  | minimal_video.py
+ DEFLATE_Video_Conservative | Idem as BR_Control_Conservative byt applied to video data        | DEFLATE_video_conservative.py
+          DEFLATE_Video_DCT | Exploit spatial correlation using the DCT (should inherit from   | DEFLATE_video_DCT.py
+	                    |  DEFLATE_Video_Conservative)                                     |
 
 ## Future extensions
 
