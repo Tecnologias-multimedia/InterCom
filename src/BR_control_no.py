@@ -133,14 +133,17 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
             played_chunk = self.received_chunks.popleft().astype(np.double)
             recorded_chunk = self.original_chunks.popleft().astype(np.double)
         except IndexError:
-            played_chunk = self.zero_chunk
-            recorded_chunk = self.zero_chunk
+            #played_chunk = self.zero_chunk
+            played_chunk = np.random.randint(low=-32768, high=32768, size=self.zero_chunk.size, dtype=np.int16).reshape(self.zero_chunk.shape)
+            #recorded_chunk = self.zero_chunk
+            recorded_chunk = np.random.randint(low=-32768, high=32768, size=self.zero_chunk.size, dtype=np.int16).reshape(self.zero_chunk.shape)
+        
         #print("played:  ", played_chunk[:,0].T)
         #print("recorded:", recorded_chunk[:,0].T)
 
         square_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_signal[c] = recorded_chunk[:, c] * recorded_chunk[:, c]
+            square_signal[c] = recorded_chunk[:, c].astype(np.double) * recorded_chunk[:, c]
         # Notice that numpy uses the symbol "*" for computing the dot
         # product of two arrays "a" and "b", that basically is the
         # projection of one of the vectors ("a") into the other
@@ -167,7 +170,8 @@ class BR_Control_No__verbose(BR_Control_No, Compression__verbose):
 
         square_error_signal = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
-            square_error_signal[c] = error_signal[c] * error_signal[c]
+            square_error_signal[c] = error_signal[c].astype(np.double) * error_signal[c]
+            #print(square_error_signal[c])
 
         error_energy = [None] * minimal.args.number_of_channels
         for c in range(minimal.args.number_of_channels):
