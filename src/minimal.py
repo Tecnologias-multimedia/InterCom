@@ -439,7 +439,7 @@ class Minimal__verbose(Minimal):
         #self.sent_bytes_count_by_cycle += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*args.number_of_channels
         self.sent_bytes_count_by_cycle += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
         self.sent_messages_count_by_cycle += 1
-        #self.total_number_of_sent_chunks += 1
+        self.total_number_of_sent_chunks += 1
         #if (self.total_number_of_sent_chunks % 44) == 0:
         #    self.cycle_feedback()
 
