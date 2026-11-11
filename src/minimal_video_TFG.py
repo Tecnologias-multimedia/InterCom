@@ -23,6 +23,8 @@ New parameters:
 # Originally implemented by JORGE JESUS SANCHEZ RIVAS.
 
 import cv2
+import os
+import signal
 import socket
 import struct
 import threading
@@ -70,9 +72,6 @@ class Minimal_Video(minimal.Minimal):
         minimal.args = args
 
         super().__init__()
-
-        #if not args.show_video:
-        #    return
 
         self.video_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.video_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -179,42 +178,105 @@ class Minimal_Video(minimal.Minimal):
         return len(packet)
 
     def receive_video_block(self):
-        rlist, _, _ = select.select([self.video_sock], [], [], 0.001)
-        if rlist:
-            # El tamaño máximo de bloque es block_width*block_height*3
-            max_block_bytes = self.block_width * self.block_height * 3
-            packet, addr = self.video_sock.recvfrom(self.header_size + max_block_bytes)
-            header = packet[:self.header_size]
-            payload = packet[self.header_size:]
-            block_idx, = struct.unpack(self._header_format, header)
-            by, bx = self.block_map[block_idx]
-            block_shape = (min(self.block_height, self.height - by), min(self.block_width, self.width - bx), 3)
-            block = np.frombuffer(payload, dtype=np.uint8).reshape(block_shape)
-            self.remote_frame[by:by+block_shape[0], bx:bx+block_shape[1], :] = block
-            return block_idx, len(packet)
-        return None, 0
+        try:
+            packet, addr = self.video_sock.recvfrom(65536)
+        except BlockingIOError:
+            return None, 0
+        header = packet[:self.header_size]
+        payload = packet[self.header_size:]
+        block_idx, = struct.unpack(self._header_format, header)
+        by, bx = self.block_map[block_idx]
+        block_shape = (min(self.block_height, self.height - by), min(self.block_width, self.width - bx), 3)
+        block = np.frombuffer(payload, dtype=np.uint8).reshape(block_shape)
+        self.remote_frame[by:by+block_shape[0], bx:bx+block_shape[1], :] = block
+        return block_idx, len(packet)
+
+    def drain_receives(self):
+        '''Drain all pending received blocks from the socket buffer.'''
+        while True:
+            recv_idx, recv_len = self.receive_video_block()
+            if recv_idx is None:
+                break
+
+    def receive_loop(self):
+        '''Dedicated receive thread: continuously drain incoming video blocks.'''
+        while self.running:
+            try:
+                recv_idx, recv_len = self.receive_video_block()
+                if recv_idx is None:
+                    time.sleep(0.0005)  # 0.5ms idle wait to avoid busy-spin
+            except Exception:
+                pass
+
+    def _on_mouse_click(self, event, x, y, flags, param):
+        '''Mouse callback for the video window. Detects click on hang-up button.
+        
+        Sends SIGINT to the process (same effect as Ctrl+C), which triggers
+        the KeyboardInterrupt in run() and shuts down cleanly.
+        '''
+        if event == cv2.EVENT_LBUTTONDOWN:
+            btn = self._hangup_btn
+            if btn['x1'] <= x <= btn['x2'] and btn['y1'] <= y <= btn['y2']:
+                print("\nHang-up button pressed. Stopping...")
+                self.running = False
+                os.kill(os.getpid(), signal.SIGINT)
+
+    def _draw_controls(self, display_frame):
+        '''Draw a styled red hang-up button with phone icon on the bottom-center.'''
+        h, w = display_frame.shape[:2]
+        btn_w, btn_h = 56, 32
+        x1 = (w - btn_w) // 2
+        y1 = h - btn_h - 10
+        x2 = x1 + btn_w
+        y2 = y1 + btn_h
+        self._hangup_btn = {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2}
+
+        cx = (x1 + x2) // 2
+        cy = (y1 + y2) // 2
+
+        # Semi-transparent overlay for the button area
+        overlay = display_frame.copy()
+
+        # Pill-shaped red button (two circles + rectangle)
+        radius = btn_h // 2
+        cv2.rectangle(overlay, (x1 + radius, y1), (x2 - radius, y2), (0, 0, 210), -1)
+        cv2.circle(overlay, (x1 + radius, cy), radius, (0, 0, 210), -1)
+        cv2.circle(overlay, (x2 - radius, cy), radius, (0, 0, 210), -1)
+
+        # Blend for semi-transparent effect
+        cv2.addWeighted(overlay, 0.85, display_frame, 0.15, 0, display_frame)
+
+        # Phone-down icon: horizontal handset shape using lines and circles
+        # Earpiece (left)
+        cv2.ellipse(display_frame, (cx - 14, cy - 2), (5, 7), 30, 0, 360, (255, 255, 255), 2)
+        # Handle (center bar)
+        cv2.line(display_frame, (cx - 10, cy + 3), (cx + 10, cy + 3), (255, 255, 255), 3)
+        # Mouthpiece (right)
+        cv2.ellipse(display_frame, (cx + 14, cy - 2), (5, 7), -30, 0, 360, (255, 255, 255), 2)
+
+        return display_frame
 
     def show_video(self):
-        cv2.imshow(f"Video (Cam {args.camera_index})", self.remote_frame) # Título de ventana modificado
+        display = self.remote_frame.copy()
+        display = self._draw_controls(display)
+        cv2.imshow(self._window_name, display)
         cv2.waitKey(1)
 
     def video_loop(self):
-        cv2.namedWindow(f"Video (Cam {args.camera_index})", cv2.WINDOW_AUTOSIZE)
+        self._window_name = f"InterCom Video (Cam {args.camera_index})"
+        self._hangup_btn = {'x1': 0, 'y1': 0, 'x2': 0, 'y2': 0}
+        cv2.namedWindow(self._window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self._window_name, self.width, self.height)
+        cv2.setMouseCallback(self._window_name, self._on_mouse_click)
         try:
             while self.running:
                 _, frame = self.cap.read()
                 if frame is None:
                     continue
                 self.compute_block_diffs(frame)
-                # Phase 1: Send blocks that changed
                 for block_idx in range(self.total_blocks):
                     if self.should_send_block(block_idx, frame):
                         self.send_video_block(block_idx, frame)
-                # Phase 2: Drain all pending receives
-                while True:
-                    recv_idx, recv_len = self.receive_video_block()
-                    if recv_idx is None:
-                        break
                 self.previous_frame = frame.copy()
                 self.show_video()
         except Exception as e:
@@ -223,24 +285,31 @@ class Minimal_Video(minimal.Minimal):
             traceback.print_exc()
 
     def run(self):
-        #if not args.show_video or self.cap is None:
-        #    print("Video disabled. Running audio-only mode.")
-        #    super().run()
-        #    return
+        print("Starting video with separate send/receive threads...")
 
-        print("Starting video with unified loop and simplified protocol...")
-
-        t_unified = threading.Thread(target=self.video_loop, daemon=True, name="UnifiedVideoThread")
-        t_unified.start()
+        t_send = threading.Thread(target=self.video_loop, daemon=True, name="VideoSendThread")
+        t_recv = threading.Thread(target=self.receive_loop, daemon=True, name="VideoRecvThread")
+        t_send.start()
+        t_recv.start()
 
         try:
-            super().run()
+            # If reading_time is set, wait with a timer instead of input()
+            # so the process can run headless (e.g., from benchmark.py)
+            reading_time = getattr(args, 'reading_time', None)
+            if reading_time:
+                self._stop_event = threading.Event()
+                with self.stream(self._handler):
+                    self._stop_event.wait(timeout=float(reading_time))
+            else:
+                super().run()
         except KeyboardInterrupt:
             print("Keyboard interrupt detected.")
         finally:
             self.running = False
-            if t_unified.is_alive():
-                t_unified.join(timeout=1)
+            if t_send.is_alive():
+                t_send.join(timeout=1)
+            if t_recv.is_alive():
+                t_recv.join(timeout=1)
             if hasattr(self, 'cap') and self.cap.isOpened():
                 self.cap.release()
             cv2.destroyAllWindows()
@@ -288,10 +357,12 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
         self.last_sent_frame = None
         self.last_received_frame = None
         self.accumulated_mse = 0.0
-        self.accumulated_psnr = 0.0
         self.frames_analyzed = 0
         self.last_mse = 0.0
-        self.last_psnr = 0.0
+
+        # CPU usage tracking
+        self._accumulated_cpu = 0.0
+        self._cpu_samples = 0
 
         self.end_time = None
         if hasattr(args, "reading_time") and args.reading_time:
@@ -360,9 +431,9 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
             mse = np.mean((sent_frame - received_frame) ** 2)
             
             # Calculate PSNR (Peak Signal-to-Noise Ratio)
-            # PSNR = 10 * log10(MAX^2 / MSE)
+            # PSNR = 10 * log10(MAX^2 / MSE), MAX=255 for 8-bit images
             if mse > 0:
-                psnr = 10.0 * np.log10((np.max(sent_frame) ** 2) / mse)
+                psnr = 10.0 * np.log10((255.0 ** 2) / mse)
             else:
                 psnr = float('inf')  
             
@@ -390,13 +461,20 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
             now = time.time()
             if self.end_time and now >= self.end_time:
                 print(f"\nTime limit reached: {getattr(args, 'reading_time', '?')} seconds")
-                self.time_event.set()
+                self.running = False
+                # Unblock _stop_event.wait() if using reading_time mode
+                if hasattr(self, '_stop_event'):
+                    self._stop_event.set()
+                else:
+                    os.kill(os.getpid(), signal.SIGINT)
                 break
 
             elapsed = max(now - self.old_time, 0.001)
             elapsed_CPU_time = psutil.Process().cpu_times()[0] - self.old_CPU_time
             self.CPU_usage = 100 * elapsed_CPU_time / elapsed
             self.global_CPU_usage = psutil.cpu_percent(interval=None)
+            self._accumulated_cpu += self.CPU_usage
+            self._cpu_samples += 1
 
             audio_sent_kbps = int(self.sent_bytes_count * 8 / 1000 / elapsed)
             audio_recv_kbps = int(self.received_bytes_count * 8 / 1000 / elapsed)
@@ -416,7 +494,9 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
 
             print("\033[3A", end='')
             mse_str = f"{self.last_mse:.2f}"
-            psnr_str = f"{self.last_psnr:.2f}"
+            last_psnr = (10.0 * np.log10((255.0 ** 2) / self.last_mse)
+                         if self.last_mse > 0 else 0.0)
+            psnr_str = f"{last_psnr:.2f}"
             print(
                 f"{cycle:>8d} |"
                 f"{self.sent_messages_count:>5d} {self.received_messages_count:>5d}    |"
@@ -469,15 +549,38 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
         # Video quality metrics
         if self.frames_analyzed > 0:
             avg_mse = self.accumulated_mse / self.frames_analyzed
-            avg_psnr = self.accumulated_psnr / self.frames_analyzed
+            # PSNR computed from average MSE (correct: not average of per-frame PSNR)
+            avg_psnr = 10.0 * np.log10((255.0 ** 2) / avg_mse) if avg_mse > 0 else float('inf')
             print("\n=== Video quality metrics ===")
             print(f"Average MSE (Mean Squared Error):  {avg_mse:.2f}")
             print(f"Average PSNR (dB):                {avg_psnr:.2f} dB")
             print(f"Frames analyzed:                  {self.frames_analyzed}")
             print("===============================")
 
+        # CPU usage
+        if self._cpu_samples > 0:
+            avg_cpu = self._accumulated_cpu / self._cpu_samples
+            print(f"\nAverage CPU usage:                {avg_cpu:.1f}%")
+
+    def receive_loop(self):
+        '''Dedicated verbose receive thread: drain incoming blocks with stats.'''
+        while self.running:
+            try:
+                recv_idx, recv_len = self.receive_video_block()
+                if recv_idx is None:
+                    time.sleep(0.0005)
+                elif recv_len:
+                    self.video_received_bytes_count += recv_len
+                    self.video_received_messages_count += 1
+            except Exception:
+                pass
+
     def video_loop(self):
-        cv2.namedWindow(f"Video (Cam {args.camera_index})", cv2.WINDOW_AUTOSIZE)
+        self._window_name = f"InterCom Video (Cam {args.camera_index})"
+        self._hangup_btn = {'x1': 0, 'y1': 0, 'x2': 0, 'y2': 0}
+        cv2.namedWindow(self._window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self._window_name, self.width, self.height)
+        cv2.setMouseCallback(self._window_name, self._on_mouse_click)
         try:
             while self.running:
                 _, frame = self.cap.read()
@@ -487,32 +590,23 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
                 self.last_sent_frame = frame.copy()
                 self.compute_block_diffs(frame)
 
-                # Phase 1: Send blocks that changed
                 for block_idx in range(self.total_blocks):
                     if self.should_send_block(block_idx, frame):
                         sent_len = self.send_video_block(block_idx, frame)
                         self.video_sent_bytes_count += sent_len
                         self.video_sent_messages_count += 1
 
-                # Phase 2: Drain all pending receives
-                while True:
-                    recv_idx, recv_len = self.receive_video_block()
-                    if recv_idx is None:
-                        break
-                    if recv_len:
-                        self.video_received_bytes_count += recv_len
-                        self.video_received_messages_count += 1
-
                 self.previous_frame = frame.copy()
+
+                # Small delay to let the receive thread process loopback packets
+                time.sleep(0.005)
                 self.last_received_frame = self.remote_frame.copy()
 
-                # Calculate and accumulate video quality metrics (MSE/PSNR)
-                mse, psnr = self.calculate_video_metrics()
+                # Calculate and accumulate video quality metrics (MSE)
+                mse, _ = self.calculate_video_metrics()
                 if mse is not None:
                     self.last_mse = mse
-                    self.last_psnr = psnr if psnr != float('inf') else 100
                     self.accumulated_mse += mse
-                    self.accumulated_psnr += self.last_psnr
                     self.frames_analyzed += 1
 
                 self.show_video()
@@ -520,7 +614,6 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
             logging.error(f"Error in video loop: {e}")
             import traceback
             traceback.print_exc()
-
 
     def run(self):
         #if not args.show_video or not hasattr(self, 'cap') or self.cap is None:
@@ -533,26 +626,37 @@ class Minimal_Video__verbose(Minimal_Video, minimal.Minimal__verbose):
         #    super().run()
         #    return
 
-        print("Starting video with unified loop and simplified protocol (verbose)...")
+        print("Starting video with separate send/receive threads (verbose)...")
         print("Press Ctrl+C to terminate\n")
         self.print_header()
 
         cycle_feedback_thread = threading.Thread(target=self.loop_cycle_feedback, daemon=True, name="FeedbackThread")
         cycle_feedback_thread.start()
 
-        t_unified = threading.Thread(target=self.video_loop, daemon=True, name="UnifiedVideoThread")
-        t_unified.start()
+        t_send = threading.Thread(target=self.video_loop, daemon=True, name="VideoSendThread")
+        t_recv = threading.Thread(target=self.receive_loop, daemon=True, name="VideoRecvThread")
+        t_send.start()
+        t_recv.start()
 
         try:
-            minimal.Minimal.run(self)
+            # If reading_time is set, wait with a timer instead of input()
+            reading_time = getattr(args, 'reading_time', None)
+            if reading_time:
+                self._stop_event = threading.Event()
+                with self.stream(self._handler):
+                    self._stop_event.wait(timeout=float(reading_time))
+            else:
+                minimal.Minimal.run(self)
         except KeyboardInterrupt:
             print("Keyboard interrupt detected.")
         finally:
             self.running = False
             if cycle_feedback_thread.is_alive():
                 cycle_feedback_thread.join(timeout=1)
-            if t_unified.is_alive():
-                t_unified.join(timeout=1)
+            if t_send.is_alive():
+                t_send.join(timeout=1)
+            if t_recv.is_alive():
+                t_recv.join(timeout=1)
             if self.cap and self.cap.isOpened():
                 self.cap.release()
             cv2.destroyAllWindows()

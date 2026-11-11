@@ -16,7 +16,6 @@ Usage:
 import zlib
 import numpy as np
 import struct
-import select
 import threading
 import time
 import argparse
@@ -70,16 +69,19 @@ class DEFLATE_Video_Conservative(minimal_video_TFG.Minimal_Video):
               f"base QSS={self.quantization_step_size}")
 
     def data_flow_control(self):
-        '''Conservative adaptive QSS based on block loss.
+        '''Conservative adaptive QSS based on block loss ratio.
         
-        Monitors the difference between sent and received blocks. If the
-        loss exceeds 2 blocks, increases QSS (more quantization). Otherwise,
-        gradually reduces QSS (improves quality) by dividing by 1.1.
+        Monitors the ratio of lost blocks vs sent blocks. Uses a proportional
+        threshold (5% loss) instead of an absolute count, which avoids false
+        positives caused by the timing gap between send/receive threads.
         '''
         while self.running:
-            number_of_lost = self.number_of_sent_blocks - self.number_of_received_blocks
-            if number_of_lost > 2:
-                self.quantization_step_size *= 2
+            sent = self.number_of_sent_blocks
+            received = self.number_of_received_blocks
+            number_of_lost = sent - received
+            # Use proportional threshold: only react if >5% of blocks were lost
+            if sent > 0 and (number_of_lost / sent) > 0.05:
+                self.quantization_step_size = int(self.quantization_step_size * 1.3) + 1
             self.quantization_step_size = int(self.quantization_step_size / 1.1)
             if self.quantization_step_size < self.minimal_quantization_step_size:
                 self.quantization_step_size = self.minimal_quantization_step_size
@@ -100,9 +102,14 @@ class DEFLATE_Video_Conservative(minimal_video_TFG.Minimal_Video):
         return (quantized_block * self.quantization_step_size).astype(np.uint8)
 
     def send_video_block(self, block_idx, frame):
-        '''Quantize + DEFLATE + send.'''
+        '''Quantize + DEFLATE + send.
+        
+        Properly handles edge blocks that may be smaller than block_height x block_width.
+        '''
         by, bx = self.block_map[block_idx]
-        block = frame[by:by+self.block_height, bx:bx+self.block_width, :]
+        bh = min(self.block_height, self.height - by)
+        bw = min(self.block_width, self.width - bx)
+        block = frame[by:by+bh, bx:bx+bw, :]
         quantized = self.quantize(block)
         compressed = zlib.compress(quantized.tobytes())
         header = struct.pack(self._header_format, block_idx)
@@ -116,28 +123,25 @@ class DEFLATE_Video_Conservative(minimal_video_TFG.Minimal_Video):
 
     def receive_video_block(self):
         '''Receive + decompress + dequantize.'''
-        rlist, _, _ = select.select([self.video_sock], [], [], 0.001)
-        if rlist:
-            try:
-                packet, addr = self.video_sock.recvfrom(65536)
-            except BlockingIOError:
-                return None, 0
-            header = packet[:self.header_size]
-            compressed = packet[self.header_size:]
-            block_idx, = struct.unpack(self._header_format, header)
-            try:
-                decompressed = zlib.decompress(compressed)
-            except zlib.error:
-                return None, 0
-            by, bx = self.block_map[block_idx]
-            bh = min(self.block_height, self.height - by)
-            bw = min(self.block_width, self.width - bx)
-            quantized = np.frombuffer(decompressed, dtype=np.uint8).reshape(bh, bw, 3)
-            block = self.dequantize(quantized)
-            self.remote_frame[by:by+bh, bx:bx+bw, :] = block
-            self.number_of_received_blocks += 1
-            return block_idx, len(packet)
-        return None, 0
+        try:
+            packet, addr = self.video_sock.recvfrom(65536)
+        except BlockingIOError:
+            return None, 0
+        header = packet[:self.header_size]
+        compressed = packet[self.header_size:]
+        block_idx, = struct.unpack(self._header_format, header)
+        try:
+            decompressed = zlib.decompress(compressed)
+        except zlib.error:
+            return None, 0
+        by, bx = self.block_map[block_idx]
+        bh = min(self.block_height, self.height - by)
+        bw = min(self.block_width, self.width - bx)
+        quantized = np.frombuffer(decompressed, dtype=np.uint8).reshape(bh, bw, 3)
+        block = self.dequantize(quantized)
+        self.remote_frame[by:by+bh, bx:bx+bw, :] = block
+        self.number_of_received_blocks += 1
+        return block_idx, len(packet)
 
 
 class DEFLATE_Video_Conservative__verbose(DEFLATE_Video_Conservative, minimal_video_TFG.Minimal_Video__verbose):
