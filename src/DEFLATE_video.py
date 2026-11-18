@@ -21,7 +21,6 @@ Usage:
 import zlib
 import numpy as np
 import struct
-import select
 import time
 import argparse
 
@@ -70,9 +69,14 @@ class DEFLATE_Video(minimal_video_TFG.Minimal_Video):
         return (quantized_block * self.quantization_step_size).astype(np.uint8)
 
     def send_video_block(self, block_idx, frame):
-        '''Quantize + DEFLATE + send.'''
+        '''Quantize + DEFLATE + send.
+        
+        Properly handles edge blocks that may be smaller than block_height x block_width.
+        '''
         by, bx = self.block_map[block_idx]
-        block = frame[by:by+self.block_height, bx:bx+self.block_width, :]
+        bh = min(self.block_height, self.height - by)
+        bw = min(self.block_width, self.width - bx)
+        block = frame[by:by+bh, bx:bx+bw, :]
         quantized = self.quantize(block)
         compressed = zlib.compress(quantized.tobytes())
         header = struct.pack(self._header_format, block_idx)
@@ -85,27 +89,24 @@ class DEFLATE_Video(minimal_video_TFG.Minimal_Video):
 
     def receive_video_block(self):
         '''Receive + decompress + dequantize.'''
-        rlist, _, _ = select.select([self.video_sock], [], [], 0.001)
-        if rlist:
-            try:
-                packet, addr = self.video_sock.recvfrom(65536)
-            except BlockingIOError:
-                return None, 0
-            header = packet[:self.header_size]
-            compressed = packet[self.header_size:]
-            block_idx, = struct.unpack(self._header_format, header)
-            try:
-                decompressed = zlib.decompress(compressed)
-            except zlib.error:
-                return None, 0
-            by, bx = self.block_map[block_idx]
-            bh = min(self.block_height, self.height - by)
-            bw = min(self.block_width, self.width - bx)
-            quantized = np.frombuffer(decompressed, dtype=np.uint8).reshape(bh, bw, 3)
-            block = self.dequantize(quantized)
-            self.remote_frame[by:by+bh, bx:bx+bw, :] = block
-            return block_idx, len(packet)
-        return None, 0
+        try:
+            packet, addr = self.video_sock.recvfrom(65536)
+        except BlockingIOError:
+            return None, 0
+        header = packet[:self.header_size]
+        compressed = packet[self.header_size:]
+        block_idx, = struct.unpack(self._header_format, header)
+        try:
+            decompressed = zlib.decompress(compressed)
+        except zlib.error:
+            return None, 0
+        by, bx = self.block_map[block_idx]
+        bh = min(self.block_height, self.height - by)
+        bw = min(self.block_width, self.width - bx)
+        quantized = np.frombuffer(decompressed, dtype=np.uint8).reshape(bh, bw, 3)
+        block = self.dequantize(quantized)
+        self.remote_frame[by:by+bh, bx:bx+bw, :] = block
+        return block_idx, len(packet)
 
 
 class DEFLATE_Video__verbose(DEFLATE_Video, minimal_video_TFG.Minimal_Video__verbose):
