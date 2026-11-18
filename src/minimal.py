@@ -298,8 +298,6 @@ parser.add_argument("--show_samples", action="store_true", help="Shows samples v
 parser.add_argument("--show_spectrum", action="store_true", help="Shows Fourier spectrum")
 
 import threading
-import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
-import pygame_widgets
 #import spectrum # If fails (DOLPHINS.WAV not found), update setuptools with "pip install setuptools"
 
 class Minimal__verbose(Minimal):
@@ -360,6 +358,8 @@ class Minimal__verbose(Minimal):
         #self.q = queue.Queue()
 
         if args.show_spectrum:
+            import pygame  # If fails opening iris and swrast, run "export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6" (good idea to put it into .bashrc)
+            import pygame_widgets
             self.recorded_chunk = self.generate_zero_chunk()
             self.played_chunk = self.generate_zero_chunk()
             # PyGame stuff
@@ -439,7 +439,7 @@ class Minimal__verbose(Minimal):
         #self.sent_bytes_count_by_cycle += len(packed_chunk)*np.dtype(self.SAMPLE_TYPE).itemsize*args.number_of_channels
         self.sent_bytes_count_by_cycle += packed_chunk.nbytes  # Returns the number of bytes of the numpy array packed_chunk
         self.sent_messages_count_by_cycle += 1
-        #self.total_number_of_sent_chunks += 1
+        self.total_number_of_sent_chunks += 1
         #if (self.total_number_of_sent_chunks % 44) == 0:
         #    self.cycle_feedback()
 
